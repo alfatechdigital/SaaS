@@ -21,6 +21,7 @@ use App\Models\Task;
 use App\Models\Team;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Support\TenantContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -43,14 +44,20 @@ class AlfatechDemoSeeder extends Seeder
     public function run(): void
     {
         $this->seedUsersAndTeam();
-        $this->seedCompanyProfile();
-        $this->seedProjects();
-        $this->seedTasks();
-        $this->seedLeads();
-        $this->seedContentItems();
-        $this->seedTransactions();
-        $this->seedPortfolioItems();
-        $this->seedActivityLogs();
+
+        // Everything below writes to (and queries) the demo tenant, and the team
+        // global scope refuses queries with no active tenant. A seeder has no
+        // request to resolve one from, so it opts in explicitly.
+        app(TenantContext::class)->runFor($this->team, function (): void {
+            $this->seedCompanyProfile();
+            $this->seedProjects();
+            $this->seedTasks();
+            $this->seedLeads();
+            $this->seedContentItems();
+            $this->seedTransactions();
+            $this->seedPortfolioItems();
+            $this->seedActivityLogs();
+        });
     }
 
     /**

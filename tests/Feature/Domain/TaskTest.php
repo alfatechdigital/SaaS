@@ -26,13 +26,18 @@ class TaskTest extends DomainTestCase
 
     public function test_owner_can_update_a_task(): void
     {
+        $project = Project::factory()->create(['team_id' => $this->team->id]);
+
         $task = Task::factory()->create([
             'team_id' => $this->team->id,
-            'project_id' => Project::factory()->create(['team_id' => $this->team->id])->id,
+            'project_id' => $project->id,
         ]);
 
+        // The project instance is reused rather than reached through `$task->project`:
+        // a lazy relation load is a scoped query, and no tenant is active outside a
+        // request (Fase 2 global scope, tugas 2.2.1).
         $this->actingAs($this->owner)
-            ->put($this->teamRoute('tasks.update', ['task' => $task->id]), $this->payload($task->project, ['status' => 'done']))
+            ->put($this->teamRoute('tasks.update', ['task' => $task->id]), $this->payload($project, ['status' => 'done']))
             ->assertRedirect();
 
         $this->assertSame('done', $task->fresh()?->status->value);

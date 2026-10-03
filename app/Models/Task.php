@@ -44,6 +44,15 @@ class Task extends Model
     use BelongsToTeam, HasFactory;
 
     /**
+     * Fase 2 (tugas 2.2.1): tasks are protected by the team global scope.
+     * Delete this override once every tenant model is covered.
+     */
+    protected static function usesTeamScope(): bool
+    {
+        return true;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

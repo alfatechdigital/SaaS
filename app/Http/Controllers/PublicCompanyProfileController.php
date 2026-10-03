@@ -7,6 +7,7 @@ use App\Http\Resources\PortfolioItemResource;
 use App\Models\CompanyProfile;
 use App\Models\PortfolioItem;
 use App\Models\Team;
+use App\Support\CurrentTeam;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,6 +28,11 @@ class PublicCompanyProfileController extends Controller
         // hidden. 404 rather than 403 so it does not confirm that the page
         // exists at all.
         abort_unless($team->public_page_enabled, 404);
+
+        // The page is reachable without a `{current_team}` segment, so this is
+        // the only place that can tell the team global scope which tenant the
+        // queries below belong to.
+        CurrentTeam::activate($team);
 
         $profile = CompanyProfile::query()
             ->forTeam($team)

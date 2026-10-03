@@ -34,6 +34,18 @@ final class CurrentTeam
                 ->firstOrFail();
         }
 
+        return self::activate($team);
+    }
+
+    /**
+     * Make the given team the active tenant for the rest of the request.
+     *
+     * Public routes reach their tenant through a route binding rather than the
+     * `{current_team}` parameter, so they have to activate it themselves —
+     * otherwise the team global scope would refuse their queries.
+     */
+    public static function activate(Team $team): Team
+    {
         app(TenantContext::class)->set($team, TenantContextOrigin::Path);
 
         return $team;
