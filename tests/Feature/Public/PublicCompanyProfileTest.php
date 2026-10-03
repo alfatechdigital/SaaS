@@ -3,6 +3,7 @@
 namespace Tests\Feature\Public;
 
 use App\Enums\LeadStatus;
+use App\Models\CompanyProfile;
 use App\Models\Lead;
 use App\Models\PortfolioItem;
 use App\Models\Team;
@@ -58,6 +59,81 @@ class PublicCompanyProfileTest extends DomainTestCase
         $this->get($this->publicRoute())
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->has('portfolio', 0));
+    }
+
+    /**
+     * P-1 / tugas 1.2.5.
+     *
+     * Both tenants are given the exact same names, so a leak cannot be spotted
+     * by reading the payload — only the ids can tell the tenants apart.
+     *
+     * Both pages are checked on purpose. The profile is fetched with a bare
+     * `first()`, so an unscoped query would return the *same* row for both
+     * tenants; asserting only one page could then pass by accident, depending on
+     * which row the database happens to return first. Requiring each page to show
+     * its own row makes the test deterministic. The portfolio count is
+     * order-independent for the same reason.
+     */
+    public function test_a_public_page_does_not_leak_another_tenants_data(): void
+    {
+        $otherTeam = Team::factory()->create();
+
+        $mine = CompanyProfile::factory()->create([
+            'team_id' => $this->team->id,
+            'company_name' => 'PT Data Kembar',
+        ]);
+
+        $theirs = CompanyProfile::factory()->create([
+            'team_id' => $otherTeam->id,
+            'company_name' => 'PT Data Kembar',
+        ]);
+
+        $myItem = PortfolioItem::factory()->create([
+            'team_id' => $this->team->id,
+            'title' => 'Portfolio Kembar',
+            'published' => true,
+        ]);
+
+        $theirItem = PortfolioItem::factory()->create([
+            'team_id' => $otherTeam->id,
+            'title' => 'Portfolio Kembar',
+            'published' => true,
+        ]);
+
+        $this->get(route('public.company-profile', ['team' => $this->team->slug]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/company-profile')
+                ->where('profile.id', $mine->id)
+                ->has('portfolio', 1)
+                ->where('portfolio.0.id', $myItem->id));
+
+        $this->get(route('public.company-profile', ['team' => $otherTeam->slug]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/company-profile')
+                ->where('profile.id', $theirs->id)
+                ->has('portfolio', 1)
+                ->where('portfolio.0.id', $theirItem->id));
+    }
+
+    /**
+     * P-1 / tugas 1.2.6.
+     *
+     * The consultation form is the only unauthenticated write endpoint, so it is
+     * the one that must never guess the tenant: the lead is filed under the team
+     * in the URL, and under no other.
+     */
+    public function test_the_consultation_form_files_the_lead_under_the_team_in_the_url(): void
+    {
+        $otherTeam = Team::factory()->create();
+
+        $this->post(route('public.consultation.store', ['team' => $otherTeam->slug]), $this->payload())
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('leads', 1);
+        $this->assertDatabaseHas('leads', ['team_id' => $otherTeam->id]);
+        $this->assertDatabaseMissing('leads', ['team_id' => $this->team->id]);
     }
 
     public function test_unknown_team_slug_returns_not_found(): void

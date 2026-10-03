@@ -136,4 +136,131 @@ abstract class TenantIsolationTestCase extends DomainTestCase
             'portfolio' => $portfolio,
         ];
     }
+
+    /**
+     * A valid `projects.update` payload.
+     *
+     * The cross-tenant tests send a payload that passes validation on purpose:
+     * otherwise the request would stop at a 302 + validation errors and the
+     * expected 404 would never be reached, quietly turning the assertion into a
+     * false negative.
+     *
+     * @return array<string, mixed>
+     */
+    protected function projectPayload(): array
+    {
+        return [
+            'name' => 'Proyek Diubah',
+            'client_name' => 'Klien Diubah',
+            'description' => 'Deskripsi proyek',
+            'status' => 'development',
+            'progress' => 25,
+            'start_date' => '2026-01-01',
+            'deadline' => '2026-06-30',
+            'project_value' => 10_000_000,
+            'pic_id' => $this->member->id,
+            'technologies' => ['Laravel'],
+            'notes' => 'Catatan',
+        ];
+    }
+
+    /**
+     * A valid `tasks.update` payload for the **acting** team's project.
+     *
+     * `project_id` must belong to the acting tenant: the rule is scoped with
+     * `where('team_id', $teamId)`, so pointing it at the other tenant's project
+     * would fail validation and mask the 404.
+     *
+     * @return array<string, mixed>
+     */
+    protected function taskPayload(Project $project): array
+    {
+        return [
+            'project_id' => $project->id,
+            'title' => 'Tugas Diubah',
+            'description' => 'Deskripsi tugas',
+            'assignee_id' => $this->member->id,
+            'priority' => 'high',
+            'status' => 'todo',
+            'due_date' => '2026-02-01',
+        ];
+    }
+
+    /**
+     * A valid `leads.update` payload.
+     *
+     * @return array<string, mixed>
+     */
+    protected function leadPayload(): array
+    {
+        return [
+            'company_name' => 'PT Prospek Diubah',
+            'contact_name' => 'Kontak Diubah',
+            'phone' => '0812-0000-0000',
+            'email' => null,
+            'source' => 'Website Alfatech',
+            'potential_project' => 'Sistem Kembar',
+            'estimated_value' => 15_000_000,
+            'status' => 'new',
+            'next_follow_up' => 'Besok pagi',
+            'notes' => 'Catatan',
+        ];
+    }
+
+    /**
+     * A valid `contents.update` payload.
+     *
+     * @return array<string, mixed>
+     */
+    protected function contentPayload(): array
+    {
+        return [
+            'title' => 'Konten Diubah',
+            'caption' => 'Caption konten',
+            'platform' => 'instagram',
+            'content_type' => 'Reels / Carousel',
+            'media_url' => null,
+            'status' => 'draft',
+            'scheduled_at' => 'Besok, 10:00 WIB',
+            'assignee_id' => $this->member->id,
+            'notes' => 'Catatan',
+        ];
+    }
+
+    /**
+     * A valid `transactions.update` payload.
+     *
+     * @return array<string, mixed>
+     */
+    protected function transactionPayload(): array
+    {
+        return [
+            'category' => 'project_income',
+            'project_id' => null,
+            'description' => 'Transaksi Diubah',
+            'amount' => 1_500_000,
+            'date' => '2026-01-15',
+        ];
+    }
+
+    /**
+     * A valid `portfolio.update` payload.
+     *
+     * @return array<string, mixed>
+     */
+    protected function portfolioPayload(): array
+    {
+        return [
+            'title' => 'Portfolio Diubah',
+            'client' => 'Klien Diubah',
+            'category' => 'Web & E-Commerce',
+            'description' => 'Deskripsi portfolio',
+            'technologies' => ['Vue.js'],
+            'image_url' => 'https://example.com/image.jpg',
+            'project_url' => 'https://example.com',
+            'completion_date' => '2026-01-10',
+            'featured' => true,
+            'published' => true,
+        ];
+    }
 }

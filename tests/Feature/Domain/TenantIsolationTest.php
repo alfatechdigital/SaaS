@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Domain;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
- * P-1 — tenant isolation suite for every `index` (read) endpoint.
+ * P-1 — tenant isolation suite: every read endpoint, every cross-tenant write id
+ * (IDOR, R-4) and the membership boundary.
  *
  * Part of the "jaring pengaman" that has to exist *before* the P-2 global scope
  * is introduced: without it, there is no way to tell a regression caused by that
@@ -14,14 +16,14 @@ use Inertia\Testing\AssertableInertia as Assert;
  *
  * Every case seeds two tenants through {@see TenantIsolationTestCase::seedLookAlikeData()},
  * so both hold rows with identical names. Each tenant owns exactly one row per
- * module; therefore a correctly scoped `index` returns exactly one row — the
- * acting tenant's own — and its `id` is the only value that can prove it.
+ * module; therefore a correctly scoped endpoint only ever exposes — or accepts —
+ * the acting tenant's own row, and its `id` is the only value that can prove it.
  *
  * The `forTeam()` scoping that these tests guard is applied manually in
  * controllers, so they are expected to fail the moment that call is removed.
  *
  * @see docs/syarhul-implementation-urgent.md P-1
- * @see docs/implementation/phase-01-fondasi.md tugas 1.2.2
+ * @see docs/implementation/phase-01-fondasi.md tugas 1.2.2, 1.2.3, 1.2.4
  */
 class TenantIsolationTest extends TenantIsolationTestCase
 {
@@ -181,6 +183,179 @@ class TenantIsolationTest extends TenantIsolationTestCase
                 ->component('admin/company-profile/Edit')
                 ->where('profile.id', $mine['company_profile']->id)
                 ->where('profile.companyName', $theirs['company_profile']->company_name));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 1.2.3 — write endpoints must not accept another tenant's id (IDOR, R-4)
+    |--------------------------------------------------------------------------
+    |
+    | Every request below targets the acting tenant's own route but carries the
+    | other tenant's record id, with a payload that passes validation. The
+    | scope has to reject it with 404 — and the row must be left untouched.
+    |
+    */
+
+    public function test_a_project_of_another_tenant_cannot_be_updated(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->put($this->routeFor($this->team, 'projects.update', ['project' => $theirs['project']->id]), $this->projectPayload())
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('projects', ['id' => $theirs['project']->id, 'name' => 'Proyek Kembar']);
+    }
+
+    public function test_a_project_of_another_tenant_cannot_be_deleted(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->delete($this->routeFor($this->team, 'projects.destroy', ['project' => $theirs['project']->id]))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('projects', ['id' => $theirs['project']->id]);
+    }
+
+    public function test_a_task_of_another_tenant_cannot_be_updated(): void
+    {
+        $mine = $this->seedLookAlikeData($this->team);
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->put(
+                $this->routeFor($this->team, 'tasks.update', ['task' => $theirs['task']->id]),
+                $this->taskPayload($mine['project']),
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('tasks', ['id' => $theirs['task']->id, 'title' => 'Tugas Kembar']);
+    }
+
+    public function test_a_task_of_another_tenant_cannot_be_deleted(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->delete($this->routeFor($this->team, 'tasks.destroy', ['task' => $theirs['task']->id]))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('tasks', ['id' => $theirs['task']->id]);
+    }
+
+    public function test_a_lead_of_another_tenant_cannot_be_updated(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->put($this->routeFor($this->team, 'leads.update', ['lead' => $theirs['lead']->id]), $this->leadPayload())
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('leads', ['id' => $theirs['lead']->id, 'company_name' => 'PT Prospek Kembar']);
+    }
+
+    public function test_a_lead_of_another_tenant_cannot_be_deleted(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->delete($this->routeFor($this->team, 'leads.destroy', ['lead' => $theirs['lead']->id]))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('leads', ['id' => $theirs['lead']->id]);
+    }
+
+    public function test_a_content_item_of_another_tenant_cannot_be_updated(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->put($this->routeFor($this->team, 'contents.update', ['content' => $theirs['content']->id]), $this->contentPayload())
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('content_items', ['id' => $theirs['content']->id, 'title' => 'Konten Kembar']);
+    }
+
+    public function test_a_content_item_of_another_tenant_cannot_be_deleted(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->delete($this->routeFor($this->team, 'contents.destroy', ['content' => $theirs['content']->id]))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('content_items', ['id' => $theirs['content']->id]);
+    }
+
+    public function test_a_transaction_of_another_tenant_cannot_be_updated(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->put($this->routeFor($this->team, 'transactions.update', ['transaction' => $theirs['transaction']->id]), $this->transactionPayload())
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('transactions', ['id' => $theirs['transaction']->id, 'description' => 'Transaksi Kembar']);
+    }
+
+    public function test_a_transaction_of_another_tenant_cannot_be_deleted(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->delete($this->routeFor($this->team, 'transactions.destroy', ['transaction' => $theirs['transaction']->id]))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('transactions', ['id' => $theirs['transaction']->id]);
+    }
+
+    public function test_a_portfolio_item_of_another_tenant_cannot_be_updated(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->put($this->routeFor($this->team, 'portfolio.update', ['portfolioItem' => $theirs['portfolio']->id]), $this->portfolioPayload())
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('portfolio_items', ['id' => $theirs['portfolio']->id, 'title' => 'Portfolio Kembar']);
+    }
+
+    public function test_a_portfolio_item_of_another_tenant_cannot_be_deleted(): void
+    {
+        $theirs = $this->seedLookAlikeData($this->otherTeam);
+
+        $this->actingAs($this->owner)
+            ->delete($this->routeFor($this->team, 'portfolio.destroy', ['portfolioItem' => $theirs['portfolio']->id]))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('portfolio_items', ['id' => $theirs['portfolio']->id]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 1.2.4 — membership boundary
+    |--------------------------------------------------------------------------
+    */
+
+    public function test_a_member_of_another_tenant_cannot_open_the_dashboard(): void
+    {
+        $this->actingAs($this->otherOwner)
+            ->get($this->routeFor($this->team, 'dashboard'))
+            ->assertForbidden();
+    }
+
+    public function test_a_user_without_any_tenant_cannot_open_the_dashboard(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get($this->routeFor($this->team, 'dashboard'))
+            ->assertForbidden();
+    }
+
+    public function test_a_guest_cannot_open_the_dashboard(): void
+    {
+        $this->get($this->routeFor($this->team, 'dashboard'))
+            ->assertRedirect();
     }
 
     /**

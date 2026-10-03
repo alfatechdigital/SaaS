@@ -36,3 +36,9 @@ jobs:
 
       - name: Run CI Checks
         run: composer ci:check
+
+      # P-1 / tugas 1.2.7 (docs/implementation/phase-01-fondasi.md).
+      - name: Tenant isolation suite (P-1, mandatory)
+        run: >-
+          php artisan test --filter=TenantIsolation
+          --fail-on-skipped --fail-on-empty-test-suite
