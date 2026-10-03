@@ -3,7 +3,10 @@ name: tests
 on:
   push:
     branches:
-      - main
+      # Every branch, so the mandatory gates below cannot be bypassed by simply
+      # working on a feature branch instead of `main`. Quoted because `*` starts
+      # a YAML alias.
+      - '**'
   pull_request:
 
 permissions:
