@@ -3,10 +3,15 @@
 namespace Tests\Feature\Tenancy;
 
 use App\Exceptions\MissingTenantContext;
+use App\Models\ActivityLog;
 use App\Models\CompanyProfile;
+use App\Models\ContentItem;
+use App\Models\Lead;
+use App\Models\PortfolioItem;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Team;
+use App\Models\Transaction;
 use App\Scopes\TeamScope;
 use App\Support\TenantContext;
 use Closure;
@@ -22,9 +27,8 @@ use Tests\TestCase;
  * the mechanics underneath it: a query without a tenant is refused, a query with
  * one is confined to it, and the escape hatch really escapes.
  *
- * Fase 2 activates the scope one model at a time. This file covers
- * `company_profiles`, `projects` and `tasks`; the remaining tenant models follow
- * on the next working day.
+ * Every tenant-owned model is covered: Fase 2 switches the scope on per model,
+ * and this file is the per-model proof that the switch actually took effect.
  *
  * @see TeamScope
  * @see \docs\implementation\phase-02-tenant-context.md tugas 2.2.1 s/d 2.2.3
@@ -69,6 +73,31 @@ class TeamGlobalScopeTest extends TestCase
                     'team_id' => $team->id,
                     'project_id' => Project::factory()->create(['team_id' => $team->id])->id,
                 ]),
+            ],
+            'leads' => [
+                Lead::class,
+                'leads',
+                static fn (Team $team): Model => Lead::factory()->create(['team_id' => $team->id]),
+            ],
+            'content_items' => [
+                ContentItem::class,
+                'content_items',
+                static fn (Team $team): Model => ContentItem::factory()->create(['team_id' => $team->id]),
+            ],
+            'transactions' => [
+                Transaction::class,
+                'transactions',
+                static fn (Team $team): Model => Transaction::factory()->income()->create(['team_id' => $team->id]),
+            ],
+            'portfolio_items' => [
+                PortfolioItem::class,
+                'portfolio_items',
+                static fn (Team $team): Model => PortfolioItem::factory()->create(['team_id' => $team->id]),
+            ],
+            'activity_logs' => [
+                ActivityLog::class,
+                'activity_logs',
+                static fn (Team $team): Model => ActivityLog::factory()->create(['team_id' => $team->id]),
             ],
         ];
     }

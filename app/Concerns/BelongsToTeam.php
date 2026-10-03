@@ -18,26 +18,15 @@ trait BelongsToTeam
     /**
      * Register the team global scope.
      *
-     * Fase 2 turns the scope on one model at a time (`usesTeamScope()`), so that a
-     * failure is always attributable to a single model. Once every tenant model is
-     * covered, that method's default becomes `true` and the per-model overrides go
-     * away.
+     * Every model that uses this trait is tenant-owned, so the scope is
+     * unconditional: querying without an active tenant fails loudly instead of
+     * returning another tenant's rows. `withoutTeamScope()` is the only way out.
+     *
+     * @see TeamScope
      */
     public static function bootBelongsToTeam(): void
     {
-        if (static::usesTeamScope()) {
-            static::addGlobalScope(new TeamScope);
-        }
-    }
-
-    /**
-     * Whether queries on this model are enforced by the {@see TeamScope}.
-     *
-     * @see \docs\implementation\phase-02-tenant-context.md tugas 2.2.1
-     */
-    protected static function usesTeamScope(): bool
-    {
-        return false;
+        static::addGlobalScope(new TeamScope);
     }
 
     /**

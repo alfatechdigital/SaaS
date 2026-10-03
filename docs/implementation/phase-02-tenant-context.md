@@ -40,8 +40,8 @@ Singkatnya: *"Tidak mungkin lagi lupa memfilter `team_id`."*
 
 | Prasyarat | Status |
 |---|---|
-| Fase 1 selesai; test isolasi tenant hijau di CI | ❌ |
-| **D-03** (penerapan global scope) disetujui | ❌ **Wajib** |
+| Fase 1 selesai; test isolasi tenant hijau di CI | ✅ (2026-10-06) |
+| **D-03** (penerapan global scope) disetujui | ✅ (2026-10-08) |
 | **D-04** (tenant settings: tabel vs JSON) diputuskan | ❌ **Wajib** untuk 2.5 |
 | **ADR-09** (cache/queue/log tenant-aware) disetujui | ❌ Disarankan |
 | Fase 1 selesai memisahkan config produksi (queue worker berjalan) | ❌ |
@@ -50,12 +50,14 @@ Singkatnya: *"Tidak mungkin lagi lupa memfilter `team_id`."*
 
 ## Current State
 
-Setelah Fase 1, kondisi yang relevan:
+> Diperbarui 2026-10-12. Sebelumnya bagian ini menggambarkan kondisi sebelum 2.1–2.2.1 dikerjakan.
 
-- Isolasi tenant **terbukti lemah secara otomatis** (test Fase 1 menangkap celah yang ada).
-- Tenant di-resolve **per controller** lewat `App\Support\CurrentTeam::from($request)` dan via `$request->team()` di `TeamRequest`.
-- Tidak ada objek yang menyimpan "tenant aktif" selama request.
-- Tidak ada job sama sekali di aplikasi, sehingga isu konteks tenant pada job belum nyata — tetapi harus disiapkan **sebelum** job pertama dibuat.
+- Isolasi tenant kini **dijamin arsitektural**: `App\Scopes\TeamScope` memfilter setiap query model tenant-scoped, dan query tanpa tenant aktif **gagal keras** (`App\Exceptions\MissingTenantContext`).
+- `App\Support\TenantContext` adalah satu sumber tenant aktif per request/job. `CurrentTeam::from()`/`activate()` menulisnya; `ResetTenantContext` (per request) dan listener `JobProcessing` (per job) membersihkannya.
+- Seluruh model tenant-scoped sudah memakai scope: `company_profiles`, `projects`, `tasks`, `leads`, `content_items`, `transactions`, `portfolio_items`, `activity_logs`.
+- `->forTeam()` di controller masih ada dan kini **redundan** — scope adalah otoritasnya. Penghapusan menyusul di 2.2.6.
+- Route publik (`p/{team}`) tidak melewati segmen `{current_team}`, jadi controller-nya mengaktifkan tenant secara eksplisit.
+- Belum ada job sama sekali; pola konteks job sudah disiapkan (`runFor()` + reset per job) tetapi belum dipakai di produksi.
 - Cache: belum dipakai secara eksplisit; kunci cache belum ber-namespace.
 - Log: belum membawa `team_id`.
 - `teams` belum punya status selain soft delete; `public_page_enabled` adalah satu-satunya saklar moderasi.
@@ -150,8 +152,11 @@ Semua bersifat **aditif dan backward compatible** (ADR-17). Tidak ada kolom diha
 | Area | Perubahan |
 |---|---|
 | `App\Support\TenantContext` | **Baru** |
+| `App\Scopes\TeamScope` | **Baru** — filter tenant + fail-loud |
+| `App\Exceptions\MissingTenantContext` | **Baru** |
+| `App\Http\Middleware\ResetTenantContext` | **Baru** — bersihkan konteks per request |
 | `App\Concerns\BelongsToTeam` | Tambah global scope + `withoutTeamScope()` |
-| `App\Support\CurrentTeam` | Didelegasikan ke `TenantContext` |
+| `App\Support\CurrentTeam` | Didelegasikan ke `TenantContext`; tambah `activate()` |
 | `App\Models\Team` | Status + `setting()` + relasi audit |
 | `App\Models\PlatformAuditLog` | **Baru** |
 | `App\Http\Middleware\EnsureTeamMembership` | Cek status tenant |
@@ -279,11 +284,13 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 
 > **Diisi oleh agen/developer saat pengerjaan.**
 
-_Belum ada entri._
-
 | Tanggal | Temuan | Dampak | Tindakan |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-10-08 | **Suite isolasi tetap hijau meski `TeamScope` sengaja dirusak**, karena controller masih memanggil `->forTeam()`. Jadi suite isolasi belum menjadi penjaga global scope. | Global scope bisa rusak tanpa terdeteksi | Tambah `tests/Feature/Tenancy/TeamGlobalScopeTest.php` (fail-loud + confinement + escape hatch per model). Suite isolasi baru efektif setelah `->forTeam()` redundan dihapus (2.2.6) |
+| 2026-10-08 | Route publik (`p/{team}`) tidak melewati segmen `{current_team}`, sehingga tidak punya tenant aktif dan query ber-scope gagal. | Halaman publik 500 begitu `company_profiles` ber-scope | `CurrentTeam::activate()` dipanggil di `PublicCompanyProfileController` dan `PublicLeadController` |
+| 2026-10-08 | Query dari relasi yang di-*lazy load* di dalam fixture test berjalan tanpa konteks tenant (`$task->project`). | Test gagal dengan exception, bukan assertion — membingungkan saat dibaca | Fixture memakai instance yang sudah dibuat. Catatan: `Model::fresh()` aman (`newQueryWithoutScopes`) dan `Rule::exists(Model::class)` aman (hanya nama tabel, tanpa scope) |
+| 2026-10-08 | `AlfatechDemoSeeder` melakukan query pada model ber-scope tanpa konteks. | `PlatformSeederTest` gagal | Seeder dibungkus `TenantContext::runFor()`. Bagian dari 2.2.5, dikerjakan lebih awal karena scope langsung memblokirnya |
+| 2026-10-12 | `activity_logs` ikut ber-scope pada hari yang sama dengan model lain, bukan menyusul. | — | Tidak ada penyesuaian khusus; `ActivityObserver` hanya menulis (`create`), tidak pernah query |
 
 ---
 
@@ -291,11 +298,14 @@ _Belum ada entri._
 
 > **Diisi saat pengerjaan.**
 
-_Belum ada entri._
-
 | Tanggal | Keputusan | Alasan |
 |---|---|---|
-| — | — | — |
+| 2026-10-08 | **D-03 disetujui** — global scope diterapkan pada seluruh model tenant-scoped | Isolasi tidak lagi bergantung pada ingatan developer; jaring pengaman P-1 sudah hijau dan wajib di CI |
+| 2026-10-08 | Scope diaktifkan **per model** lewat saklar sementara `usesTeamScope()`, lalu saklar dihapus setelah semua model tercakup (2026-10-12) | Agar setiap kegagalan dapat diatribusikan ke satu model (RSK-01); scaffolding sementara dibuang setelah tidak dipakai |
+| 2026-10-08 | Scope di `BelongsToTeam` dibuat **unconditional** setelah seluruh model tercakup | Model yang memakai trait itu memang tenant-owned; satu-satunya jalan keluar adalah `withoutTeamScope()` yang eksplisit |
+| 2026-10-08 | Jalur khusus yang dibereskan lebih awal: route publik + seeder | Keduanya langsung gagal begitu scope aktif; menundanya hanya membuat suite merah |
+| 2026-10-08 | Fail-loud memakai exception khusus yang menyebut nama model | Penyebab langsung terlihat dari stack trace, tanpa perlu debug tambahan |
+| 2026-10-08 | `runFor()` **memulihkan** konteks sebelumnya (bukan sekadar menghapusnya) | `runFor()` bersarang tidak boleh melebarkan scope luar secara diam-diam, dan konteks tetap bersih bila callback melempar exception |
 
 ---
 

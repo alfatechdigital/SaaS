@@ -235,28 +235,34 @@ Dokumen induk tetap berlaku sebagai peta jangka panjang. Yang berubah hanyalah *
 Bisa ditempel langsung sebagai issue atau GitHub Project.
 
 **P-0 — Version control**
-- [ ] Repository git aktif di lokasi yang benar
-- [ ] `.gitignore` ditinjau; pastikan `docs/` **tidak** diabaikan
-- [ ] Commit pertama; repository sudah ter-*push* ke GitHub
+- [x] Repository git aktif di lokasi yang benar
+- [x] `.gitignore` ditinjau; pastikan `docs/` **tidak** diabaikan
+- [x] Commit pertama; repository sudah ter-*push* ke GitHub
 - [ ] Pertimbangkan memindahkan proyek keluar dari folder OneDrive
 
 **P-1 — Test isolasi tenant**
-- [ ] Helper test dua tenant berdata mirip
-- [ ] Test `index` untuk 8 modul
-- [ ] Test `update`/`delete` lintas tenant
-- [ ] Test akses non-anggota
-- [ ] Test halaman publik & form konsultasi
-- [ ] Test dijalankan wajib di CI
-- [ ] **Dibuktikan gagal** saat `forTeam()` sengaja dihapus
+- [x] Helper test dua tenant berdata mirip
+- [x] Test `index` untuk 8 modul
+- [x] Test `update`/`delete` lintas tenant
+- [x] Test akses non-anggota
+- [x] Test halaman publik & form konsultasi
+- [x] Test dijalankan wajib di CI
+- [x] **Dibuktikan gagal** saat `forTeam()` sengaja dihapus
 
 **P-2 — Global scope**
-- [ ] `TenantContext` dibuat
-- [ ] `TenantContext` menggantikan resolusi tenant yang tersebar
-- [ ] Global scope aktif per model
-- [ ] Query tanpa konteks gagal keras
-- [ ] `withoutTeamScope()` tersedia dan terdokumentasi
+- [x] `TenantContext` dibuat
+- [x] `TenantContext` menggantikan resolusi tenant yang tersebar
+- [x] Global scope aktif per model
+- [x] Query tanpa konteks gagal keras
+- [x] `withoutTeamScope()` tersedia dan terdokumentasi
 - [ ] Platform layer, seeder, dan command tetap berfungsi
 - [ ] Suite isolasi P-1 tetap hijau tanpa mengubah ekspektasi
+
+> **Status 2026-10-12.**
+> - **P-0** selesai, kecuali memindahkan proyek keluar dari OneDrive (belum dilakukan).
+> - **P-1** selesai, termasuk bukti mutation. Langkah gerbang CI sudah dipasang di `.github/workflows/tests.yml`, **tetapi belum pernah benar-benar berjalan**: workflow hanya trigger pada `push` ke `main` dan `pull_request`, sedangkan pekerjaan di-*push* ke branch `syahrul-dev`. Perlu diputuskan sebelum gate ini punya arti.
+> - **P-2** — 2.1 dan 2.2.1–2.2.3 selesai (scope aktif di seluruh 8 model, fail-loud, `withoutTeamScope()`). Dua kotak terakhir sengaja belum dicentang: audit jalur khusus, penghapusan `->forTeam()` yang redundan, dan verifikasi ulang suite isolasi adalah 2.2.4–2.2.7 (Selasa 13 Okt). Platform layer + seeder sudah hijau, `command` belum diaudit.
+> - **P-3**, **P-4**, **P-5** belum dimulai.
 
 **P-3 — Database produksi**
 - [ ] CI menjalankan migrasi di MySQL dan Postgres
