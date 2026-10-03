@@ -15,7 +15,11 @@ export function useToast() {
     /**
      * Show a toast notification.
      */
-    function showToast(message: string, type: ToastType = 'success', title?: string): void {
+    function showToast(
+        message: string,
+        type: ToastType = 'success',
+        title?: string,
+    ): void {
         const content = title ?? message;
         const options = title ? { description: message } : undefined;
 

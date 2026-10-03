@@ -21,18 +21,19 @@ Sesudah itu, kembali ke dokumen induk.
 
 ## 1. Ringkasan (TL;DR)
 
-| Urutan | Item | Sifat | Kenapa di sini |
-|---|---|---|---|
-| **P-0** | Version control | Prasyarat | Kamu akan upload ke GitHub — tanpa `.git`, tidak ada apa pun untuk di-review |
-| **P-1** | Test isolasi tenant | **DEFECT** | Satu-satunya item yang merupakan cacat, bukan hygiene |
-| **P-2** | Global scope isolasi tenant | **DEFECT** | Perbaikan definitif dari P-1 |
-| **P-3** | MySQL + Redis | Infrastruktur | Wajib sebelum tenant kedua, tapi **setelah** P-1/P-2 |
-| **P-4** | Keputusan istilah "team" | Naming | Murah, gratis, mencegah kebingungan tim |
-| **P-5** | Audit platform + backup | Safety net | Sebelum ada tenant yang datanya berharga |
-| **G-1…G-5** | **Integrasi gelombang 1** (WhatsApp bot, cashflow minimalis, SEO automation, SaaS billing, payment link Lite) | Fitur produk | ✅ **Disetujui 2026-09-30** — dikerjakan **setelah** P-0…P-5 |
-| — | Custom domain, e-commerce penuh, AI, analytics, media manager | Fitur produk | **JANGAN dulu** |
+| Urutan      | Item                                                                                                          | Sifat         | Kenapa di sini                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------- |
+| **P-0**     | Version control                                                                                               | Prasyarat     | Kamu akan upload ke GitHub — tanpa `.git`, tidak ada apa pun untuk di-review |
+| **P-1**     | Test isolasi tenant                                                                                           | **DEFECT**    | Satu-satunya item yang merupakan cacat, bukan hygiene                        |
+| **P-2**     | Global scope isolasi tenant                                                                                   | **DEFECT**    | Perbaikan definitif dari P-1                                                 |
+| **P-3**     | MySQL + Redis                                                                                                 | Infrastruktur | Wajib sebelum tenant kedua, tapi **setelah** P-1/P-2                         |
+| **P-4**     | Keputusan istilah "team"                                                                                      | Naming        | Murah, gratis, mencegah kebingungan tim                                      |
+| **P-5**     | Audit platform + backup                                                                                       | Safety net    | Sebelum ada tenant yang datanya berharga                                     |
+| **G-1…G-5** | **Integrasi gelombang 1** (WhatsApp bot, cashflow minimalis, SEO automation, SaaS billing, payment link Lite) | Fitur produk  | ✅ **Disetujui 2026-09-30** — dikerjakan **setelah** P-0…P-5                 |
+| —           | Custom domain, e-commerce penuh, AI, analytics, media manager                                                 | Fitur produk  | **JANGAN dulu**                                                              |
 
 **Prinsip pemisahnya sederhana:**
+
 - **P-1 dan P-2 adalah cacat** → memperbaiki = menghilangkan risiko.
 - **P-3 sampai P-5 adalah hygiene** → memperbaiki = memindahkan batas kapasitas.
 - **Sisanya adalah produk** → memperbaiki = menambah nilai, tapi hanya setelah ada pelanggan.
@@ -46,16 +47,19 @@ Sesudah itu, kembali ke dokumen induk.
 **Temuan:** `git log` di folder ini gagal dengan pesan `fatal: not a git repository (or any of the parent directories)`. Artinya, folder ini **bukan repository git**.
 
 **Kenapa ini masuk daftar urgent:** rencanamu adalah meng-upload ke GitHub supaya tim bisa mulai bekerja. Tanpa `.git`:
+
 - tidak ada history, sehingga tidak ada rollback;
 - tim tidak bisa membuat pull request, sehingga tidak ada proses review;
 - penyebab bug tidak dapat dilacak (`git blame` tidak tersedia).
 
 **Tindakan:**
-1. Pastikan repository di-*init* di lokasi yang benar, dan `.gitignore` sudah sesuai.
-2. Pastikan folder `docs/` **ikut terlacak** (jangan di-*ignore*) — dokumen perencanaan ini harus ikut ke GitHub. Saat ini `.gitignore` tidak mengecualikan `docs/`, jadi ini aman.
+
+1. Pastikan repository di-_init_ di lokasi yang benar, dan `.gitignore` sudah sesuai.
+2. Pastikan folder `docs/` **ikut terlacak** (jangan di-_ignore_) — dokumen perencanaan ini harus ikut ke GitHub. Saat ini `.gitignore` tidak mengecualikan `docs/`, jadi ini aman.
 3. **Perhatikan OneDrive.** Menyimpan `.git` di dalam folder yang disinkronkan OneDrive adalah kombinasi rawan: berkas `.git` dapat rusak atau hilang saat sinkronisasi, terutama ketika folder berisi `node_modules` dan `vendor` dalam jumlah besar. Pertimbangkan memindahkan proyek ke path lokal biasa, atau minimal pastikan repository remote (GitHub) selalu menjadi sumber kebenaran.
 
 **Kriteria selesai:**
+
 - `git status` berjalan tanpa error.
 - `git ls-files docs` menampilkan `IMPLEMENTATION_PLAN.md`, `syarhul-implementation-urgent.md`, dan kelima dokumen fase.
 - Riwayat commit pertama sudah ada.
@@ -79,13 +83,14 @@ Sesudah itu, kembali ke dokumen induk.
 Untuk produk SaaS, kebocoran data antar pelanggan bukan sekadar bug — ini insiden yang tidak dapat ditarik kembali, dan menyangkut kepercayaan serta potensi masalah hukum.
 
 **Tindakan:**
+
 1. Buat helper test dengan **dua tenant berisi data yang sengaja dibuat mirip** (nama perusahaan sama, hanya `team_id` berbeda). Dua tenant dengan data yang jelas berbeda tidak akan membuktikan apa pun.
 2. Uji `index` untuk seluruh modul: proyek, task, lead, content, transaction, portfolio, activity-log, company-profile.
 3. Uji `update`/`delete` terhadap ID milik tenant lain → harus 404/403.
 4. Uji user non-anggota membuka `{current_team}/dashboard` → harus 403.
 5. Uji halaman publik tenant B tidak membocorkan data tenant A.
 6. Uji form konsultasi tenant B tidak menulis lead ke tenant A.
-7. Jadikan kelompok test ini **wajib di CI** dan jangan pernah di-*skip*.
+7. Jadikan kelompok test ini **wajib di CI** dan jangan pernah di-_skip_.
 
 **Bukti bahwa test ini bukan test palsu (wajib dilakukan).**
 Sementara hapus `->forTeam(...)` dari salah satu controller, jalankan test, dan pastikan test **GAGAL**. Lalu kembalikan. Test isolasi yang selalu hijau tidak membuktikan apa pun.
@@ -103,6 +108,7 @@ Sementara hapus `->forTeam(...)` dari salah satu controller, jalankan test, dan 
 **Kenapa urutannya setelah P-1, bukan bersamaan.** Global scope mengubah perilaku hampir semua query. Tanpa jaring pengaman dari P-1, kamu tidak akan bisa membedakan mana kegagalan akibat perubahan dan mana yang memang sudah bocor sebelumnya. **P-1 adalah alat ukurnya; P-2 adalah perbaikannya.**
 
 **Tindakan:**
+
 1. Buat `TenantContext` sebagai satu sumber tenant aktif.
 2. Pasang global scope di trait `BelongsToTeam`, **per model, satu per satu** — jalankan test setiap langkah.
 3. Buat query model tenant-scoped tanpa konteks **gagal keras** (exception), jangan mengembalikan data yang salah.
@@ -150,6 +156,7 @@ Sementara hapus `->forTeam(...)` dari salah satu controller, jalankan test, dan 
 - Nilainya bagi user: nol. Ini persis jenis pekerjaan yang perencanaan ini secara sengaja hindari ("jangan refactor hanya demi gaya").
 
 **Tindakan (murah, selesai dalam hitungan menit):**
+
 1. Tetapkan glosarium: **`Team` = Tenant** (satu perusahaan/organisasi yang berlangganan).
 2. Tulis satu paragraf penjelasan di `README.md`.
 3. Catat keputusannya di dokumen induk (ADR-02).
@@ -181,13 +188,13 @@ Sementara hapus `->forTeam(...)` dari salah satu controller, jalankan test, dan 
 
 ### 3.1 Delegasi baru: integrasi gelombang 1
 
-| Item | Lingkup yang **disetujui** | Lingkup yang **tetap dilarang** |
-|---|---|---|
-| **WhatsApp** | Bot **dua arah** (pengiriman + webhook masuk + balasan otomatis) | Kampanye massal, template lanjutan |
-| **Cashflow** | **Minimalis**: laporan periode/kategori, dashboard, ekspor | Laporan & analitik lanjutan |
-| **SEO automation** | **Dasar**: otomasi meta/schema, ping sitemap | Skor SEO, audit on-page, Search Console, hreflang, redirect manager |
-| **SaaS billing** | Langganan tenant → platform, invoice, webhook | Dunning otomatis, trial otomatis, UI upgrade/downgrade |
-| **Payment** | **Lite**: payment link/invoice untuk pelanggan tenant | **Full**: katalog, keranjang, pesanan, ongkir (butuh B-4) |
+| Item               | Lingkup yang **disetujui**                                       | Lingkup yang **tetap dilarang**                                     |
+| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **WhatsApp**       | Bot **dua arah** (pengiriman + webhook masuk + balasan otomatis) | Kampanye massal, template lanjutan                                  |
+| **Cashflow**       | **Minimalis**: laporan periode/kategori, dashboard, ekspor       | Laporan & analitik lanjutan                                         |
+| **SEO automation** | **Dasar**: otomasi meta/schema, ping sitemap                     | Skor SEO, audit on-page, Search Console, hreflang, redirect manager |
+| **SaaS billing**   | Langganan tenant → platform, invoice, webhook                    | Dunning otomatis, trial otomatis, UI upgrade/downgrade              |
+| **Payment**        | **Lite**: payment link/invoice untuk pelanggan tenant            | **Full**: katalog, keranjang, pesanan, ongkir (butuh B-4)           |
 
 > Integrasi ini **tetap** dikerjakan **setelah** P-0…P-5. Jangan biarkan pekerjaan integrasi menunda perbaikan cacat isolasi tenant.
 
@@ -195,15 +202,15 @@ Sementara hapus `->forTeam(...)` dari salah satu controller, jalankan test, dan 
 
 Semua ini tetap bernilai rendah atau berisiko tinggi untuk sekarang:
 
-| Item | Alasan ditunda |
-|---|---|
-| Custom domain (penuh) | Fitur belum disetujui (PDR-04); butuh DNS, reverse proxy, dan SSL |
-| Storage / media manager | Belum ada satu pun upload di aplikasi |
-| AI / automation | Belum disetujui; berisiko biaya tak terkendali |
-| Katalog / pesanan / keranjang (e-commerce penuh) | Ini bisnis baru, bukan sekadar modul — keputusan "Lite dulu" |
-| Memperluas CMS | Belum ada kebutuhan nyata |
-| Otomasi SEO tingkat lanjut | Fondasi SEO sudah cukup untuk sekarang |
-| Analytics & reporting | Belum disetujui |
+| Item                                             | Alasan ditunda                                                    |
+| ------------------------------------------------ | ----------------------------------------------------------------- |
+| Custom domain (penuh)                            | Fitur belum disetujui (PDR-04); butuh DNS, reverse proxy, dan SSL |
+| Storage / media manager                          | Belum ada satu pun upload di aplikasi                             |
+| AI / automation                                  | Belum disetujui; berisiko biaya tak terkendali                    |
+| Katalog / pesanan / keranjang (e-commerce penuh) | Ini bisnis baru, bukan sekadar modul — keputusan "Lite dulu"      |
+| Memperluas CMS                                   | Belum ada kebutuhan nyata                                         |
+| Otomasi SEO tingkat lanjut                       | Fondasi SEO sudah cukup untuk sekarang                            |
+| Analytics & reporting                            | Belum disetujui                                                   |
 
 Rujukan: `phase-05-fitur-masa-depan.md`.
 
@@ -213,20 +220,20 @@ Rujukan: `phase-05-fitur-masa-depan.md`.
 
 Dokumen induk tetap berlaku sebagai peta jangka panjang. Yang berubah hanyalah **urutan eksekusi**.
 
-| Prioritas di sini | Setara dengan | Catatan |
-|---|---|---|
-| P-0 Version control | Menyisipkan temuan baru | Belum ada di dokumen induk — perlu ditambahkan sebagai risiko |
-| P-1 Test isolasi tenant | **Fase 1**, tugas 1.2 | Naik menjadi pekerjaan pertama |
-| P-2 Global scope | **Fase 2**, tugas 2.1–2.2 | Tetap tepat setelah P-1 |
-| P-3 MySQL + Redis | **Fase 1** tugas 1.4.5 + **Fase 3** + §17 | Dinaikkan prioritasnya menjadi "sebelum deploy pertama" |
-| P-4 Istilah "team" | **Fase 1**, tugas 1.1.4 | Diturunkan menjadi keputusan dokumen saja |
-| P-5 Audit + backup | **Fase 2** tugas 2.4 + §17 | Tepat setelah isolasi beres |
-| — | **Fase 3** (SEO/domain) | Ditunda sampai P-1 s/d P-4 selesai |
-| **Gelombang 1** (integrasi) | `phase-05` item **B-2, B-3, B-5 Lite, B-6, B-8** | Disetujui 2026-09-30; jadwal di `implementation-schedule.md` |
-| — | **Fase 4** (entitlement) | **Gelombang 1** — dibutuhkan oleh SaaS billing (ADR-06/ADR-14 disetujui) |
-| — | **Fase 5** (sisa backlog) | Tetap DILARANG |
+| Prioritas di sini           | Setara dengan                                    | Catatan                                                                  |
+| --------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------ |
+| P-0 Version control         | Menyisipkan temuan baru                          | Belum ada di dokumen induk — perlu ditambahkan sebagai risiko            |
+| P-1 Test isolasi tenant     | **Fase 1**, tugas 1.2                            | Naik menjadi pekerjaan pertama                                           |
+| P-2 Global scope            | **Fase 2**, tugas 2.1–2.2                        | Tetap tepat setelah P-1                                                  |
+| P-3 MySQL + Redis           | **Fase 1** tugas 1.4.5 + **Fase 3** + §17        | Dinaikkan prioritasnya menjadi "sebelum deploy pertama"                  |
+| P-4 Istilah "team"          | **Fase 1**, tugas 1.1.4                          | Diturunkan menjadi keputusan dokumen saja                                |
+| P-5 Audit + backup          | **Fase 2** tugas 2.4 + §17                       | Tepat setelah isolasi beres                                              |
+| —                           | **Fase 3** (SEO/domain)                          | Ditunda sampai P-1 s/d P-4 selesai                                       |
+| **Gelombang 1** (integrasi) | `phase-05` item **B-2, B-3, B-5 Lite, B-6, B-8** | Disetujui 2026-09-30; jadwal di `implementation-schedule.md`             |
+| —                           | **Fase 4** (entitlement)                         | **Gelombang 1** — dibutuhkan oleh SaaS billing (ADR-06/ADR-14 disetujui) |
+| —                           | **Fase 5** (sisa backlog)                        | Tetap DILARANG                                                           |
 
-**Satu-satunya perubahan urutan besar:** Fase 1 dipecah. Pekerjaan yang bersifat *defect* (P-1) didahulukan, sedangkan pekerjaan *persiapan* (storage seam, SEO, konfigurasi) menyusul. Global scope (Fase 2) naik menjadi pekerjaan ketiga.
+**Satu-satunya perubahan urutan besar:** Fase 1 dipecah. Pekerjaan yang bersifat _defect_ (P-1) didahulukan, sedangkan pekerjaan _persiapan_ (storage seam, SEO, konfigurasi) menyusul. Global scope (Fase 2) naik menjadi pekerjaan ketiga.
 
 ---
 
@@ -235,12 +242,14 @@ Dokumen induk tetap berlaku sebagai peta jangka panjang. Yang berubah hanyalah *
 Bisa ditempel langsung sebagai issue atau GitHub Project.
 
 **P-0 — Version control**
+
 - [x] Repository git aktif di lokasi yang benar
 - [x] `.gitignore` ditinjau; pastikan `docs/` **tidak** diabaikan
-- [x] Commit pertama; repository sudah ter-*push* ke GitHub
+- [x] Commit pertama; repository sudah ter-_push_ ke GitHub
 - [ ] Pertimbangkan memindahkan proyek keluar dari folder OneDrive
 
 **P-1 — Test isolasi tenant**
+
 - [x] Helper test dua tenant berdata mirip
 - [x] Test `index` untuk 8 modul
 - [x] Test `update`/`delete` lintas tenant
@@ -250,6 +259,7 @@ Bisa ditempel langsung sebagai issue atau GitHub Project.
 - [x] **Dibuktikan gagal** saat `forTeam()` sengaja dihapus
 
 **P-2 — Global scope**
+
 - [x] `TenantContext` dibuat
 - [x] `TenantContext` menggantikan resolusi tenant yang tersebar
 - [x] Global scope aktif per model
@@ -259,30 +269,35 @@ Bisa ditempel langsung sebagai issue atau GitHub Project.
 - [ ] Suite isolasi P-1 tetap hijau tanpa mengubah ekspektasi
 
 > **Status 2026-10-12.**
+>
 > - **P-0** selesai, kecuali memindahkan proyek keluar dari OneDrive (belum dilakukan).
-> - **P-1** selesai, termasuk bukti mutation. Langkah gerbang CI sudah dipasang di `.github/workflows/tests.yml`, **tetapi belum pernah benar-benar berjalan**: workflow hanya trigger pada `push` ke `main` dan `pull_request`, sedangkan pekerjaan di-*push* ke branch `syahrul-dev`. Perlu diputuskan sebelum gate ini punya arti.
+> - **P-1** selesai, termasuk bukti mutation. Langkah gerbang CI sudah dipasang di `.github/workflows/tests.yml`, **tetapi belum pernah benar-benar berjalan**: workflow hanya trigger pada `push` ke `main` dan `pull_request`, sedangkan pekerjaan di-_push_ ke branch `syahrul-dev`. Perlu diputuskan sebelum gate ini punya arti.
 > - **P-2** — 2.1 dan 2.2.1–2.2.3 selesai (scope aktif di seluruh 8 model, fail-loud, `withoutTeamScope()`). Dua kotak terakhir sengaja belum dicentang: audit jalur khusus, penghapusan `->forTeam()` yang redundan, dan verifikasi ulang suite isolasi adalah 2.2.4–2.2.7 (Selasa 13 Okt). Platform layer + seeder sudah hijau, `command` belum diaudit.
 > - **P-3**, **P-4**, **P-5** belum dimulai.
 
 **P-3 — Database produksi**
+
 - [ ] CI menjalankan migrasi di MySQL dan Postgres
 - [ ] Cache, session, queue dipindahkan ke Redis
 - [ ] Guard: `APP_ENV=production` tidak memakai SQLite
 - [ ] Rencana cutover disiapkan untuk deployment pertama
 
 **P-4 — Istilah "team"**
+
 - [ ] Glosarium: `Team` = Tenant
 - [ ] Catatan di `README.md`
 - [ ] Dicatat sebagai ADR-02 di dokumen induk
 - [ ] **Tidak ada** rename tabel/kolom
 
 **P-5 — Audit & backup**
+
 - [ ] `platform_audit_logs` dibuat
 - [ ] Buat/hapus/suspend/moderasi tenant tercatat
 - [ ] Backup terjadwal
 - [ ] Restore diuji dan berhasil
 
 **Quality gate sebelum setiap PR digabung**
+
 - [ ] `composer test` hijau (pint + phpstan level 7 + phpunit)
 - [ ] `npm run types:check` hijau
 - [ ] `npm run build` dijalankan sebelum `php artisan test`
@@ -302,7 +317,7 @@ Bisa ditempel langsung sebagai issue atau GitHub Project.
 
 ## Riwayat Perubahan
 
-| Versi | Tanggal | Perubahan | Penulis |
-|---|---|---|---|
-| 1.0.0 | 2026-09-23 | Dibuat sebagai panduan prioritas sebelum tim mulai bekerja | Software Architect |
+| Versi | Tanggal    | Perubahan                                                                                                                                                                                                                                                                | Penulis            |
+| ----- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| 1.0.0 | 2026-09-23 | Dibuat sebagai panduan prioritas sebelum tim mulai bekerja                                                                                                                                                                                                               | Software Architect |
 | 1.1.0 | 2026-09-30 | Lima integrasi (WhatsApp bot, cashflow minimalis, SEO automation, SaaS billing, payment link Lite) disetujui masuk gelombang 1; bagian "JANGAN dikerjakan dulu" dipisah menjadi lingkup yang disetujui vs tetap dilarang; rujukan ke `implementation-schedule.md` v2.0.0 | Software Architect |

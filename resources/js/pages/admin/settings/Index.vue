@@ -56,7 +56,12 @@ const initials = computed(() =>
         .join(''),
 );
 
-const themeOptions: { value: Appearance; label: string; description: string; icon: string }[] = [
+const themeOptions: {
+    value: Appearance;
+    label: string;
+    description: string;
+    icon: string;
+}[] = [
     {
         value: 'light',
         label: 'Mode Terang',
@@ -87,7 +92,10 @@ const activeThemeLabel = computed(() => {
         return '';
     }
 
-    return themeOptions.find((option) => option.value === appearance.value)?.label ?? '';
+    return (
+        themeOptions.find((option) => option.value === appearance.value)
+            ?.label ?? ''
+    );
 });
 
 function toggleQuickTheme(): void {
@@ -95,12 +103,36 @@ function toggleQuickTheme(): void {
 }
 
 const systemRows = computed(() => [
-    { label: 'Basis Data', value: props.system.database, detail: 'Eloquent + migration' },
-    { label: 'Cache', value: props.system.cache, detail: 'Store cache aplikasi' },
-    { label: 'Queue', value: props.system.queue, detail: 'Driver antrian pekerjaan' },
-    { label: 'Session', value: props.system.session, detail: 'Penyimpanan sesi login' },
-    { label: 'Mail', value: props.system.mail, detail: 'Pengiriman email transaksional' },
-    { label: 'Versi', value: `Laravel ${props.system.laravel}`, detail: `PHP ${props.system.php}` },
+    {
+        label: 'Basis Data',
+        value: props.system.database,
+        detail: 'Eloquent + migration',
+    },
+    {
+        label: 'Cache',
+        value: props.system.cache,
+        detail: 'Store cache aplikasi',
+    },
+    {
+        label: 'Queue',
+        value: props.system.queue,
+        detail: 'Driver antrian pekerjaan',
+    },
+    {
+        label: 'Session',
+        value: props.system.session,
+        detail: 'Penyimpanan sesi login',
+    },
+    {
+        label: 'Mail',
+        value: props.system.mail,
+        detail: 'Pengiriman email transaksional',
+    },
+    {
+        label: 'Versi',
+        value: `Laravel ${props.system.laravel}`,
+        detail: `PHP ${props.system.php}`,
+    },
 ]);
 </script>
 
@@ -113,7 +145,9 @@ const systemRows = computed(() => [
             class="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-colors sm:p-6 dark:border-slate-800 dark:bg-slate-900"
         >
             <div class="mb-1 flex items-center gap-2">
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
+                <h1
+                    class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100"
+                >
                     Pengaturan Sistem &amp; Tema
                 </h1>
                 <span
@@ -123,7 +157,8 @@ const systemRows = computed(() => [
                 </span>
             </div>
             <p class="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                Sesuaikan tampilan antarmuka, tinjau profil akun operasional, dan periksa status sistem.
+                Sesuaikan tampilan antarmuka, tinjau profil akun operasional,
+                dan periksa status sistem.
             </p>
         </div>
 
@@ -133,13 +168,19 @@ const systemRows = computed(() => [
         >
             <div class="border-b border-slate-100 pb-4 dark:border-slate-800">
                 <div class="flex items-center gap-2.5">
-                    <span class="material-symbols-outlined text-[22px] text-blue-600 dark:text-blue-400">palette</span>
+                    <span
+                        class="material-symbols-outlined text-[22px] text-blue-600 dark:text-blue-400"
+                        >palette</span
+                    >
                     <div>
-                        <h2 class="text-base font-bold text-slate-900 dark:text-slate-100">
+                        <h2
+                            class="text-base font-bold text-slate-900 dark:text-slate-100"
+                        >
                             Pilihan Tema Tampilan
                         </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
-                            Preferensi disimpan di browser dan cookie, jadi ikut terbaca saat halaman dirender di server.
+                            Preferensi disimpan di browser dan cookie, jadi ikut
+                            terbaca saat halaman dirender di server.
                         </p>
                     </div>
                 </div>
@@ -164,21 +205,39 @@ const systemRows = computed(() => [
                     <div
                         class="mb-3 h-24 w-full overflow-hidden rounded-xl border border-slate-200 bg-[#faf8ff] p-2.5 shadow-xs dark:border-slate-700 dark:bg-slate-950"
                     >
-                        <div class="mb-2 flex items-center justify-between border-b border-slate-200 pb-1.5 dark:border-slate-800">
-                            <span class="h-1.5 w-8 rounded bg-slate-300 dark:bg-slate-700"></span>
-                            <span class="h-1.5 w-3 rounded bg-slate-200 dark:bg-slate-700"></span>
+                        <div
+                            class="mb-2 flex items-center justify-between border-b border-slate-200 pb-1.5 dark:border-slate-800"
+                        >
+                            <span
+                                class="h-1.5 w-8 rounded bg-slate-300 dark:bg-slate-700"
+                            ></span>
+                            <span
+                                class="h-1.5 w-3 rounded bg-slate-200 dark:bg-slate-700"
+                            ></span>
                         </div>
-                        <div class="h-6 rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"></div>
+                        <div
+                            class="h-6 rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                        ></div>
                     </div>
 
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[20px] text-slate-500 dark:text-slate-300">
+                            <span
+                                class="material-symbols-outlined text-[20px] text-slate-500 dark:text-slate-300"
+                            >
                                 {{ option.icon }}
                             </span>
                             <div>
-                                <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ option.label }}</h3>
-                                <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ option.description }}</p>
+                                <h3
+                                    class="text-sm font-bold text-slate-900 dark:text-slate-100"
+                                >
+                                    {{ option.label }}
+                                </h3>
+                                <p
+                                    class="text-[11px] text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ option.description }}
+                                </p>
                             </div>
                         </div>
                         <span
@@ -195,12 +254,23 @@ const systemRows = computed(() => [
                 v-if="mounted"
                 class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs dark:border-slate-700 dark:bg-slate-800/60"
             >
-                <div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                    <span class="material-symbols-outlined text-[18px] text-blue-600 dark:text-blue-400">info</span>
+                <div
+                    class="flex items-center gap-2 text-slate-600 dark:text-slate-300"
+                >
+                    <span
+                        class="material-symbols-outlined text-[18px] text-blue-600 dark:text-blue-400"
+                        >info</span
+                    >
                     <span>
-                        Tema aktif saat ini: <strong>{{ activeThemeLabel }}</strong>
+                        Tema aktif saat ini:
+                        <strong>{{ activeThemeLabel }}</strong>
                         <template v-if="appearance === 'system'">
-                            ({{ resolvedAppearance === 'dark' ? 'Gelap' : 'Terang' }} mengikuti sistem)
+                            ({{
+                                resolvedAppearance === 'dark'
+                                    ? 'Gelap'
+                                    : 'Terang'
+                            }}
+                            mengikuti sistem)
                         </template>
                     </span>
                 </div>
@@ -209,7 +279,8 @@ const systemRows = computed(() => [
                     class="font-bold text-blue-600 hover:underline dark:text-blue-400"
                     @click="toggleQuickTheme"
                 >
-                    Beralih Cepat ke {{ resolvedAppearance === 'dark' ? 'Terang' : 'Gelap' }}
+                    Beralih Cepat ke
+                    {{ resolvedAppearance === 'dark' ? 'Terang' : 'Gelap' }}
                 </button>
             </div>
         </div>
@@ -220,9 +291,14 @@ const systemRows = computed(() => [
         >
             <div class="border-b border-slate-100 pb-4 dark:border-slate-800">
                 <div class="flex items-center gap-2.5">
-                    <span class="material-symbols-outlined text-[22px] text-emerald-600 dark:text-emerald-400">badge</span>
+                    <span
+                        class="material-symbols-outlined text-[22px] text-emerald-600 dark:text-emerald-400"
+                        >badge</span
+                    >
                     <div>
-                        <h2 class="text-base font-bold text-slate-900 dark:text-slate-100">
+                        <h2
+                            class="text-base font-bold text-slate-900 dark:text-slate-100"
+                        >
                             Profil Akun &amp; Hak Akses
                         </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
@@ -240,15 +316,23 @@ const systemRows = computed(() => [
                 </span>
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <h3 class="text-base font-bold text-slate-900 dark:text-slate-100">{{ user?.name }}</h3>
+                        <h3
+                            class="text-base font-bold text-slate-900 dark:text-slate-100"
+                        >
+                            {{ user?.name }}
+                        </h3>
                         <span
                             class="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800 uppercase dark:bg-blue-900/60 dark:text-blue-300"
                         >
                             {{ team?.roleLabel ?? 'Tanpa Tim' }}
                         </span>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ user?.email }}</p>
-                    <p class="mt-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        {{ user?.email }}
+                    </p>
+                    <p
+                        class="mt-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                    >
                         Jabatan: {{ user?.job_title ?? 'Belum diisi' }}
                     </p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
@@ -257,26 +341,34 @@ const systemRows = computed(() => [
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 text-xs sm:grid-cols-3 dark:border-slate-800">
+            <div
+                class="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 text-xs sm:grid-cols-3 dark:border-slate-800"
+            >
                 <Link
                     :href="profileEdit()"
                     class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5 font-semibold text-slate-700 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
                 >
-                    <span class="material-symbols-outlined text-[18px]">person</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >person</span
+                    >
                     <span>Ubah Profil</span>
                 </Link>
                 <Link
                     :href="securityEdit()"
                     class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5 font-semibold text-slate-700 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
                 >
-                    <span class="material-symbols-outlined text-[18px]">lock</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >lock</span
+                    >
                     <span>Keamanan &amp; Passkey</span>
                 </Link>
                 <Link
                     :href="teamIndex.url({ current_team: teamSlug })"
                     class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5 font-semibold text-slate-700 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
                 >
-                    <span class="material-symbols-outlined text-[18px]">group</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >group</span
+                    >
                     <span>Kelola Tim</span>
                 </Link>
             </div>
@@ -288,32 +380,49 @@ const systemRows = computed(() => [
         >
             <div class="border-b border-slate-100 pb-4 dark:border-slate-800">
                 <div class="flex items-center gap-2.5">
-                    <span class="material-symbols-outlined text-[22px] text-indigo-600 dark:text-indigo-400">
+                    <span
+                        class="material-symbols-outlined text-[22px] text-indigo-600 dark:text-indigo-400"
+                    >
                         cloud_done
                     </span>
                     <div>
-                        <h2 class="text-base font-bold text-slate-900 dark:text-slate-100">Status Sistem</h2>
+                        <h2
+                            class="text-base font-bold text-slate-900 dark:text-slate-100"
+                        >
+                            Status Sistem
+                        </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
-                            Konfigurasi backend yang sedang dipakai aplikasi ini.
+                            Konfigurasi backend yang sedang dipakai aplikasi
+                            ini.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3">
+            <div
+                class="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3"
+            >
                 <div
                     v-for="row in systemRows"
                     :key="row.label"
                     class="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-800/50"
                 >
-                    <span class="text-[11px] font-bold text-slate-400 uppercase dark:text-slate-500">
+                    <span
+                        class="text-[11px] font-bold text-slate-400 uppercase dark:text-slate-500"
+                    >
                         {{ row.label }}
                     </span>
-                    <div class="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
-                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <div
+                        class="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200"
+                    >
+                        <span
+                            class="h-2 w-2 rounded-full bg-emerald-500"
+                        ></span>
                         <span class="capitalize">{{ row.value }}</span>
                     </div>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ row.detail }}</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                        {{ row.detail }}
+                    </p>
                 </div>
             </div>
         </div>

@@ -134,7 +134,9 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
             >
                 <div class="flex items-start gap-3.5">
                     <div class="relative flex-shrink-0">
-                        <Avatar class="h-14 w-14 ring-2 ring-slate-100 dark:ring-slate-800">
+                        <Avatar
+                            class="h-14 w-14 ring-2 ring-slate-100 dark:ring-slate-800"
+                        >
                             <AvatarImage
                                 v-if="member.avatar"
                                 :src="member.avatar"
@@ -180,10 +182,7 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                                         :key="role.value"
                                         data-test="member-role-option"
                                         @click="
-                                            updateMemberRole(
-                                                member,
-                                                role.value,
-                                            )
+                                            updateMemberRole(member, role.value)
                                         "
                                     >
                                         {{ role.label }}
@@ -337,9 +336,7 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                         title="Batalkan undangan"
                         @click="confirmCancelInvitation(invitation)"
                     >
-                        <span
-                            class="material-symbols-outlined text-[18px]"
-                        >
+                        <span class="material-symbols-outlined text-[18px]">
                             close
                         </span>
                     </Button>

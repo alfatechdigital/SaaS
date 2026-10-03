@@ -9,7 +9,11 @@ import {
     update as leadUpdate,
 } from '@/routes/leads';
 import type { Lead, LeadStatus } from '@/types';
-import { formatRupiah, formatRupiahShort, getLeadStatusBadge } from '@/utils/formatters';
+import {
+    formatRupiah,
+    formatRupiahShort,
+    getLeadStatusBadge,
+} from '@/utils/formatters';
 
 /**
  * Sales pipeline: Kanban board + table view.
@@ -45,7 +49,11 @@ const convertingId = ref<number | null>(null);
 const sources = computed(() => [
     'all',
     ...Array.from(
-        new Set(props.leads.map((lead) => lead.source).filter((source): source is string => !!source)),
+        new Set(
+            props.leads
+                .map((lead) => lead.source)
+                .filter((source): source is string => !!source),
+        ),
     ),
 ]);
 
@@ -53,7 +61,10 @@ const filteredLeads = computed(() => {
     const query = searchQuery.value.trim().toLowerCase();
 
     return props.leads.filter((lead) => {
-        if (sourceFilter.value !== 'all' && lead.source !== sourceFilter.value) {
+        if (
+            sourceFilter.value !== 'all' &&
+            lead.source !== sourceFilter.value
+        ) {
             return false;
         }
 
@@ -78,18 +89,27 @@ const newLeadsCount = computed(
 );
 
 const negotiationLeads = computed(() =>
-    props.leads.filter((lead) => lead.status === 'proposal' || lead.status === 'negotiation'),
+    props.leads.filter(
+        (lead) => lead.status === 'proposal' || lead.status === 'negotiation',
+    ),
 );
 
 const negotiationValue = computed(() =>
-    negotiationLeads.value.reduce((total, lead) => total + lead.estimatedValue, 0),
+    negotiationLeads.value.reduce(
+        (total, lead) => total + lead.estimatedValue,
+        0,
+    ),
 );
 
 const closedLeads = computed(() =>
-    props.leads.filter((lead) => lead.status === 'won' || lead.status === 'lost'),
+    props.leads.filter(
+        (lead) => lead.status === 'won' || lead.status === 'lost',
+    ),
 );
 
-const wonLeadCount = computed(() => props.leads.filter((lead) => lead.status === 'won').length);
+const wonLeadCount = computed(
+    () => props.leads.filter((lead) => lead.status === 'won').length,
+);
 
 const winRate = computed(() => {
     if (closedLeads.value.length === 0) {
@@ -115,13 +135,48 @@ const pendingFollowUps = computed(() =>
         .slice(0, 3),
 );
 
-const kanbanColumns: { id: string; title: string; statuses: LeadStatus[]; accent: string }[] = [
-    { id: 'new', title: 'Prospek Baru', statuses: ['new'], accent: 'border-t-blue-500' },
-    { id: 'contacted', title: 'Dihubungi', statuses: ['contacted'], accent: 'border-t-sky-500' },
-    { id: 'meeting', title: 'Jadwal Meeting', statuses: ['follow_up', 'meeting'], accent: 'border-t-amber-500' },
-    { id: 'negotiation', title: 'Proposal & Negosiasi', statuses: ['proposal', 'negotiation'], accent: 'border-t-indigo-500' },
-    { id: 'won', title: 'Won / Deal', statuses: ['won'], accent: 'border-t-emerald-500' },
-    { id: 'lost', title: 'Lost / Batal', statuses: ['lost'], accent: 'border-t-rose-500' },
+const kanbanColumns: {
+    id: string;
+    title: string;
+    statuses: LeadStatus[];
+    accent: string;
+}[] = [
+    {
+        id: 'new',
+        title: 'Prospek Baru',
+        statuses: ['new'],
+        accent: 'border-t-blue-500',
+    },
+    {
+        id: 'contacted',
+        title: 'Dihubungi',
+        statuses: ['contacted'],
+        accent: 'border-t-sky-500',
+    },
+    {
+        id: 'meeting',
+        title: 'Jadwal Meeting',
+        statuses: ['follow_up', 'meeting'],
+        accent: 'border-t-amber-500',
+    },
+    {
+        id: 'negotiation',
+        title: 'Proposal & Negosiasi',
+        statuses: ['proposal', 'negotiation'],
+        accent: 'border-t-indigo-500',
+    },
+    {
+        id: 'won',
+        title: 'Won / Deal',
+        statuses: ['won'],
+        accent: 'border-t-emerald-500',
+    },
+    {
+        id: 'lost',
+        title: 'Lost / Batal',
+        statuses: ['lost'],
+        accent: 'border-t-rose-500',
+    },
 ];
 
 function columnLeads(statuses: LeadStatus[]): Lead[] {
@@ -129,7 +184,10 @@ function columnLeads(statuses: LeadStatus[]): Lead[] {
 }
 
 function columnValue(statuses: LeadStatus[]): number {
-    return columnLeads(statuses).reduce((total, lead) => total + lead.estimatedValue, 0);
+    return columnLeads(statuses).reduce(
+        (total, lead) => total + lead.estimatedValue,
+        0,
+    );
 }
 
 function whatsappLink(phone: string | null): string | null {
@@ -153,7 +211,8 @@ const inputClass =
     'w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600 focus:outline-none';
 const textareaClass =
     'w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600 focus:outline-none leading-relaxed';
-const labelClass = 'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
+const labelClass =
+    'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
 
 const form = useForm({
     company_name: '',
@@ -212,7 +271,13 @@ function saveLead(): void {
     };
 
     if (editingLead.value) {
-        form.put(leadUpdate.url({ current_team: teamSlug.value, lead: editingLead.value.id }), options);
+        form.put(
+            leadUpdate.url({
+                current_team: teamSlug.value,
+                lead: editingLead.value.id,
+            }),
+            options,
+        );
 
         return;
     }
@@ -248,13 +313,20 @@ function removeLead(lead: Lead): void {
         return;
     }
 
-    router.delete(leadDestroy.url({ current_team: teamSlug.value, lead: lead.id }), {
-        preserveScroll: true,
-    });
+    router.delete(
+        leadDestroy.url({ current_team: teamSlug.value, lead: lead.id }),
+        {
+            preserveScroll: true,
+        },
+    );
 }
 
 function convertLead(lead: Lead): void {
-    if (!window.confirm(`Konversi deal "${lead.companyName}" menjadi proyek pengembangan?`)) {
+    if (
+        !window.confirm(
+            `Konversi deal "${lead.companyName}" menjadi proyek pengembangan?`,
+        )
+    ) {
         return;
     }
 
@@ -298,11 +370,15 @@ function exportCsv(): void {
     ]);
 
     const csv = [header, ...rows]
-        .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+        .map((row) =>
+            row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','),
+        )
         .join('\r\n');
 
     // The BOM keeps Excel from mangling the Indonesian characters.
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([`\uFEFF${csv}`], {
+        type: 'text/csv;charset=utf-8;',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
 
@@ -322,11 +398,16 @@ function exportCsv(): void {
             class="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-6 dark:border-slate-800 dark:bg-slate-900"
         >
             <div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
+                <h1
+                    class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100"
+                >
                     Pipeline Leads &amp; CRM Klien
                 </h1>
-                <p class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                    Kelola prospek inbound, tahapan negosiasi, follow up, dan konversi ke proyek aktif.
+                <p
+                    class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400"
+                >
+                    Kelola prospek inbound, tahapan negosiasi, follow up, dan
+                    konversi ke proyek aktif.
                 </p>
             </div>
             <div class="flex items-center gap-2.5">
@@ -335,14 +416,18 @@ function exportCsv(): void {
                     class="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 sm:text-sm dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                     @click="exportCsv"
                 >
-                    <span class="material-symbols-outlined text-[18px]">download</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >download</span
+                    >
                     <span class="hidden sm:inline">Unduh Estimasi</span>
                 </button>
                 <button
                     class="flex items-center gap-1.5 rounded-xl bg-[#1e40af] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-blue-700 sm:text-sm"
                     @click="openCreateModal"
                 >
-                    <span class="material-symbols-outlined text-[18px]">person_add</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >person_add</span
+                    >
                     <span>+ Tambah Prospek Baru</span>
                 </button>
             </div>
@@ -350,41 +435,87 @@ function exportCsv(): void {
 
         <!-- KPI cards -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-2xl border border-slate-100 bg-white p-4.5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Nilai Pipeline</div>
-                <div class="mt-1.5 text-xl font-bold text-slate-900 dark:text-slate-100">
+            <div
+                class="rounded-2xl border border-slate-100 bg-white p-4.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+            >
+                <div
+                    class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                >
+                    Total Nilai Pipeline
+                </div>
+                <div
+                    class="mt-1.5 text-xl font-bold text-slate-900 dark:text-slate-100"
+                >
                     {{ formatRupiah(totalPipelineValue) }}
                 </div>
-                <div class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                <div
+                    class="mt-1 text-[11px] text-slate-500 dark:text-slate-400"
+                >
                     {{ leads.length }} Calon Klien Aktif
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-100 bg-white p-4.5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Prospek Baru</div>
-                <div class="mt-1.5 text-xl font-bold text-blue-700 dark:text-blue-400">
+            <div
+                class="rounded-2xl border border-slate-100 bg-white p-4.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+            >
+                <div
+                    class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                >
+                    Prospek Baru
+                </div>
+                <div
+                    class="mt-1.5 text-xl font-bold text-blue-700 dark:text-blue-400"
+                >
                     {{ newLeadsCount }} Leads
                 </div>
-                <div class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Belum dihubungi</div>
+                <div
+                    class="mt-1 text-[11px] text-slate-500 dark:text-slate-400"
+                >
+                    Belum dihubungi
+                </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-100 bg-white p-4.5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Tahap Negosiasi &amp; Proposal</div>
-                <div class="mt-1.5 text-xl font-bold text-indigo-700 dark:text-indigo-400">
+            <div
+                class="rounded-2xl border border-slate-100 bg-white p-4.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+            >
+                <div
+                    class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                >
+                    Tahap Negosiasi &amp; Proposal
+                </div>
+                <div
+                    class="mt-1.5 text-xl font-bold text-indigo-700 dark:text-indigo-400"
+                >
                     {{ negotiationLeads.length }} Leads
                 </div>
-                <div class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                <div
+                    class="mt-1 text-[11px] text-slate-500 dark:text-slate-400"
+                >
                     {{ formatRupiahShort(negotiationValue) }} mendekati deal
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-100 bg-white p-4.5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Closing Win Rate</div>
-                <div class="mt-1.5 text-xl font-bold text-emerald-700 dark:text-emerald-400">
+            <div
+                class="rounded-2xl border border-slate-100 bg-white p-4.5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+            >
+                <div
+                    class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                >
+                    Closing Win Rate
+                </div>
+                <div
+                    class="mt-1.5 text-xl font-bold text-emerald-700 dark:text-emerald-400"
+                >
                     {{ winRate === null ? '-' : `${winRate.toFixed(1)}%` }}
                 </div>
-                <div class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    {{ closedLeads.length === 0 ? 'Belum ada lead ditutup' : `${wonLeadCount} menang dari ${closedLeads.length} lead ditutup` }}
+                <div
+                    class="mt-1 text-[11px] text-slate-500 dark:text-slate-400"
+                >
+                    {{
+                        closedLeads.length === 0
+                            ? 'Belum ada lead ditutup'
+                            : `${wonLeadCount} menang dari ${closedLeads.length} lead ditutup`
+                    }}
                 </div>
             </div>
         </div>
@@ -398,13 +529,33 @@ function exportCsv(): void {
                 <div
                     class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white"
                 >
-                    <span class="material-symbols-outlined text-[20px]">notification_important</span>
+                    <span class="material-symbols-outlined text-[20px]"
+                        >notification_important</span
+                    >
                 </div>
                 <div>
-                    <span class="font-bold text-amber-950 dark:text-amber-100">Follow Up Terjadwal: </span>
+                    <span class="font-bold text-amber-950 dark:text-amber-100"
+                        >Follow Up Terjadwal:
+                    </span>
                     <span>
-                        {{ pendingFollowUps.map((lead) => `${lead.companyName} (${lead.nextFollowUp})`).join(', ') }}
-                        <template v-if="leads.filter((l) => l.nextFollowUp && l.status !== 'won' && l.status !== 'lost').length > 3">
+                        {{
+                            pendingFollowUps
+                                .map(
+                                    (lead) =>
+                                        `${lead.companyName} (${lead.nextFollowUp})`,
+                                )
+                                .join(', ')
+                        }}
+                        <template
+                            v-if="
+                                leads.filter(
+                                    (l) =>
+                                        l.nextFollowUp &&
+                                        l.status !== 'won' &&
+                                        l.status !== 'lost',
+                                ).length > 3
+                            "
+                        >
                             , dan lainnya
                         </template>
                     </span>
@@ -413,10 +564,15 @@ function exportCsv(): void {
         </div>
 
         <!-- Search, filter, view switcher -->
-        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div
+            class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"
+        >
             <div class="flex max-w-xl flex-1 items-center gap-2.5">
                 <div class="relative flex-1">
-                    <span class="material-symbols-outlined absolute top-2.5 left-3 text-[18px] text-slate-400">search</span>
+                    <span
+                        class="material-symbols-outlined absolute top-2.5 left-3 text-[18px] text-slate-400"
+                        >search</span
+                    >
                     <input
                         v-model="searchQuery"
                         placeholder="Cari nama prospek, instansi, atau PIC..."
@@ -426,16 +582,25 @@ function exportCsv(): void {
 
                 <select
                     v-model="sourceFilter"
-                    :class="[inputClass, 'h-10 cursor-pointer! text-slate-700 dark:text-slate-300']"
+                    :class="[
+                        inputClass,
+                        'h-10 cursor-pointer! text-slate-700 dark:text-slate-300',
+                    ]"
                 >
                     <option value="all">Semua Sumber</option>
-                    <option v-for="source in sources.slice(1)" :key="source" :value="source">
+                    <option
+                        v-for="source in sources.slice(1)"
+                        :key="source"
+                        :value="source"
+                    >
                         {{ source }}
                     </option>
                 </select>
             </div>
 
-            <div class="flex items-center self-start rounded-xl bg-slate-100 p-1 sm:self-auto dark:bg-slate-800">
+            <div
+                class="flex items-center self-start rounded-xl bg-slate-100 p-1 sm:self-auto dark:bg-slate-800"
+            >
                 <button
                     :class="[
                         'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
@@ -445,7 +610,9 @@ function exportCsv(): void {
                     ]"
                     @click="viewMode = 'kanban'"
                 >
-                    <span class="material-symbols-outlined text-[16px]">view_kanban</span>
+                    <span class="material-symbols-outlined text-[16px]"
+                        >view_kanban</span
+                    >
                     <span>Kanban Board</span>
                 </button>
                 <button
@@ -457,29 +624,40 @@ function exportCsv(): void {
                     ]"
                     @click="viewMode = 'table'"
                 >
-                    <span class="material-symbols-outlined text-[16px]">table_rows</span>
+                    <span class="material-symbols-outlined text-[16px]"
+                        >table_rows</span
+                    >
                     <span>Tabel View</span>
                 </button>
             </div>
         </div>
 
         <!-- Kanban -->
-        <div v-if="viewMode === 'kanban'" class="grid grid-cols-1 items-start gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <div
+            v-if="viewMode === 'kanban'"
+            class="grid grid-cols-1 items-start gap-4 md:grid-cols-3 lg:grid-cols-6"
+        >
             <div
                 v-for="column in kanbanColumns"
                 :key="column.id"
                 :class="[
-                    'space-y-3 rounded-2xl border border-slate-200 border-t-4 bg-slate-50/75 p-3.5 dark:border-slate-800 dark:bg-slate-900/60',
+                    'space-y-3 rounded-2xl border border-t-4 border-slate-200 bg-slate-50/75 p-3.5 dark:border-slate-800 dark:bg-slate-900/60',
                     column.accent,
                 ]"
             >
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-xs font-bold tracking-wide text-slate-900 uppercase dark:text-slate-100">
+                        <h3
+                            class="text-xs font-bold tracking-wide text-slate-900 uppercase dark:text-slate-100"
+                        >
                             {{ column.title }}
                         </h3>
-                        <div class="mt-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                            {{ formatRupiahShort(columnValue(column.statuses)) }}
+                        <div
+                            class="mt-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+                        >
+                            {{
+                                formatRupiahShort(columnValue(column.statuses))
+                            }}
                         </div>
                     </div>
                     <span
@@ -503,11 +681,18 @@ function exportCsv(): void {
                         class="space-y-2.5 rounded-xl border border-slate-100 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
                     >
                         <div>
-                            <div class="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            <div
+                                class="text-xs font-bold text-slate-900 dark:text-slate-100"
+                            >
                                 {{ lead.companyName }}
                             </div>
-                            <div class="mt-0.5 line-clamp-1 text-[11px] font-medium text-blue-700 dark:text-blue-400">
-                                {{ lead.potentialProject ?? 'Belum ada kebutuhan tercatat' }}
+                            <div
+                                class="mt-0.5 line-clamp-1 text-[11px] font-medium text-blue-700 dark:text-blue-400"
+                            >
+                                {{
+                                    lead.potentialProject ??
+                                    'Belum ada kebutuhan tercatat'
+                                }}
                             </div>
                         </div>
 
@@ -515,7 +700,9 @@ function exportCsv(): void {
                             class="space-y-1 rounded-lg border border-slate-100 bg-slate-50 p-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400"
                         >
                             <div class="flex items-center justify-between">
-                                <span class="font-medium text-slate-700 dark:text-slate-200">
+                                <span
+                                    class="font-medium text-slate-700 dark:text-slate-200"
+                                >
                                     {{ lead.contactName ?? 'Tanpa kontak' }}
                                 </span>
                                 <a
@@ -525,15 +712,24 @@ function exportCsv(): void {
                                     rel="noreferrer"
                                     class="flex items-center gap-0.5 font-bold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
                                 >
-                                    <span class="material-symbols-outlined text-[14px]">chat</span>
+                                    <span
+                                        class="material-symbols-outlined text-[14px]"
+                                        >chat</span
+                                    >
                                     <span>WA</span>
                                 </a>
                             </div>
-                            <div class="text-[10px] text-slate-400">{{ lead.source ?? '-' }}</div>
+                            <div class="text-[10px] text-slate-400">
+                                {{ lead.source ?? '-' }}
+                            </div>
                         </div>
 
-                        <div class="flex items-center justify-between text-xs pt-1">
-                            <span class="font-bold text-slate-900 dark:text-slate-100">
+                        <div
+                            class="flex items-center justify-between pt-1 text-xs"
+                        >
+                            <span
+                                class="font-bold text-slate-900 dark:text-slate-100"
+                            >
                                 {{ formatRupiah(lead.estimatedValue) }}
                             </span>
                             <span
@@ -544,24 +740,43 @@ function exportCsv(): void {
                             </span>
                         </div>
 
-                        <div class="flex items-center justify-between gap-1 border-t border-slate-100 pt-2 dark:border-slate-800">
+                        <div
+                            class="flex items-center justify-between gap-1 border-t border-slate-100 pt-2 dark:border-slate-800"
+                        >
                             <button
                                 v-if="lead.status === 'won'"
                                 :disabled="convertingId === lead.id"
                                 class="flex w-full items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2 py-1.5 text-[11px] font-bold text-white shadow-xs transition-colors hover:bg-emerald-700 disabled:opacity-50"
                                 @click="convertLead(lead)"
                             >
-                                <span class="material-symbols-outlined text-[14px]">rocket_launch</span>
-                                <span>{{ convertingId === lead.id ? 'Memproses...' : 'Konversi ke Proyek' }}</span>
+                                <span
+                                    class="material-symbols-outlined text-[14px]"
+                                    >rocket_launch</span
+                                >
+                                <span>{{
+                                    convertingId === lead.id
+                                        ? 'Memproses...'
+                                        : 'Konversi ke Proyek'
+                                }}</span>
                             </button>
 
                             <template v-else>
                                 <select
                                     :value="lead.status"
                                     class="cursor-pointer rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-200 focus:outline-none dark:bg-slate-800 dark:text-slate-200"
-                                    @change="changeStatus(lead, ($event.target as HTMLSelectElement).value as LeadStatus)"
+                                    @change="
+                                        changeStatus(
+                                            lead,
+                                            ($event.target as HTMLSelectElement)
+                                                .value as LeadStatus,
+                                        )
+                                    "
                                 >
-                                    <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                                    <option
+                                        v-for="option in statusOptions"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
                                         Tahap: {{ option.label }}
                                     </option>
                                 </select>
@@ -572,14 +787,20 @@ function exportCsv(): void {
                                         class="p-1 text-slate-400 hover:text-blue-600"
                                         @click="openEditModal(lead)"
                                     >
-                                        <span class="material-symbols-outlined text-[16px]">edit</span>
+                                        <span
+                                            class="material-symbols-outlined text-[16px]"
+                                            >edit</span
+                                        >
                                     </button>
                                     <button
                                         title="Hapus Lead"
                                         class="p-1 text-slate-400 hover:text-rose-600"
                                         @click="removeLead(lead)"
                                     >
-                                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                                        <span
+                                            class="material-symbols-outlined text-[16px]"
+                                            >delete</span
+                                        >
                                     </button>
                                 </div>
                             </template>
@@ -600,7 +821,9 @@ function exportCsv(): void {
                         class="border-b border-slate-100 bg-slate-50 font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400"
                     >
                         <tr>
-                            <th class="px-4 py-3.5">Instansi &amp; Kebutuhan</th>
+                            <th class="px-4 py-3.5">
+                                Instansi &amp; Kebutuhan
+                            </th>
                             <th class="px-3 py-3.5">Kontak &amp; No. Telp</th>
                             <th class="px-3 py-3.5">Sumber Leads</th>
                             <th class="px-3 py-3.5">Estimasi Kontrak</th>
@@ -609,10 +832,16 @@ function exportCsv(): void {
                             <th class="px-3 py-3.5 text-right">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody
+                        class="divide-y divide-slate-100 dark:divide-slate-800"
+                    >
                         <tr v-if="filteredLeads.length === 0">
-                            <td colspan="7" class="py-8 text-center text-slate-400">
-                                Tidak ada prospek yang sesuai dengan kriteria filter.
+                            <td
+                                colspan="7"
+                                class="py-8 text-center text-slate-400"
+                            >
+                                Tidak ada prospek yang sesuai dengan kriteria
+                                filter.
                             </td>
                         </tr>
 
@@ -622,13 +851,21 @@ function exportCsv(): void {
                             class="transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/50"
                         >
                             <td class="px-4 py-3">
-                                <div class="font-bold text-slate-900 dark:text-slate-100">{{ lead.companyName }}</div>
-                                <div class="text-[11px] text-blue-700 dark:text-blue-400">
+                                <div
+                                    class="font-bold text-slate-900 dark:text-slate-100"
+                                >
+                                    {{ lead.companyName }}
+                                </div>
+                                <div
+                                    class="text-[11px] text-blue-700 dark:text-blue-400"
+                                >
                                     {{ lead.potentialProject ?? '-' }}
                                 </div>
                             </td>
                             <td class="px-3 py-3">
-                                <div class="font-semibold text-slate-800 dark:text-slate-200">
+                                <div
+                                    class="font-semibold text-slate-800 dark:text-slate-200"
+                                >
                                     {{ lead.contactName ?? '-' }}
                                 </div>
                                 <a
@@ -638,10 +875,15 @@ function exportCsv(): void {
                                     rel="noreferrer"
                                     class="flex items-center gap-0.5 text-[11px] text-emerald-700 hover:underline dark:text-emerald-400"
                                 >
-                                    <span class="material-symbols-outlined text-[14px]">call</span>
+                                    <span
+                                        class="material-symbols-outlined text-[14px]"
+                                        >call</span
+                                    >
                                     <span>{{ lead.phone }}</span>
                                 </a>
-                                <span v-else class="text-[11px] text-slate-400">-</span>
+                                <span v-else class="text-[11px] text-slate-400"
+                                    >-</span
+                                >
                             </td>
                             <td class="px-3 py-3">
                                 <span
@@ -650,7 +892,9 @@ function exportCsv(): void {
                                     {{ lead.source ?? '-' }}
                                 </span>
                             </td>
-                            <td class="px-3 py-3 font-bold text-slate-900 dark:text-slate-100">
+                            <td
+                                class="px-3 py-3 font-bold text-slate-900 dark:text-slate-100"
+                            >
                                 {{ formatRupiah(lead.estimatedValue) }}
                             </td>
                             <td class="px-3 py-3">
@@ -660,18 +904,32 @@ function exportCsv(): void {
                                         'cursor-pointer rounded-md border px-2 py-1 text-xs font-semibold focus:outline-none',
                                         getLeadStatusBadge(lead.status).class,
                                     ]"
-                                    @change="changeStatus(lead, ($event.target as HTMLSelectElement).value as LeadStatus)"
+                                    @change="
+                                        changeStatus(
+                                            lead,
+                                            ($event.target as HTMLSelectElement)
+                                                .value as LeadStatus,
+                                        )
+                                    "
                                 >
-                                    <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                                    <option
+                                        v-for="option in statusOptions"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
                                         {{ option.label }}
                                     </option>
                                 </select>
                             </td>
-                            <td class="px-3 py-3 font-medium text-slate-600 dark:text-slate-300">
+                            <td
+                                class="px-3 py-3 font-medium text-slate-600 dark:text-slate-300"
+                            >
                                 {{ lead.nextFollowUp ?? '-' }}
                             </td>
                             <td class="px-3 py-3 text-right">
-                                <div class="flex items-center justify-end gap-1.5">
+                                <div
+                                    class="flex items-center justify-end gap-1.5"
+                                >
                                     <button
                                         v-if="lead.status === 'won'"
                                         :disabled="convertingId === lead.id"
@@ -679,20 +937,29 @@ function exportCsv(): void {
                                         class="flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
                                         @click="convertLead(lead)"
                                     >
-                                        <span class="material-symbols-outlined text-[14px]">rocket_launch</span>
+                                        <span
+                                            class="material-symbols-outlined text-[14px]"
+                                            >rocket_launch</span
+                                        >
                                         <span>Proyek</span>
                                     </button>
                                     <button
                                         class="rounded p-1 text-slate-400 hover:text-blue-600"
                                         @click="openEditModal(lead)"
                                     >
-                                        <span class="material-symbols-outlined text-[18px]">edit</span>
+                                        <span
+                                            class="material-symbols-outlined text-[18px]"
+                                            >edit</span
+                                        >
                                     </button>
                                     <button
                                         class="rounded p-1 text-slate-400 hover:text-rose-600"
                                         @click="removeLead(lead)"
                                     >
-                                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        <span
+                                            class="material-symbols-outlined text-[18px]"
+                                            >delete</span
+                                        >
                                     </button>
                                 </div>
                             </td>
@@ -705,24 +972,48 @@ function exportCsv(): void {
         <!-- Modal: create / edit lead -->
         <Modal
             :is-open="isModalOpen"
-            :title="editingLead ? 'Edit Prospek Leads' : 'Tambah Prospek Klien Baru'"
+            :title="
+                editingLead ? 'Edit Prospek Leads' : 'Tambah Prospek Klien Baru'
+            "
             subtitle="Masukkan detail kebutuhan calon klien untuk corong penjualan."
             @close="isModalOpen = false"
         >
-            <form class="space-y-4 text-xs sm:text-sm" @submit.prevent="saveLead">
+            <form
+                class="space-y-4 text-xs sm:text-sm"
+                @submit.prevent="saveLead"
+            >
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                        <label :class="labelClass">Nama Instansi / Perusahaan *</label>
-                        <input v-model="form.company_name" required placeholder="Contoh: PT Graha Finansial" :class="inputClass" />
-                        <p v-if="form.errors.company_name" class="mt-1 text-[11px] text-rose-600">
+                        <label :class="labelClass"
+                            >Nama Instansi / Perusahaan *</label
+                        >
+                        <input
+                            v-model="form.company_name"
+                            required
+                            placeholder="Contoh: PT Graha Finansial"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.company_name"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ form.errors.company_name }}
                         </p>
                     </div>
 
                     <div>
-                        <label :class="labelClass">Nama Kontak Person (PIC Klien)</label>
-                        <input v-model="form.contact_name" placeholder="Contoh: Pak Hendra (Direktur)" :class="inputClass" />
-                        <p v-if="form.errors.contact_name" class="mt-1 text-[11px] text-rose-600">
+                        <label :class="labelClass"
+                            >Nama Kontak Person (PIC Klien)</label
+                        >
+                        <input
+                            v-model="form.contact_name"
+                            placeholder="Contoh: Pak Hendra (Direktur)"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.contact_name"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ form.errors.contact_name }}
                         </p>
                     </div>
@@ -730,20 +1021,38 @@ function exportCsv(): void {
 
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                        <label :class="labelClass">No. WhatsApp / Telepon</label>
-                        <input v-model="form.phone" placeholder="0812-8899-xxxx" :class="inputClass" />
+                        <label :class="labelClass"
+                            >No. WhatsApp / Telepon</label
+                        >
+                        <input
+                            v-model="form.phone"
+                            placeholder="0812-8899-xxxx"
+                            :class="inputClass"
+                        />
                     </div>
 
                     <div>
                         <label :class="labelClass">Email Klien</label>
-                        <input v-model="form.email" type="email" placeholder="klien@perusahaan.com" :class="inputClass" />
-                        <p v-if="form.errors.email" class="mt-1 text-[11px] text-rose-600">{{ form.errors.email }}</p>
+                        <input
+                            v-model="form.email"
+                            type="email"
+                            placeholder="klien@perusahaan.com"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.email"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
+                            {{ form.errors.email }}
+                        </p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                        <label :class="labelClass">Kebutuhan Proyek yang Diminati</label>
+                        <label :class="labelClass"
+                            >Kebutuhan Proyek yang Diminati</label
+                        >
                         <input
                             v-model="form.potential_project"
                             placeholder="Contoh: Web Portal Investasi & CRM"
@@ -753,26 +1062,52 @@ function exportCsv(): void {
 
                     <div>
                         <label :class="labelClass">Sumber Leads</label>
-                        <input v-model="form.source" list="lead-sources" placeholder="Website Alfatech" :class="inputClass" />
+                        <input
+                            v-model="form.source"
+                            list="lead-sources"
+                            placeholder="Website Alfatech"
+                            :class="inputClass"
+                        />
                         <datalist id="lead-sources">
-                            <option v-for="source in sources.slice(1)" :key="source" :value="source" />
+                            <option
+                                v-for="source in sources.slice(1)"
+                                :key="source"
+                                :value="source"
+                            />
                         </datalist>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
-                        <label :class="labelClass">Estimasi Nilai Kontrak (Rp)</label>
-                        <input v-model.number="form.estimated_value" type="number" min="0" :class="inputClass" />
-                        <p v-if="form.errors.estimated_value" class="mt-1 text-[11px] text-rose-600">
+                        <label :class="labelClass"
+                            >Estimasi Nilai Kontrak (Rp)</label
+                        >
+                        <input
+                            v-model.number="form.estimated_value"
+                            type="number"
+                            min="0"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.estimated_value"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ form.errors.estimated_value }}
                         </p>
                     </div>
 
                     <div>
                         <label :class="labelClass">Status Tahapan CRM</label>
-                        <select v-model="form.status" :class="[inputClass, 'cursor-pointer']">
-                            <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                        <select
+                            v-model="form.status"
+                            :class="[inputClass, 'cursor-pointer']"
+                        >
+                            <option
+                                v-for="option in statusOptions"
+                                :key="option.value"
+                                :value="option.value"
+                            >
                                 {{ option.label }}
                             </option>
                         </select>
@@ -780,12 +1115,18 @@ function exportCsv(): void {
 
                     <div>
                         <label :class="labelClass">Jadwal Follow Up</label>
-                        <input v-model="form.next_follow_up" placeholder="Contoh: Besok, 10:00 WIB" :class="inputClass" />
+                        <input
+                            v-model="form.next_follow_up"
+                            placeholder="Contoh: Besok, 10:00 WIB"
+                            :class="inputClass"
+                        />
                     </div>
                 </div>
 
                 <div>
-                    <label :class="labelClass">Catatan Kebutuhan &amp; Hasil Diskusi</label>
+                    <label :class="labelClass"
+                        >Catatan Kebutuhan &amp; Hasil Diskusi</label
+                    >
                     <textarea
                         v-model="form.notes"
                         rows="3"
@@ -794,7 +1135,9 @@ function exportCsv(): void {
                     />
                 </div>
 
-                <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <div
+                    class="flex items-center justify-end gap-3 border-t border-slate-100 pt-3 dark:border-slate-800"
+                >
                     <button
                         type="button"
                         class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -807,7 +1150,9 @@ function exportCsv(): void {
                         :disabled="form.processing"
                         class="rounded-xl bg-[#1e40af] px-5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {{ form.processing ? 'Menyimpan...' : 'Simpan Prospek' }}
+                        {{
+                            form.processing ? 'Menyimpan...' : 'Simpan Prospek'
+                        }}
                     </button>
                 </div>
             </form>

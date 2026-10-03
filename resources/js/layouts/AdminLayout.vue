@@ -57,7 +57,7 @@ const moduleName = computed<string>(() => {
             @close="mobileSidebarOpen = false"
         />
 
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="flex min-w-0 flex-1 flex-col">
             <TopNavbar
                 :module-name="moduleName"
                 @toggle-sidebar="mobileSidebarOpen = !mobileSidebarOpen"

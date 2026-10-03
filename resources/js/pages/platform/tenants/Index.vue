@@ -285,7 +285,8 @@ function formatDate(value: string | null): string {
                 <DialogHeader>
                     <DialogTitle>Hapus tenant</DialogTitle>
                     <DialogDescription>
-                        Tenant <strong>{{ tenantToDelete?.name }}</strong> beserta
+                        Tenant
+                        <strong>{{ tenantToDelete?.name }}</strong> beserta
                         halaman publiknya akan dihapus permanen. Anggota yang
                         kehilangan tim aktifnya harus diundang ulang.
                     </DialogDescription>

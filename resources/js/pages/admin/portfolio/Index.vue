@@ -30,14 +30,23 @@ const editingItem = ref<PortfolioItem | null>(null);
 
 const categories = computed(() => [
     'all',
-    ...Array.from(new Set(props.items.map((item) => item.category).filter((c): c is string => !!c))),
+    ...Array.from(
+        new Set(
+            props.items
+                .map((item) => item.category)
+                .filter((c): c is string => !!c),
+        ),
+    ),
 ]);
 
 const filteredItems = computed(() => {
     const query = searchQuery.value.trim().toLowerCase();
 
     return props.items.filter((item) => {
-        if (categoryFilter.value !== 'all' && item.category !== categoryFilter.value) {
+        if (
+            categoryFilter.value !== 'all' &&
+            item.category !== categoryFilter.value
+        ) {
             return false;
         }
 
@@ -82,7 +91,8 @@ const inputClass =
     'w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600 focus:outline-none';
 const textareaClass =
     'w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600 focus:outline-none leading-relaxed';
-const labelClass = 'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
+const labelClass =
+    'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
 
 function openCreateModal(): void {
     editingItem.value = null;
@@ -136,7 +146,10 @@ function save(): void {
 
 function togglePublished(item: PortfolioItem): void {
     router.put(
-        portfolioUpdate.url({ current_team: teamSlug.value, portfolioItem: item.id }),
+        portfolioUpdate.url({
+            current_team: teamSlug.value,
+            portfolioItem: item.id,
+        }),
         {
             title: item.title,
             client: item.client,
@@ -159,7 +172,10 @@ function remove(item: PortfolioItem): void {
     }
 
     router.delete(
-        portfolioDestroy.url({ current_team: teamSlug.value, portfolioItem: item.id }),
+        portfolioDestroy.url({
+            current_team: teamSlug.value,
+            portfolioItem: item.id,
+        }),
         { preserveScroll: true },
     );
 }
@@ -174,11 +190,16 @@ function remove(item: PortfolioItem): void {
             class="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-6 dark:border-slate-800 dark:bg-slate-900"
         >
             <div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
+                <h1
+                    class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100"
+                >
                     Katalog Portofolio &amp; Case Studies
                 </h1>
-                <p class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                    Showcase proyek software pilihan untuk presentasi klien dan profil website publik.
+                <p
+                    class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400"
+                >
+                    Showcase proyek software pilihan untuk presentasi klien dan
+                    profil website publik.
                 </p>
             </div>
             <button
@@ -191,13 +212,17 @@ function remove(item: PortfolioItem): void {
         </div>
 
         <!-- Filters -->
-        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold sm:text-sm">
+        <div
+            class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"
+        >
+            <div
+                class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold sm:text-sm"
+            >
                 <button
                     v-for="cat in categories"
                     :key="cat"
                     :class="[
-                        'whitespace-nowrap rounded-lg px-3 py-1.5 transition-all',
+                        'rounded-lg px-3 py-1.5 whitespace-nowrap transition-all',
                         categoryFilter === cat
                             ? 'bg-[#1e40af] text-white shadow-xs'
                             : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
@@ -209,7 +234,10 @@ function remove(item: PortfolioItem): void {
             </div>
 
             <div class="relative w-full sm:w-64">
-                <span class="material-symbols-outlined absolute top-2.5 left-3 text-[18px] text-slate-400">search</span>
+                <span
+                    class="material-symbols-outlined absolute top-2.5 left-3 text-[18px] text-slate-400"
+                    >search</span
+                >
                 <input
                     v-model="searchQuery"
                     placeholder="Cari portofolio..."
@@ -223,21 +251,31 @@ function remove(item: PortfolioItem): void {
             v-if="filteredItems.length === 0"
             class="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-900"
         >
-            <span class="material-symbols-outlined text-[40px] text-slate-300 dark:text-slate-600">work</span>
-            <p class="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
+            <span
+                class="material-symbols-outlined text-[40px] text-slate-300 dark:text-slate-600"
+                >work</span
+            >
+            <p
+                class="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400"
+            >
                 Belum ada portofolio yang cocok.
             </p>
         </div>
 
         <!-- Grid -->
-        <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div
+            v-else
+            class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+        >
             <div
                 v-for="item in filteredItems"
                 :key="item.id"
                 class="flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
             >
                 <div>
-                    <div class="relative h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                    <div
+                        class="relative h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800"
+                    >
                         <img
                             v-if="item.imageUrl"
                             :src="item.imageUrl"
@@ -261,7 +299,9 @@ function remove(item: PortfolioItem): void {
                             <button
                                 :class="[
                                     'rounded-md px-2 py-1 text-[10px] font-bold shadow-xs',
-                                    item.published ? 'bg-emerald-600 text-white' : 'bg-slate-700/80 text-slate-200',
+                                    item.published
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-slate-700/80 text-slate-200',
                                 ]"
                                 @click="togglePublished(item)"
                             >
@@ -272,15 +312,21 @@ function remove(item: PortfolioItem): void {
 
                     <div class="space-y-3 p-5">
                         <div>
-                            <span class="text-[11px] font-bold tracking-wide text-blue-700 uppercase dark:text-blue-400">
+                            <span
+                                class="text-[11px] font-bold tracking-wide text-blue-700 uppercase dark:text-blue-400"
+                            >
                                 {{ item.client }}
                             </span>
-                            <h3 class="mt-0.5 text-base leading-snug font-bold text-slate-900 dark:text-slate-100">
+                            <h3
+                                class="mt-0.5 text-base leading-snug font-bold text-slate-900 dark:text-slate-100"
+                            >
                                 {{ item.title }}
                             </h3>
                         </div>
 
-                        <p class="line-clamp-3 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                        <p
+                            class="line-clamp-3 text-xs leading-relaxed text-slate-600 dark:text-slate-300"
+                        >
                             {{ item.description }}
                         </p>
 
@@ -299,7 +345,9 @@ function remove(item: PortfolioItem): void {
                 <div
                     class="mt-3 flex items-center justify-between border-t border-slate-100 p-5 pt-0 text-xs dark:border-slate-800"
                 >
-                    <span class="text-[11px] text-slate-400">{{ item.completionDate }}</span>
+                    <span class="text-[11px] text-slate-400">{{
+                        item.completionDate
+                    }}</span>
                     <div class="flex items-center gap-1">
                         <a
                             v-if="item.projectUrl"
@@ -309,21 +357,27 @@ function remove(item: PortfolioItem): void {
                             title="Buka Link Proyek"
                             class="rounded-lg p-1.5 text-blue-700 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-slate-800"
                         >
-                            <span class="material-symbols-outlined text-[18px]">launch</span>
+                            <span class="material-symbols-outlined text-[18px]"
+                                >launch</span
+                            >
                         </a>
                         <button
                             title="Edit Portofolio"
                             class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-blue-700 dark:hover:bg-slate-800"
                             @click="openEditModal(item)"
                         >
-                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                            <span class="material-symbols-outlined text-[18px]"
+                                >edit</span
+                            >
                         </button>
                         <button
                             title="Hapus Portofolio"
                             class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50"
                             @click="remove(item)"
                         >
-                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                            <span class="material-symbols-outlined text-[18px]"
+                                >delete</span
+                            >
                         </button>
                     </div>
                 </div>
@@ -347,13 +401,27 @@ function remove(item: PortfolioItem): void {
                             placeholder="Contoh: Platform Telemedicine SehatPlus"
                             :class="inputClass"
                         />
-                        <p v-if="form.errors.title" class="mt-1 text-[11px] text-rose-600">{{ form.errors.title }}</p>
+                        <p
+                            v-if="form.errors.title"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
+                            {{ form.errors.title }}
+                        </p>
                     </div>
 
                     <div>
                         <label :class="labelClass">Nama Klien</label>
-                        <input v-model="form.client" placeholder="Contoh: RS Medika Utama" :class="inputClass" />
-                        <p v-if="form.errors.client" class="mt-1 text-[11px] text-rose-600">{{ form.errors.client }}</p>
+                        <input
+                            v-model="form.client"
+                            placeholder="Contoh: RS Medika Utama"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.client"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
+                            {{ form.errors.client }}
+                        </p>
                     </div>
                 </div>
 
@@ -369,22 +437,40 @@ function remove(item: PortfolioItem): void {
 
                     <div>
                         <label :class="labelClass">Tanggal Penyelesaian</label>
-                        <input v-model="form.completion_date" type="date" :class="inputClass" />
+                        <input
+                            v-model="form.completion_date"
+                            type="date"
+                            :class="inputClass"
+                        />
                     </div>
                 </div>
 
                 <div>
-                    <label :class="labelClass">URL Gambar / Tangkapan Layar</label>
-                    <input v-model="form.image_url" placeholder="https://images.unsplash.com/..." :class="inputClass" />
+                    <label :class="labelClass"
+                        >URL Gambar / Tangkapan Layar</label
+                    >
+                    <input
+                        v-model="form.image_url"
+                        placeholder="https://images.unsplash.com/..."
+                        :class="inputClass"
+                    />
                 </div>
 
                 <div>
-                    <label :class="labelClass">URL Demonstrasi / Live Link</label>
-                    <input v-model="form.project_url" placeholder="https://..." :class="inputClass" />
+                    <label :class="labelClass"
+                        >URL Demonstrasi / Live Link</label
+                    >
+                    <input
+                        v-model="form.project_url"
+                        placeholder="https://..."
+                        :class="inputClass"
+                    />
                 </div>
 
                 <div>
-                    <label :class="labelClass">Teknologi yang Digunakan (Pisahkan koma)</label>
+                    <label :class="labelClass"
+                        >Teknologi yang Digunakan (Pisahkan koma)</label
+                    >
                     <input
                         v-model="form.technologies"
                         placeholder="React, TypeScript, Tailwind CSS, Docker"
@@ -393,7 +479,9 @@ function remove(item: PortfolioItem): void {
                 </div>
 
                 <div>
-                    <label :class="labelClass">Deskripsi &amp; Dampak Solusi</label>
+                    <label :class="labelClass"
+                        >Deskripsi &amp; Dampak Solusi</label
+                    >
                     <textarea
                         v-model="form.description"
                         rows="3"
@@ -403,7 +491,9 @@ function remove(item: PortfolioItem): void {
                 </div>
 
                 <div class="flex items-center gap-6 pt-1">
-                    <label class="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <label
+                        class="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300"
+                    >
                         <input
                             v-model="form.featured"
                             type="checkbox"
@@ -412,7 +502,9 @@ function remove(item: PortfolioItem): void {
                         <span>Tampilkan sebagai Featured Showcase</span>
                     </label>
 
-                    <label class="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <label
+                        class="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300"
+                    >
                         <input
                             v-model="form.published"
                             type="checkbox"
@@ -422,7 +514,9 @@ function remove(item: PortfolioItem): void {
                     </label>
                 </div>
 
-                <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <div
+                    class="flex items-center justify-end gap-3 border-t border-slate-100 pt-3 dark:border-slate-800"
+                >
                     <button
                         type="button"
                         class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -435,7 +529,11 @@ function remove(item: PortfolioItem): void {
                         :disabled="form.processing"
                         class="rounded-xl bg-[#1e40af] px-5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {{ form.processing ? 'Menyimpan...' : 'Simpan Portofolio' }}
+                        {{
+                            form.processing
+                                ? 'Menyimpan...'
+                                : 'Simpan Portofolio'
+                        }}
                     </button>
                 </div>
             </form>

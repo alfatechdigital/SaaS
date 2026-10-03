@@ -27,17 +27,17 @@ Aplikasi ini **multi-tenant**: satu instalasi bisa melayani banyak tim/perusahaa
 
 ## Teknologi
 
-| Lapisan | Teknologi |
-|---|---|
-| Backend | Laravel 13, PHP 8.3+ |
-| Frontend | Vue 3.5 (`<script setup lang="ts">`), TypeScript, Inertia 3 |
-| Styling | Tailwind CSS v4 |
-| Build tool | Vite 8 (`vite-plus`) |
-| Database | SQLite |
-| Autentikasi | Laravel Fortify (login, 2FA, passkey) |
-| Routing frontend | Wayfinder (helper rute di-generate otomatis) |
-| Komponen UI | reka-ui / shadcn-vue |
-| Testing | PHPUnit + Larastan (PHPStan level 7) |
+| Lapisan          | Teknologi                                                   |
+| ---------------- | ----------------------------------------------------------- |
+| Backend          | Laravel 13, PHP 8.3+                                        |
+| Frontend         | Vue 3.5 (`<script setup lang="ts">`), TypeScript, Inertia 3 |
+| Styling          | Tailwind CSS v4                                             |
+| Build tool       | Vite 8 (`vite-plus`)                                        |
+| Database         | SQLite                                                      |
+| Autentikasi      | Laravel Fortify (login, 2FA, passkey)                       |
+| Routing frontend | Wayfinder (helper rute di-generate otomatis)                |
+| Komponen UI      | reka-ui / shadcn-vue                                        |
+| Testing          | PHPUnit + Larastan (PHPStan level 7)                        |
 
 Tidak ada Pinia. State global memakai composable + `provide`/`inject`.
 
@@ -157,11 +157,11 @@ composer dev
 
 Perintah ini menjalankan tiga proses sekaligus dengan `concurrently`:
 
-| Proses | Keterangan |
-|---|---|
-| `php artisan serve` | server Laravel di `http://localhost:8000` |
-| `php artisan queue:listen` | worker antrian |
-| `npm run dev` | Vite dev server (hot reload, termasuk SSR saat pengembangan) |
+| Proses                     | Keterangan                                                   |
+| -------------------------- | ------------------------------------------------------------ |
+| `php artisan serve`        | server Laravel di `http://localhost:8000`                    |
+| `php artisan queue:listen` | worker antrian                                               |
+| `npm run dev`              | Vite dev server (hot reload, termasuk SSR saat pengembangan) |
 
 ### Cara manual (dua terminal)
 
@@ -185,14 +185,14 @@ Untuk melihat versi produksi, gunakan `npm run build` dan akses lewat server Lar
 
 Setelah aplikasi berjalan di `http://localhost:8000`:
 
-| URL | Untuk |
-|---|---|
-| `http://localhost:8000/` | Halaman sambutan (Welcome) |
-| `http://localhost:8000/login` | Login portal internal |
-| `http://localhost:8000/register` | Registrasi akun baru |
-| `http://localhost:8000/alfatech/dashboard` | Dashboard portal internal |
-| `http://localhost:8000/p/alfatech` | **Website publik** profil perusahaan |
-| `http://localhost:8000/settings/profile` | Pengaturan profil akun |
+| URL                                        | Untuk                                |
+| ------------------------------------------ | ------------------------------------ |
+| `http://localhost:8000/`                   | Halaman sambutan (Welcome)           |
+| `http://localhost:8000/login`              | Login portal internal                |
+| `http://localhost:8000/register`           | Registrasi akun baru                 |
+| `http://localhost:8000/alfatech/dashboard` | Dashboard portal internal            |
+| `http://localhost:8000/p/alfatech`         | **Website publik** profil perusahaan |
+| `http://localhost:8000/settings/profile`   | Pengaturan profil akun               |
 
 ### URL portal internal selalu berawalan slug tim
 
@@ -220,14 +220,14 @@ Tombol **"Buka Website Publik"** di halaman Profil Perusahaan juga langsung meng
 
 Hasil `php artisan migrate:fresh --seed` membuat satu tim dengan enam anggota. **Semua akun memakai password: `password`**
 
-| Email | Jabatan | Peran di Tim |
-|---|---|---|
-| `digitalalfatech@gmail.com` | CEO & Founder | **Owner** (akses penuh) |
-| `aditya@alfatech.id` | Technical Lead | Member |
-| `maya@alfatech.id` | UI/UX & FE Specialist | Member |
-| `budi@alfatech.id` | Senior Fullstack Dev | Member |
-| `sarah@alfatech.id` | Backend & Business Analyst | Member |
-| `reza@alfatech.id` | Mobile Developer | Member |
+| Email                       | Jabatan                    | Peran di Tim            |
+| --------------------------- | -------------------------- | ----------------------- |
+| `digitalalfatech@gmail.com` | CEO & Founder              | **Owner** (akses penuh) |
+| `aditya@alfatech.id`        | Technical Lead             | Member                  |
+| `maya@alfatech.id`          | UI/UX & FE Specialist      | Member                  |
+| `budi@alfatech.id`          | Senior Fullstack Dev       | Member                  |
+| `sarah@alfatech.id`         | Backend & Business Analyst | Member                  |
+| `reza@alfatech.id`          | Mobile Developer           | Member                  |
 
 > ⚠️ **Hanya untuk pengembangan lokal.** Akun demo ini berasal dari seeder — jangan pernah dipakai di produksi. Lihat [`database/seeders/AlfatechDemoSeeder.php`](database/seeders/AlfatechDemoSeeder.php).
 
@@ -241,11 +241,11 @@ Seluruh data domain memiliki kolom `team_id`, dan setiap query wajib ter-scope k
 
 **Peran tim** (`App\Enums\TeamRole`):
 
-| Peran | Akses |
-|---|---|
-| `Owner` | Semua permission, termasuk menghapus tim |
-| `Admin` | Semua modul domain + kelola anggota (tanpa menghapus tim) |
-| `Member` | Proyek, Konten Medsos, Profil Perusahaan, Portofolio |
+| Peran    | Akses                                                     |
+| -------- | --------------------------------------------------------- |
+| `Owner`  | Semua permission, termasuk menghapus tim                  |
+| `Admin`  | Semua modul domain + kelola anggota (tanpa menghapus tim) |
+| `Member` | Proyek, Konten Medsos, Profil Perusahaan, Portofolio      |
 
 **Permission** (`App\Enums\TeamPermission`) memakai format `modul:aksi`, mis. `project:manage`, `lead:manage`, `finance:manage`, `activity-log:view`.
 
@@ -267,26 +267,26 @@ Cara ini dipakai menu Sidebar untuk menyembunyikan item yang tidak boleh diakses
 
 ### Pengembangan
 
-| Perintah | Fungsi |
-|---|---|
-| `composer dev` | Jalankan server + queue + Vite sekaligus |
-| `php artisan serve` | Server Laravel saja |
-| `npm run dev` | Vite dev server saja (hot reload) |
-| `npm run build` | Build aset produksi → `public/build` |
-| `php artisan migrate:fresh --seed` | Reset database + isi data demo |
+| Perintah                           | Fungsi                                   |
+| ---------------------------------- | ---------------------------------------- |
+| `composer dev`                     | Jalankan server + queue + Vite sekaligus |
+| `php artisan serve`                | Server Laravel saja                      |
+| `npm run dev`                      | Vite dev server saja (hot reload)        |
+| `npm run build`                    | Build aset produksi → `public/build`     |
+| `php artisan migrate:fresh --seed` | Reset database + isi data demo           |
 
 ### Kualitas kode & test
 
-| Perintah | Fungsi |
-|---|---|
-| `composer test` | **Rangkaian lengkap**: pint --test → phpstan → phpunit |
-| `php artisan test` | Test saja |
-| `php artisan test --filter=NamaTest` | Jalankan satu test tertentu |
-| `vendor/bin/phpstan analyse` | Analisis statis, level 7 |
-| `vendor/bin/pint` | Rapikan format kode |
-| `vendor/bin/pint --test` | Cek format tanpa mengubah file |
-| `npm run types:check` | Cek tipe TypeScript (`vue-tsc`) |
-| `npm run check` | Lint + format frontend |
+| Perintah                             | Fungsi                                                 |
+| ------------------------------------ | ------------------------------------------------------ |
+| `composer test`                      | **Rangkaian lengkap**: pint --test → phpstan → phpunit |
+| `php artisan test`                   | Test saja                                              |
+| `php artisan test --filter=NamaTest` | Jalankan satu test tertentu                            |
+| `vendor/bin/phpstan analyse`         | Analisis statis, level 7                               |
+| `vendor/bin/pint`                    | Rapikan format kode                                    |
+| `vendor/bin/pint --test`             | Cek format tanpa mengubah file                         |
+| `npm run types:check`                | Cek tipe TypeScript (`vue-tsc`)                        |
+| `npm run check`                      | Lint + format frontend                                 |
 
 > **Jalankan `npm run build` sebelum `php artisan test`** bila `public/build` belum ada, agar test yang me-render halaman Inertia tidak gagal.
 
@@ -342,7 +342,7 @@ resources/js/
 
 ## Catatan & Keterbatasan
 
-- **SSR produksi belum diaktifkan.** `config/inertia.php` sudah `ssr.enabled => true`, tetapi bundle `bootstrap/ssr` belum dibuild dan server SSR belum berjalan — sehingga Inertia *fallback* diam-diam ke rendering di klien. Aplikasi tetap berjalan normal; yang terdampak hanya SEO halaman publik. Langkah mengaktifkannya ada di [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) §13. Saat pengembangan (`npm run dev`), SSR **sudah** aktif lewat plugin Vite.
+- **SSR produksi belum diaktifkan.** `config/inertia.php` sudah `ssr.enabled => true`, tetapi bundle `bootstrap/ssr` belum dibuild dan server SSR belum berjalan — sehingga Inertia _fallback_ diam-diam ke rendering di klien. Aplikasi tetap berjalan normal; yang terdampak hanya SEO halaman publik. Langkah mengaktifkannya ada di [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) §13. Saat pengembangan (`npm run dev`), SSR **sudah** aktif lewat plugin Vite.
 - **Halaman `/settings/profile`, `/settings/security`, `/settings/teams`, dan `/settings/appearance`** masih memakai layout bawaan starter kit, sehingga sidebar-nya berbeda dari sidebar utama aplikasi. Ini keputusan yang disengaja (ADR-16).
 - **Data uang disimpan sebagai integer rupiah** (SQLite tidak punya tipe desimal). Formatting hanya dilakukan di frontend lewat `resources/js/utils/formatters.ts`.
 - **Tidak ada real-time push.** Perubahan data diterapkan lewat kunjungan Inertia biasa, bukan WebSocket (ADR-07).

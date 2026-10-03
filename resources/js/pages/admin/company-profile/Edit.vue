@@ -51,7 +51,8 @@ const inputClass =
     'w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600 focus:outline-none';
 const textareaClass =
     'w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600 focus:outline-none leading-relaxed';
-const labelClass = 'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
+const labelClass =
+    'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
 const cardClass =
     'bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-4';
 
@@ -95,11 +96,16 @@ function save(): void {
             class="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-6 dark:border-slate-800 dark:bg-slate-900"
         >
             <div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
+                <h1
+                    class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100"
+                >
                     CMS Profil Perusahaan
                 </h1>
-                <p class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                    Kelola konten profil, layanan IT, kontak resmi, dan FAQ perusahaan.
+                <p
+                    class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400"
+                >
+                    Kelola konten profil, layanan IT, kontak resmi, dan FAQ
+                    perusahaan.
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -109,7 +115,9 @@ function save(): void {
                     rel="noreferrer"
                     class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition-all hover:border-slate-300 hover:text-blue-700 sm:text-sm dark:border-slate-700 dark:text-slate-300 dark:hover:text-blue-400"
                 >
-                    <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >open_in_new</span
+                    >
                     <span>Buka Website Publik</span>
                 </a>
                 <button
@@ -140,38 +148,67 @@ function save(): void {
         </div>
 
         <!-- Editor -->
-        <form v-if="activeTab === 'editor'" class="space-y-6" @submit.prevent="save">
+        <form
+            v-if="activeTab === 'editor'"
+            class="space-y-6"
+            @submit.prevent="save"
+        >
             <div :class="cardClass">
-                <h2 class="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                    <span class="material-symbols-outlined text-[20px] text-blue-700 dark:text-blue-400">domain</span>
+                <h2
+                    class="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100"
+                >
+                    <span
+                        class="material-symbols-outlined text-[20px] text-blue-700 dark:text-blue-400"
+                        >domain</span
+                    >
                     <span>Identitas &amp; Informasi Utama</span>
                 </h2>
 
-                <div class="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 sm:text-sm">
+                <div
+                    class="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 sm:text-sm"
+                >
                     <div>
                         <label :class="labelClass">Nama Resmi Perusahaan</label>
-                        <input v-model="form.company_name" :class="inputClass" />
-                        <p v-if="form.errors.company_name" class="mt-1 text-[11px] text-rose-600">
+                        <input
+                            v-model="form.company_name"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.company_name"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ form.errors.company_name }}
                         </p>
                     </div>
 
                     <div>
                         <label :class="labelClass">Email Resmi</label>
-                        <input v-model="form.email" type="email" :class="inputClass" />
-                        <p v-if="form.errors.email" class="mt-1 text-[11px] text-rose-600">
+                        <input
+                            v-model="form.email"
+                            type="email"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.email"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ form.errors.email }}
                         </p>
                     </div>
 
                     <div>
-                        <label :class="labelClass">Nomor Telepon / WhatsApp</label>
+                        <label :class="labelClass"
+                            >Nomor Telepon / WhatsApp</label
+                        >
                         <input v-model="form.phone" :class="inputClass" />
                     </div>
 
                     <div>
                         <label :class="labelClass">Website URL</label>
-                        <input v-model="form.social_links.website" :class="inputClass" />
+                        <input
+                            v-model="form.social_links.website"
+                            :class="inputClass"
+                        />
                     </div>
                 </div>
 
@@ -181,16 +218,26 @@ function save(): void {
                 </div>
 
                 <div class="text-xs sm:text-sm">
-                    <label :class="labelClass">Tentang Kami (About Story)</label>
-                    <textarea v-model="form.about" rows="4" :class="textareaClass" />
+                    <label :class="labelClass"
+                        >Tentang Kami (About Story)</label
+                    >
+                    <textarea
+                        v-model="form.about"
+                        rows="4"
+                        :class="textareaClass"
+                    />
                 </div>
             </div>
 
             <!-- Services -->
             <div :class="cardClass">
                 <div class="flex items-center justify-between">
-                    <h2 class="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                        <span class="material-symbols-outlined text-[20px] text-blue-700 dark:text-blue-400">
+                    <h2
+                        class="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100"
+                    >
+                        <span
+                            class="material-symbols-outlined text-[20px] text-blue-700 dark:text-blue-400"
+                        >
                             design_services
                         </span>
                         <span>Layanan Unggulan Software House</span>
@@ -200,12 +247,19 @@ function save(): void {
                         class="flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-800 dark:text-blue-400"
                         @click="addService"
                     >
-                        <span class="material-symbols-outlined text-[16px]">add</span>
+                        <span class="material-symbols-outlined text-[16px]"
+                            >add</span
+                        >
                         <span>Tambah Layanan</span>
                     </button>
                 </div>
 
-                <p v-if="form.errors.services" class="text-[11px] text-rose-600">{{ form.errors.services }}</p>
+                <p
+                    v-if="form.errors.services"
+                    class="text-[11px] text-rose-600"
+                >
+                    {{ form.errors.services }}
+                </p>
 
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div
@@ -214,7 +268,9 @@ function save(): void {
                         class="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-700 dark:bg-slate-800/40"
                     >
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span
+                                class="text-xs font-bold text-slate-700 dark:text-slate-300"
+                            >
                                 Layanan #{{ index + 1 }}
                             </span>
                             <button
@@ -223,7 +279,10 @@ function save(): void {
                                 title="Hapus layanan"
                                 @click="removeService(index)"
                             >
-                                <span class="material-symbols-outlined text-[16px]">delete</span>
+                                <span
+                                    class="material-symbols-outlined text-[16px]"
+                                    >delete</span
+                                >
                             </button>
                         </div>
                         <input
@@ -244,8 +303,13 @@ function save(): void {
             <!-- FAQ -->
             <div :class="cardClass">
                 <div class="flex items-center justify-between">
-                    <h2 class="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                        <span class="material-symbols-outlined text-[20px] text-blue-700 dark:text-blue-400">help</span>
+                    <h2
+                        class="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100"
+                    >
+                        <span
+                            class="material-symbols-outlined text-[20px] text-blue-700 dark:text-blue-400"
+                            >help</span
+                        >
                         <span>Frequently Asked Questions (FAQ)</span>
                     </h2>
                     <button
@@ -253,7 +317,9 @@ function save(): void {
                         class="flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-800 dark:text-blue-400"
                         @click="addFaq"
                     >
-                        <span class="material-symbols-outlined text-[16px]">add</span>
+                        <span class="material-symbols-outlined text-[16px]"
+                            >add</span
+                        >
                         <span>Tambah FAQ</span>
                     </button>
                 </div>
@@ -265,7 +331,9 @@ function save(): void {
                         class="space-y-2 rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-700 dark:bg-slate-800/40"
                     >
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span
+                                class="text-xs font-bold text-slate-700 dark:text-slate-300"
+                            >
                                 Pertanyaan #{{ index + 1 }}
                             </span>
                             <button
@@ -274,7 +342,10 @@ function save(): void {
                                 title="Hapus FAQ"
                                 @click="removeFaq(index)"
                             >
-                                <span class="material-symbols-outlined text-[16px]">delete</span>
+                                <span
+                                    class="material-symbols-outlined text-[16px]"
+                                    >delete</span
+                                >
                             </button>
                         </div>
                         <input
@@ -300,8 +371,14 @@ function save(): void {
                     :disabled="form.processing"
                     class="flex items-center gap-2 rounded-xl bg-[#1e40af] px-6 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50 sm:text-sm"
                 >
-                    <span class="material-symbols-outlined text-[18px]">save</span>
-                    <span>{{ form.processing ? 'Menyimpan...' : 'Simpan Perubahan CMS' }}</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >save</span
+                    >
+                    <span>{{
+                        form.processing
+                            ? 'Menyimpan...'
+                            : 'Simpan Perubahan CMS'
+                    }}</span>
                 </button>
             </div>
         </form>
@@ -317,10 +394,14 @@ function save(): void {
                 >
                     Solusi Teknologi &amp; Software House Terpercaya
                 </span>
-                <h2 class="text-2xl font-black tracking-tight text-slate-900 sm:text-4xl dark:text-slate-100">
+                <h2
+                    class="text-2xl font-black tracking-tight text-slate-900 sm:text-4xl dark:text-slate-100"
+                >
                     {{ form.company_name || 'Nama Perusahaan' }}
                 </h2>
-                <p class="text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-300">
+                <p
+                    class="text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-300"
+                >
                     {{ form.about }}
                 </p>
                 <div class="flex items-center justify-center gap-3 pt-2">
@@ -331,7 +412,9 @@ function save(): void {
                         rel="noreferrer"
                         class="flex items-center gap-2 rounded-xl bg-[#1e40af] px-5 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700 sm:text-sm"
                     >
-                        <span class="material-symbols-outlined text-[18px]">chat</span>
+                        <span class="material-symbols-outlined text-[18px]"
+                            >chat</span
+                        >
                         <span>Konsultasi Proyek Gratis</span>
                     </a>
                 </div>
@@ -339,15 +422,20 @@ function save(): void {
 
             <div class="space-y-6">
                 <div class="mx-auto max-w-xl text-center">
-                    <h3 class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                    <h3
+                        class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100"
+                    >
                         Layanan Solusi Digital
                     </h3>
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        Kami merancang perangkat lunak yang disesuaikan dengan kebutuhan alur bisnis Anda.
+                        Kami merancang perangkat lunak yang disesuaikan dengan
+                        kebutuhan alur bisnis Anda.
                     </p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div
+                    class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                >
                     <div
                         v-for="service in form.services"
                         :key="service.id"
@@ -356,16 +444,28 @@ function save(): void {
                         <div
                             class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                         >
-                            <span class="material-symbols-outlined text-[22px]">code</span>
+                            <span class="material-symbols-outlined text-[22px]"
+                                >code</span
+                            >
                         </div>
-                        <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ service.name }}</h4>
-                        <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{{ service.desc }}</p>
+                        <h4
+                            class="text-sm font-bold text-slate-900 dark:text-slate-100"
+                        >
+                            {{ service.name }}
+                        </h4>
+                        <p
+                            class="text-xs leading-relaxed text-slate-600 dark:text-slate-300"
+                        >
+                            {{ service.desc }}
+                        </p>
                     </div>
                 </div>
             </div>
 
             <div class="mx-auto max-w-3xl space-y-4">
-                <h3 class="text-center text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                <h3
+                    class="text-center text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100"
+                >
                     Pertanyaan yang Sering Diajukan (FAQ)
                 </h3>
                 <div class="space-y-3">
@@ -374,10 +474,14 @@ function save(): void {
                         :key="index"
                         class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
                     >
-                        <div class="text-xs font-bold text-slate-900 sm:text-sm dark:text-slate-100">
+                        <div
+                            class="text-xs font-bold text-slate-900 sm:text-sm dark:text-slate-100"
+                        >
                             {{ faq.question }}
                         </div>
-                        <div class="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                        <div
+                            class="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300"
+                        >
                             {{ faq.answer }}
                         </div>
                     </div>

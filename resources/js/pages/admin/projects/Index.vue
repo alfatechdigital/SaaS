@@ -7,8 +7,18 @@ import {
     store as projectStore,
     update as projectUpdate,
 } from '@/routes/projects';
-import { destroy as taskDestroy, store as taskStore, update as taskUpdate } from '@/routes/tasks';
-import type { MemberOption, Project, ProjectStatus, Task, TaskPriority } from '@/types';
+import {
+    destroy as taskDestroy,
+    store as taskStore,
+    update as taskUpdate,
+} from '@/routes/tasks';
+import type {
+    MemberOption,
+    Project,
+    ProjectStatus,
+    Task,
+    TaskPriority,
+} from '@/types';
 import { formatRupiah, getProjectStatusBadge } from '@/utils/formatters';
 
 /**
@@ -53,7 +63,11 @@ function countByStatus(status: ProjectStatus): number {
 const tabs = computed(() => [
     { id: 'all', label: 'Semua Proyek', count: props.projects.length },
     { id: 'deal', label: 'Deal', count: countByStatus('deal') },
-    { id: 'development', label: 'Development', count: countByStatus('development') },
+    {
+        id: 'development',
+        label: 'Development',
+        count: countByStatus('development'),
+    },
     { id: 'review', label: 'Review', count: countByStatus('review') },
     { id: 'completed', label: 'Selesai', count: countByStatus('completed') },
     { id: 'cancelled', label: 'Dibatalkan', count: countByStatus('cancelled') },
@@ -64,11 +78,17 @@ const filteredProjects = computed(() => {
 
     return props.projects
         .filter((project) => {
-            if (activeTab.value !== 'all' && project.status !== activeTab.value) {
+            if (
+                activeTab.value !== 'all' &&
+                project.status !== activeTab.value
+            ) {
                 return false;
             }
 
-            if (selectedPicId.value !== 'all' && String(project.picId) !== selectedPicId.value) {
+            if (
+                selectedPicId.value !== 'all' &&
+                String(project.picId) !== selectedPicId.value
+            ) {
                 return false;
             }
 
@@ -79,7 +99,9 @@ const filteredProjects = computed(() => {
             return (
                 project.name.toLowerCase().includes(query) ||
                 (project.clientName ?? '').toLowerCase().includes(query) ||
-                project.technologies.some((tech) => tech.toLowerCase().includes(query))
+                project.technologies.some((tech) =>
+                    tech.toLowerCase().includes(query),
+                )
             );
         })
         .sort((a, b) => {
@@ -91,13 +113,17 @@ const filteredProjects = computed(() => {
                 return b.progress - a.progress;
             }
 
-            return (a.deadline ?? '9999-12-31').localeCompare(b.deadline ?? '9999-12-31');
+            return (a.deadline ?? '9999-12-31').localeCompare(
+                b.deadline ?? '9999-12-31',
+            );
         });
 });
 
 const projectTasks = computed(() =>
     selectedProject.value
-        ? props.tasks.filter((task) => task.projectId === selectedProject.value?.id)
+        ? props.tasks.filter(
+              (task) => task.projectId === selectedProject.value?.id,
+          )
         : [],
 );
 
@@ -132,7 +158,8 @@ const inputClass =
     'w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600 focus:outline-none';
 const textareaClass =
     'w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600 focus:outline-none leading-relaxed';
-const labelClass = 'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
+const labelClass =
+    'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
 
 function today(): string {
     return new Date().toISOString().split('T')[0];
@@ -198,7 +225,8 @@ const taskForm = useForm({
  * error is therefore keyed by the wire name and has to be read explicitly.
  */
 const progressError = computed(
-    () => (form.errors as unknown as Record<string, string | undefined>).progress,
+    () =>
+        (form.errors as unknown as Record<string, string | undefined>).progress,
 );
 
 function openCreateModal(): void {
@@ -248,7 +276,10 @@ function saveProject(): void {
 
     if (editingProject.value) {
         form.put(
-            projectUpdate.url({ current_team: teamSlug.value, project: editingProject.value.id }),
+            projectUpdate.url({
+                current_team: teamSlug.value,
+                project: editingProject.value.id,
+            }),
             options,
         );
 
@@ -259,18 +290,28 @@ function saveProject(): void {
 }
 
 function removeProject(project: Project): void {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus proyek "${project.name}"?`)) {
+    if (
+        !window.confirm(
+            `Apakah Anda yakin ingin menghapus proyek "${project.name}"?`,
+        )
+    ) {
         return;
     }
 
-    router.delete(projectDestroy.url({ current_team: teamSlug.value, project: project.id }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            if (selectedProject.value?.id === project.id) {
-                selectedProject.value = null;
-            }
+    router.delete(
+        projectDestroy.url({
+            current_team: teamSlug.value,
+            project: project.id,
+        }),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (selectedProject.value?.id === project.id) {
+                    selectedProject.value = null;
+                }
+            },
         },
-    });
+    );
 }
 
 function addTask(): void {
@@ -313,9 +354,12 @@ function toggleTaskStatus(task: Task): void {
 }
 
 function removeTask(task: Task): void {
-    router.delete(taskDestroy.url({ current_team: teamSlug.value, task: task.id }), {
-        preserveScroll: true,
-    });
+    router.delete(
+        taskDestroy.url({ current_team: teamSlug.value, task: task.id }),
+        {
+            preserveScroll: true,
+        },
+    );
 }
 
 function progressBarClass(progress: number): string {
@@ -356,11 +400,15 @@ function exportCsv(): void {
     ]);
 
     const csv = [header, ...rows]
-        .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+        .map((row) =>
+            row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','),
+        )
         .join('\r\n');
 
     // The BOM keeps Excel from mangling the Indonesian characters.
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([`\uFEFF${csv}`], {
+        type: 'text/csv;charset=utf-8;',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
 
@@ -380,11 +428,16 @@ function exportCsv(): void {
             class="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-6 dark:border-slate-800 dark:bg-slate-900"
         >
             <div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
+                <h1
+                    class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100"
+                >
                     Manajemen Proyek
                 </h1>
-                <p class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                    Kelola siklus pengembangan, status kontrak, teknologi, dan deliverable software.
+                <p
+                    class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400"
+                >
+                    Kelola siklus pengembangan, status kontrak, teknologi, dan
+                    deliverable software.
                 </p>
             </div>
             <div class="flex items-center gap-2.5">
@@ -393,14 +446,18 @@ function exportCsv(): void {
                     class="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 sm:text-sm dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                     @click="exportCsv"
                 >
-                    <span class="material-symbols-outlined text-[18px]">file_download</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >file_download</span
+                    >
                     <span class="hidden sm:inline">Ekspor CSV</span>
                 </button>
                 <button
                     class="flex items-center gap-1.5 rounded-xl bg-[#1e40af] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-blue-700 sm:text-sm"
                     @click="openCreateModal"
                 >
-                    <span class="material-symbols-outlined text-[18px]">add</span>
+                    <span class="material-symbols-outlined text-[18px]"
+                        >add</span
+                    >
                     <span>Buat Proyek Baru</span>
                 </button>
             </div>
@@ -414,7 +471,7 @@ function exportCsv(): void {
                 v-for="tab in tabs"
                 :key="tab.id"
                 :class="[
-                    'flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 transition-all',
+                    'flex items-center gap-1.5 rounded-lg px-3 py-2 whitespace-nowrap transition-all',
                     activeTab === tab.id
                         ? 'bg-[#1e40af] text-white shadow-xs'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100',
@@ -438,7 +495,10 @@ function exportCsv(): void {
         <!-- Search & filters -->
         <div class="grid grid-cols-1 gap-3 md:grid-cols-12">
             <div class="relative md:col-span-6">
-                <span class="material-symbols-outlined absolute top-2.5 left-3 text-[18px] text-slate-400">search</span>
+                <span
+                    class="material-symbols-outlined absolute top-2.5 left-3 text-[18px] text-slate-400"
+                    >search</span
+                >
                 <input
                     v-model="searchQuery"
                     placeholder="Cari nama proyek, klien, atau teknologi..."
@@ -449,27 +509,50 @@ function exportCsv(): void {
             <div class="md:col-span-3">
                 <select
                     v-model="selectedPicId"
-                    :class="[inputClass, 'cursor-pointer text-slate-700 dark:text-slate-300']"
+                    :class="[
+                        inputClass,
+                        'cursor-pointer text-slate-700 dark:text-slate-300',
+                    ]"
                 >
                     <option value="all">Semua PIC</option>
-                    <option v-for="member in members" :key="member.id" :value="String(member.id)">
+                    <option
+                        v-for="member in members"
+                        :key="member.id"
+                        :value="String(member.id)"
+                    >
                         PIC: {{ member.name }}
                     </option>
                 </select>
             </div>
 
             <div class="md:col-span-3">
-                <select v-model="sortBy" :class="[inputClass, 'cursor-pointer text-slate-700 dark:text-slate-300']">
+                <select
+                    v-model="sortBy"
+                    :class="[
+                        inputClass,
+                        'cursor-pointer text-slate-700 dark:text-slate-300',
+                    ]"
+                >
                     <option value="deadline">Urutkan: Deadline Terdekat</option>
-                    <option value="value">Urutkan: Nilai Kontrak Tertinggi</option>
-                    <option value="progress">Urutkan: Progress Tertinggi</option>
+                    <option value="value">
+                        Urutkan: Nilai Kontrak Tertinggi
+                    </option>
+                    <option value="progress">
+                        Urutkan: Progress Tertinggi
+                    </option>
                 </select>
             </div>
         </div>
 
         <!-- Table + quick preview drawer -->
         <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-            <div :class="selectedProject ? 'lg:col-span-7 xl:col-span-8' : 'lg:col-span-12'">
+            <div
+                :class="
+                    selectedProject
+                        ? 'lg:col-span-7 xl:col-span-8'
+                        : 'lg:col-span-12'
+                "
+            >
                 <div
                     class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900"
                 >
@@ -479,7 +562,9 @@ function exportCsv(): void {
                                 class="border-b border-slate-100 bg-slate-50 font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400"
                             >
                                 <tr>
-                                    <th class="px-4 py-3">Nama Proyek &amp; Klien</th>
+                                    <th class="px-4 py-3">
+                                        Nama Proyek &amp; Klien
+                                    </th>
                                     <th class="px-3 py-3">Status Kontrak</th>
                                     <th class="px-3 py-3">Progress</th>
                                     <th class="px-3 py-3">Nilai Kontrak</th>
@@ -488,10 +573,16 @@ function exportCsv(): void {
                                     <th class="px-3 py-3 text-right">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                            <tbody
+                                class="divide-y divide-slate-100 dark:divide-slate-800"
+                            >
                                 <tr v-if="filteredProjects.length === 0">
-                                    <td colspan="7" class="py-8 text-center text-slate-400">
-                                        Tidak ada proyek yang sesuai dengan kriteria filter.
+                                    <td
+                                        colspan="7"
+                                        class="py-8 text-center text-slate-400"
+                                    >
+                                        Tidak ada proyek yang sesuai dengan
+                                        kriteria filter.
                                     </td>
                                 </tr>
 
@@ -507,15 +598,27 @@ function exportCsv(): void {
                                     @click="selectedProject = project"
                                 >
                                     <td class="max-w-[220px] px-4 py-3.5">
-                                        <div class="truncate text-[13px] font-bold text-slate-900 dark:text-slate-100">
+                                        <div
+                                            class="truncate text-[13px] font-bold text-slate-900 dark:text-slate-100"
+                                        >
                                             {{ project.name }}
                                         </div>
-                                        <div class="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
-                                            {{ project.clientName ?? 'Tanpa klien' }}
+                                        <div
+                                            class="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400"
+                                        >
+                                            {{
+                                                project.clientName ??
+                                                'Tanpa klien'
+                                            }}
                                         </div>
-                                        <div class="mt-1.5 flex flex-wrap gap-1">
+                                        <div
+                                            class="mt-1.5 flex flex-wrap gap-1"
+                                        >
                                             <span
-                                                v-for="tech in project.technologies.slice(0, 3)"
+                                                v-for="tech in project.technologies.slice(
+                                                    0,
+                                                    3,
+                                                )"
                                                 :key="tech"
                                                 class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                             >
@@ -528,10 +631,14 @@ function exportCsv(): void {
                                         <span
                                             :class="[
                                                 'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold',
-                                                getProjectStatusBadge(project.status).class,
+                                                getProjectStatusBadge(
+                                                    project.status,
+                                                ).class,
                                             ]"
                                         >
-                                            <span class="mr-1.5 h-1.5 w-1.5 rounded-full bg-current"></span>
+                                            <span
+                                                class="mr-1.5 h-1.5 w-1.5 rounded-full bg-current"
+                                            ></span>
                                             {{ project.statusLabel }}
                                         </span>
                                     </td>
@@ -542,24 +649,38 @@ function exportCsv(): void {
                                         >
                                             <span>{{ project.progress }}%</span>
                                         </div>
-                                        <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                        <div
+                                            class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                                        >
                                             <div
-                                                :class="['h-full rounded-full', progressBarClass(project.progress)]"
-                                                :style="{ width: `${project.progress}%` }"
+                                                :class="[
+                                                    'h-full rounded-full',
+                                                    progressBarClass(
+                                                        project.progress,
+                                                    ),
+                                                ]"
+                                                :style="{
+                                                    width: `${project.progress}%`,
+                                                }"
                                             ></div>
                                         </div>
                                     </td>
 
-                                    <td class="px-3 py-3.5 font-bold whitespace-nowrap text-slate-900 dark:text-slate-100">
+                                    <td
+                                        class="px-3 py-3.5 font-bold whitespace-nowrap text-slate-900 dark:text-slate-100"
+                                    >
                                         {{ formatRupiah(project.projectValue) }}
                                     </td>
 
                                     <td class="px-3 py-3.5 whitespace-nowrap">
-                                        <div class="font-medium text-slate-800 dark:text-slate-200">
+                                        <div
+                                            class="font-medium text-slate-800 dark:text-slate-200"
+                                        >
                                             {{ project.deadline ?? '-' }}
                                         </div>
                                         <div class="text-[10px] text-slate-400">
-                                            Mulai: {{ project.startDate ?? '-' }}
+                                            Mulai:
+                                            {{ project.startDate ?? '-' }}
                                         </div>
                                     </td>
 
@@ -568,36 +689,59 @@ function exportCsv(): void {
                                             <div
                                                 class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                                             >
-                                                {{ (project.picName ?? '?').charAt(0) }}
+                                                {{
+                                                    (
+                                                        project.picName ?? '?'
+                                                    ).charAt(0)
+                                                }}
                                             </div>
                                             <div>
                                                 <div
                                                     class="max-w-[100px] truncate font-semibold text-slate-800 dark:text-slate-200"
                                                 >
-                                                    {{ project.picName ?? 'Belum ada PIC' }}
+                                                    {{
+                                                        project.picName ??
+                                                        'Belum ada PIC'
+                                                    }}
                                                 </div>
-                                                <div class="text-[10px] text-slate-400">
-                                                    {{ project.picRole ?? 'Engineer' }}
+                                                <div
+                                                    class="text-[10px] text-slate-400"
+                                                >
+                                                    {{
+                                                        project.picRole ??
+                                                        'Engineer'
+                                                    }}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
 
-                                    <td class="px-3 py-3.5 text-right whitespace-nowrap" @click.stop>
-                                        <div class="flex items-center justify-end gap-1">
+                                    <td
+                                        class="px-3 py-3.5 text-right whitespace-nowrap"
+                                        @click.stop
+                                    >
+                                        <div
+                                            class="flex items-center justify-end gap-1"
+                                        >
                                             <button
                                                 title="Edit Proyek"
                                                 class="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-slate-800"
                                                 @click="openEditModal(project)"
                                             >
-                                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                                                <span
+                                                    class="material-symbols-outlined text-[18px]"
+                                                    >edit</span
+                                                >
                                             </button>
                                             <button
                                                 title="Hapus Proyek"
                                                 class="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50"
                                                 @click="removeProject(project)"
                                             >
-                                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                                                <span
+                                                    class="material-symbols-outlined text-[18px]"
+                                                    >delete</span
+                                                >
                                             </button>
                                         </div>
                                     </td>
@@ -613,12 +757,18 @@ function exportCsv(): void {
                 v-if="selectedProject"
                 class="sticky top-20 space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg lg:col-span-5 xl:col-span-4 dark:border-slate-800 dark:bg-slate-900"
             >
-                <div class="flex items-start justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+                <div
+                    class="flex items-start justify-between border-b border-slate-100 pb-3 dark:border-slate-800"
+                >
                     <div class="min-w-0 flex-1">
-                        <span class="text-[10px] font-bold tracking-wider text-blue-700 uppercase dark:text-blue-400">
+                        <span
+                            class="text-[10px] font-bold tracking-wider text-blue-700 uppercase dark:text-blue-400"
+                        >
                             Detail Proyek
                         </span>
-                        <h3 class="mt-0.5 truncate text-base font-bold text-slate-900 dark:text-slate-100">
+                        <h3
+                            class="mt-0.5 truncate text-base font-bold text-slate-900 dark:text-slate-100"
+                        >
                             {{ selectedProject.name }}
                         </h3>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
@@ -629,32 +779,54 @@ function exportCsv(): void {
                         class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
                         @click="selectedProject = null"
                     >
-                        <span class="material-symbols-outlined text-[20px]">close</span>
+                        <span class="material-symbols-outlined text-[20px]"
+                            >close</span
+                        >
                     </button>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
-                        <span class="text-[11px] text-slate-400">Nilai Kontrak</span>
-                        <div class="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <div
+                        class="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50"
+                    >
+                        <span class="text-[11px] text-slate-400"
+                            >Nilai Kontrak</span
+                        >
+                        <div
+                            class="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100"
+                        >
                             {{ formatRupiah(selectedProject.projectValue) }}
                         </div>
                     </div>
 
-                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
-                        <span class="text-[11px] text-slate-400">Deadline Rilis</span>
-                        <div class="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <div
+                        class="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50"
+                    >
+                        <span class="text-[11px] text-slate-400"
+                            >Deadline Rilis</span
+                        >
+                        <div
+                            class="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100"
+                        >
                             {{ selectedProject.deadline ?? '-' }}
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <div class="mb-1.5 flex justify-between text-xs font-semibold">
-                        <span class="text-slate-600 dark:text-slate-300">Progress Pengerjaan</span>
-                        <span class="font-bold text-blue-700 dark:text-blue-400">{{ selectedProject.progress }}%</span>
+                    <div
+                        class="mb-1.5 flex justify-between text-xs font-semibold"
+                    >
+                        <span class="text-slate-600 dark:text-slate-300"
+                            >Progress Pengerjaan</span
+                        >
+                        <span class="font-bold text-blue-700 dark:text-blue-400"
+                            >{{ selectedProject.progress }}%</span
+                        >
                     </div>
-                    <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div
+                        class="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                    >
                         <div
                             class="h-full rounded-full bg-[#1e40af] transition-all duration-300"
                             :style="{ width: `${selectedProject.progress}%` }"
@@ -672,10 +844,14 @@ function exportCsv(): void {
                             {{ (selectedProject.picName ?? '?').charAt(0) }}
                         </div>
                         <div>
-                            <div class="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            <div
+                                class="text-xs font-bold text-slate-900 dark:text-slate-100"
+                            >
                                 {{ selectedProject.picName ?? 'Belum ada PIC' }}
                             </div>
-                            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                            <div
+                                class="text-[11px] text-slate-500 dark:text-slate-400"
+                            >
                                 {{ selectedProject.picRole ?? 'Project Lead' }}
                             </div>
                         </div>
@@ -688,16 +864,23 @@ function exportCsv(): void {
                         title="Hubungi PIC via WhatsApp"
                         class="rounded-lg bg-emerald-50 p-2 text-emerald-700 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300"
                     >
-                        <span class="material-symbols-outlined text-[18px]">chat</span>
+                        <span class="material-symbols-outlined text-[18px]"
+                            >chat</span
+                        >
                     </a>
                 </div>
 
                 <div class="space-y-2 text-xs">
-                    <span class="font-bold text-slate-800 dark:text-slate-200">Deskripsi &amp; Ruang Lingkup:</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200"
+                        >Deskripsi &amp; Ruang Lingkup:</span
+                    >
                     <p
                         class="rounded-lg border border-slate-100 bg-slate-50 p-2.5 leading-relaxed text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
                     >
-                        {{ selectedProject.description || 'Tidak ada deskripsi tambahan.' }}
+                        {{
+                            selectedProject.description ||
+                            'Tidak ada deskripsi tambahan.'
+                        }}
                     </p>
                     <div class="mt-2 flex flex-wrap gap-1">
                         <span
@@ -711,18 +894,30 @@ function exportCsv(): void {
                 </div>
 
                 <!-- Sprint tasks -->
-                <div class="space-y-3 border-t border-slate-100 pt-2 dark:border-slate-800">
+                <div
+                    class="space-y-3 border-t border-slate-100 pt-2 dark:border-slate-800"
+                >
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <span
+                            class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                        >
                             Sprint &amp; Deliverable Tasks
                         </span>
-                        <span class="text-[11px] text-slate-500 dark:text-slate-400">
-                            {{ doneTaskCount }}/{{ projectTasks.length }} Selesai
+                        <span
+                            class="text-[11px] text-slate-500 dark:text-slate-400"
+                        >
+                            {{ doneTaskCount }}/{{ projectTasks.length }}
+                            Selesai
                         </span>
                     </div>
 
-                    <div class="max-h-48 space-y-1.5 overflow-y-auto pr-1 text-xs">
-                        <div v-if="projectTasks.length === 0" class="py-3 text-center text-xs text-slate-400">
+                    <div
+                        class="max-h-48 space-y-1.5 overflow-y-auto pr-1 text-xs"
+                    >
+                        <div
+                            v-if="projectTasks.length === 0"
+                            class="py-3 text-center text-xs text-slate-400"
+                        >
                             Belum ada tugas di proyek ini.
                         </div>
 
@@ -748,19 +943,29 @@ function exportCsv(): void {
                                 >
                                     {{ task.title }}
                                 </span>
-                                <div class="mt-0.5 flex items-center gap-2 text-[10px] text-slate-400">
+                                <div
+                                    class="mt-0.5 flex items-center gap-2 text-[10px] text-slate-400"
+                                >
                                     <span>{{ task.dueDate ?? '-' }}</span>
                                     <span
                                         :class="
-                                            task.priority === 'high' ? 'font-bold text-rose-600 uppercase' : 'uppercase'
+                                            task.priority === 'high'
+                                                ? 'font-bold text-rose-600 uppercase'
+                                                : 'uppercase'
                                         "
                                     >
                                         {{ task.priorityLabel }}
                                     </span>
                                 </div>
                             </div>
-                            <button class="p-0.5 text-slate-300 hover:text-rose-600" @click="removeTask(task)">
-                                <span class="material-symbols-outlined text-[14px]">delete</span>
+                            <button
+                                class="p-0.5 text-slate-300 hover:text-rose-600"
+                                @click="removeTask(task)"
+                            >
+                                <span
+                                    class="material-symbols-outlined text-[14px]"
+                                    >delete</span
+                                >
                             </button>
                         </div>
                     </div>
@@ -781,7 +986,9 @@ function exportCsv(): void {
                         </select>
                         <button
                             type="submit"
-                            :disabled="!newTaskTitle.trim() || taskForm.processing"
+                            :disabled="
+                                !newTaskTitle.trim() || taskForm.processing
+                            "
                             class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                         >
                             Tambah
@@ -789,7 +996,9 @@ function exportCsv(): void {
                     </form>
                 </div>
 
-                <div class="flex gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <div
+                    class="flex gap-2 border-t border-slate-100 pt-3 dark:border-slate-800"
+                >
                     <button
                         class="flex-1 rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-800 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                         @click="openEditModal(selectedProject)"
@@ -809,11 +1018,16 @@ function exportCsv(): void {
         <!-- Modal: create / edit project -->
         <Modal
             :is-open="isModalOpen"
-            :title="editingProject ? 'Edit Proyek Software' : 'Buat Proyek Baru'"
+            :title="
+                editingProject ? 'Edit Proyek Software' : 'Buat Proyek Baru'
+            "
             subtitle="Isi parameter proyek, alokasi PIC engineer, dan deliverable kontrak."
             @close="isModalOpen = false"
         >
-            <form class="space-y-4 text-xs sm:text-sm" @submit.prevent="saveProject">
+            <form
+                class="space-y-4 text-xs sm:text-sm"
+                @submit.prevent="saveProject"
+            >
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                         <label :class="labelClass">Nama Proyek *</label>
@@ -823,18 +1037,28 @@ function exportCsv(): void {
                             placeholder="Contoh: Sistem ERP Pergudangan"
                             :class="inputClass"
                         />
-                        <p v-if="form.errors.name" class="mt-1 text-[11px] text-rose-600">{{ form.errors.name }}</p>
+                        <p
+                            v-if="form.errors.name"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
+                            {{ form.errors.name }}
+                        </p>
                     </div>
 
                     <div>
-                        <label :class="labelClass">Nama Klien / Perusahaan *</label>
+                        <label :class="labelClass"
+                            >Nama Klien / Perusahaan *</label
+                        >
                         <input
                             v-model="form.client_name"
                             required
                             placeholder="Contoh: PT Logistik Nusantara"
                             :class="inputClass"
                         />
-                        <p v-if="form.errors.client_name" class="mt-1 text-[11px] text-rose-600">
+                        <p
+                            v-if="form.errors.client_name"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ form.errors.client_name }}
                         </p>
                     </div>
@@ -843,15 +1067,26 @@ function exportCsv(): void {
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
                         <label :class="labelClass">Nilai Kontrak (Rp)</label>
-                        <input v-model.number="form.project_value" type="number" min="0" :class="inputClass" />
-                        <p v-if="form.errors.project_value" class="mt-1 text-[11px] text-rose-600">
+                        <input
+                            v-model.number="form.project_value"
+                            type="number"
+                            min="0"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.project_value"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ form.errors.project_value }}
                         </p>
                     </div>
 
                     <div>
                         <label :class="labelClass">Status Proyek</label>
-                        <select v-model="form.status" :class="[inputClass, 'cursor-pointer']">
+                        <select
+                            v-model="form.status"
+                            :class="[inputClass, 'cursor-pointer']"
+                        >
                             <option value="lead">Lead</option>
                             <option value="negotiation">Negosiasi</option>
                             <option value="deal">Deal</option>
@@ -863,7 +1098,9 @@ function exportCsv(): void {
                     </div>
 
                     <div>
-                        <label :class="labelClass">Progress ({{ form.progress_pct }}%)</label>
+                        <label :class="labelClass"
+                            >Progress ({{ form.progress_pct }}%)</label
+                        >
                         <input
                             v-model.number="form.progress_pct"
                             type="range"
@@ -871,7 +1108,10 @@ function exportCsv(): void {
                             max="100"
                             class="mt-2 w-full cursor-pointer"
                         />
-                        <p v-if="progressError" class="mt-1 text-[11px] text-rose-600">
+                        <p
+                            v-if="progressError"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ progressError }}
                         </p>
                     </div>
@@ -880,37 +1120,70 @@ function exportCsv(): void {
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
                         <label :class="labelClass">Tanggal Mulai</label>
-                        <input v-model="form.start_date" type="date" :class="inputClass" />
+                        <input
+                            v-model="form.start_date"
+                            type="date"
+                            :class="inputClass"
+                        />
                     </div>
 
                     <div>
                         <label :class="labelClass">Deadline Selesai</label>
-                        <input v-model="form.deadline" type="date" :class="inputClass" />
-                        <p v-if="form.errors.deadline" class="mt-1 text-[11px] text-rose-600">
+                        <input
+                            v-model="form.deadline"
+                            type="date"
+                            :class="inputClass"
+                        />
+                        <p
+                            v-if="form.errors.deadline"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
                             {{ form.errors.deadline }}
                         </p>
                     </div>
 
                     <div>
                         <label :class="labelClass">PIC Proyek</label>
-                        <select v-model="form.pic_id" :class="[inputClass, 'cursor-pointer']">
+                        <select
+                            v-model="form.pic_id"
+                            :class="[inputClass, 'cursor-pointer']"
+                        >
                             <option :value="null">Belum ditentukan</option>
-                            <option v-for="member in members" :key="member.id" :value="member.id">
-                                {{ member.name }}{{ member.jobTitle ? ` (${member.jobTitle})` : '' }}
+                            <option
+                                v-for="member in members"
+                                :key="member.id"
+                                :value="member.id"
+                            >
+                                {{ member.name
+                                }}{{
+                                    member.jobTitle
+                                        ? ` (${member.jobTitle})`
+                                        : ''
+                                }}
                             </option>
                         </select>
-                        <p v-if="form.errors.pic_id" class="mt-1 text-[11px] text-rose-600">{{ form.errors.pic_id }}</p>
+                        <p
+                            v-if="form.errors.pic_id"
+                            class="mt-1 text-[11px] text-rose-600"
+                        >
+                            {{ form.errors.pic_id }}
+                        </p>
                     </div>
                 </div>
 
                 <div>
-                    <label :class="labelClass">Teknologi yang Digunakan (Pisahkan koma)</label>
+                    <label :class="labelClass"
+                        >Teknologi yang Digunakan (Pisahkan koma)</label
+                    >
                     <input
                         v-model="form.technologies"
                         placeholder="React, Node.js, PostgreSQL, Docker"
                         :class="inputClass"
                     />
-                    <p v-if="form.errors.technologies" class="mt-1 text-[11px] text-rose-600">
+                    <p
+                        v-if="form.errors.technologies"
+                        class="mt-1 text-[11px] text-rose-600"
+                    >
                         {{ form.errors.technologies }}
                     </p>
                 </div>
@@ -925,7 +1198,9 @@ function exportCsv(): void {
                     />
                 </div>
 
-                <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <div
+                    class="flex items-center justify-end gap-3 border-t border-slate-100 pt-3 dark:border-slate-800"
+                >
                     <button
                         type="button"
                         class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"

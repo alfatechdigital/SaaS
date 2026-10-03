@@ -56,22 +56,36 @@ const handleLogout = () => {
 
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
-            <Link class="block w-full cursor-pointer" :href="profileEdit()" prefetch>
-                <span class="material-symbols-outlined mr-2 text-[18px]">person</span>
+            <Link
+                class="block w-full cursor-pointer"
+                :href="profileEdit()"
+                prefetch
+            >
+                <span class="material-symbols-outlined mr-2 text-[18px]"
+                    >person</span
+                >
                 Profil Saya
             </Link>
         </DropdownMenuItem>
 
         <DropdownMenuItem :as-child="true">
-            <Link class="block w-full cursor-pointer" :href="securityEdit()" prefetch>
-                <span class="material-symbols-outlined mr-2 text-[18px]">lock</span>
+            <Link
+                class="block w-full cursor-pointer"
+                :href="securityEdit()"
+                prefetch
+            >
+                <span class="material-symbols-outlined mr-2 text-[18px]"
+                    >lock</span
+                >
                 Keamanan &amp; Passkey
             </Link>
         </DropdownMenuItem>
 
         <DropdownMenuItem v-if="teamHref" :as-child="true">
             <Link class="block w-full cursor-pointer" :href="teamHref" prefetch>
-                <span class="material-symbols-outlined mr-2 text-[18px]">group</span>
+                <span class="material-symbols-outlined mr-2 text-[18px]"
+                    >group</span
+                >
                 Kelola Tim
             </Link>
         </DropdownMenuItem>
@@ -87,7 +101,9 @@ const handleLogout = () => {
             data-test="logout-button"
             @click="handleLogout"
         >
-            <span class="material-symbols-outlined mr-2 text-[18px]">logout</span>
+            <span class="material-symbols-outlined mr-2 text-[18px]"
+                >logout</span
+            >
             Keluar
         </Link>
     </DropdownMenuItem>

@@ -2,7 +2,11 @@
 import { computed, onMounted, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import type { ActivityEntityType, ActivityLog } from '@/types';
-import { formatDateTimeId, formatTimeAgo, getActivityActionBadge } from '@/utils/formatters';
+import {
+    formatDateTimeId,
+    formatTimeAgo,
+    getActivityActionBadge,
+} from '@/utils/formatters';
 
 /**
  * Audit trail of every tracked data change.
@@ -46,7 +50,10 @@ const filteredLogs = computed(() => {
     const query = searchQuery.value.trim().toLowerCase();
 
     return props.logs.filter((log) => {
-        if (entityFilter.value !== 'all' && log.entityType !== entityFilter.value) {
+        if (
+            entityFilter.value !== 'all' &&
+            log.entityType !== entityFilter.value
+        ) {
             return false;
         }
 
@@ -71,19 +78,28 @@ const filteredLogs = computed(() => {
             class="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-6 dark:border-slate-800 dark:bg-slate-900"
         >
             <div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
+                <h1
+                    class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100"
+                >
                     Log Aktivitas &amp; Audit Perubahan
                 </h1>
-                <p class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                    Rekam jejak setiap perubahan data untuk transparansi manajemen. Menampilkan
+                <p
+                    class="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400"
+                >
+                    Rekam jejak setiap perubahan data untuk transparansi
+                    manajemen. Menampilkan
                     {{ logs.length }} aktivitas terbaru.
                 </p>
             </div>
         </div>
 
         <!-- Filters & search -->
-        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold sm:text-sm">
+        <div
+            class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"
+        >
+            <div
+                class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold sm:text-sm"
+            >
                 <button
                     :class="[
                         'rounded-lg px-3 py-1.5 whitespace-nowrap transition-all',
@@ -111,7 +127,10 @@ const filteredLogs = computed(() => {
             </div>
 
             <div class="relative w-full sm:w-64">
-                <span class="material-symbols-outlined absolute top-2 left-3 text-[18px] text-slate-400">search</span>
+                <span
+                    class="material-symbols-outlined absolute top-2 left-3 text-[18px] text-slate-400"
+                    >search</span
+                >
                 <input
                     v-model="searchQuery"
                     placeholder="Cari pelaku atau aktivitas..."
@@ -124,12 +143,22 @@ const filteredLogs = computed(() => {
         <div
             class="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:p-6 dark:border-slate-800 dark:bg-slate-900"
         >
-            <div v-if="filteredLogs.length === 0" class="py-10 text-center text-sm text-slate-400">
+            <div
+                v-if="filteredLogs.length === 0"
+                class="py-10 text-center text-sm text-slate-400"
+            >
                 Belum ada aktivitas yang cocok.
             </div>
 
-            <div v-else class="relative ml-3.5 space-y-6 border-l-2 border-slate-100 dark:border-slate-800">
-                <div v-for="log in filteredLogs" :key="log.id" class="relative pl-6 sm:pl-8">
+            <div
+                v-else
+                class="relative ml-3.5 space-y-6 border-l-2 border-slate-100 dark:border-slate-800"
+            >
+                <div
+                    v-for="log in filteredLogs"
+                    :key="log.id"
+                    class="relative pl-6 sm:pl-8"
+                >
                     <span
                         class="absolute top-1 -left-[9px] h-4 w-4 rounded-full border-4 border-blue-600 bg-white dark:bg-slate-900"
                     ></span>
@@ -137,9 +166,13 @@ const filteredLogs = computed(() => {
                     <div
                         class="space-y-1.5 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4 dark:border-slate-800 dark:bg-slate-800/40"
                     >
-                        <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-2"
+                        >
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold text-slate-900 sm:text-sm dark:text-slate-100">
+                                <span
+                                    class="text-xs font-bold text-slate-900 sm:text-sm dark:text-slate-100"
+                                >
                                     {{ log.performedByName ?? 'Sistem' }}
                                 </span>
                                 <span
@@ -160,11 +193,17 @@ const filteredLogs = computed(() => {
                                 class="text-[11px] font-medium text-slate-400"
                                 :title="formatDateTimeId(log.createdAt)"
                             >
-                                {{ mounted ? formatTimeAgo(log.createdAt) : formatDateTimeId(log.createdAt) }}
+                                {{
+                                    mounted
+                                        ? formatTimeAgo(log.createdAt)
+                                        : formatDateTimeId(log.createdAt)
+                                }}
                             </span>
                         </div>
 
-                        <p class="text-xs leading-relaxed font-medium text-slate-700 dark:text-slate-300">
+                        <p
+                            class="text-xs leading-relaxed font-medium text-slate-700 dark:text-slate-300"
+                        >
                             {{ log.details }}
                         </p>
                     </div>
