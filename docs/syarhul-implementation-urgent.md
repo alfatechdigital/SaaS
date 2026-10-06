@@ -265,15 +265,26 @@ Bisa ditempel langsung sebagai issue atau GitHub Project.
 - [x] Global scope aktif per model
 - [x] Query tanpa konteks gagal keras
 - [x] `withoutTeamScope()` tersedia dan terdokumentasi
-- [ ] Platform layer, seeder, dan command tetap berfungsi
-- [ ] Suite isolasi P-1 tetap hijau tanpa mengubah ekspektasi
+- [x] Setiap pemakaian `withoutTeamScope()` punya alasan tertulis (2.2.4 — nol di produksi, tiga di test)
+- [x] Platform layer, seeder, dan command tetap berfungsi (2.2.5)
+- [x] `->forTeam()` yang redundan dihapus (2.2.6)
+- [x] Suite isolasi P-1 tetap hijau tanpa mengubah ekspektasi (2.2.7)
 
-> **Status 2026-10-12.**
+> **Status 2026-10-13 — P-2 selesai (tahap akhir).**
+>
+> - **2.2.4** — pencarian `withoutTeamScope()` di `app/`, `routes/`, `database/`: **nol pemakaian**. Tiga pemakaian yang ada hanya di `TeamGlobalScopeTest`, masing-masing diberi komentar alasan. Lihat [phase-02 → Audit 2.2.4–2.2.5](implementation/phase-02-tenant-context.md#audit-224225--escape-hatch--jalur-khusus).
+> - **2.2.5** — jalur khusus diaudit satu per satu: platform layer hanya menyentuh `teams`/`users`/`memberships`/`team_invitations` (tanpa model ber-scope), seeder memakai `runFor()`, `platform:promote` hanya menyentuh `users`, scheduler menyentuh `team_invitations` (tidak tenant-scoped), route publik memakai `CurrentTeam::activate()`. Tidak ada konteks tenant palsu yang dipasang.
+> - **2.2.6** — 33 pemanggilan `->forTeam(...)` redundan dihapus dari 10 controller (`Dashboard`, `Lead`, `Project`, `Task`, `ContentItem`, `Transaction`, `PortfolioItem`, `ActivityLog`, `CompanyProfile`, dan `PublicCompanyProfile`). Tenant tetap diaktifkan lewat `CurrentTeam::from()` / `TeamRequest::authorize()` / `activate()`. Aturan validasi `Rule::exists(...)->where('team_id', …)` **tidak** disentuh karena `Rule::exists()` tidak melewati scope.
+> - **2.2.7** — mutasi ulang: `addGlobalScope(new TeamScope)` dinonaktifkan sementara → **45 test gagal, 20 di antaranya `TenantIsolationTest`**. Jadi suite isolasi kini menjaga **global scope**, bukan `->forTeam()`. Setelah dikembalikan: `composer test` hijau (249 test, 1052 assertion), termasuk test baru `test_dashboard_only_exposes_the_active_tenant_data`.
+
+> **Status 2026-10-12 (riwayat).**
 >
 > - **P-0** selesai, kecuali memindahkan proyek keluar dari OneDrive (belum dilakukan).
-> - **P-1** selesai, termasuk bukti mutation. Langkah gerbang CI sudah dipasang di `.github/workflows/tests.yml`, **tetapi belum pernah benar-benar berjalan**: workflow hanya trigger pada `push` ke `main` dan `pull_request`, sedangkan pekerjaan di-_push_ ke branch `syahrul-dev`. Perlu diputuskan sebelum gate ini punya arti.
-> - **P-2** — 2.1 dan 2.2.1–2.2.3 selesai (scope aktif di seluruh 8 model, fail-loud, `withoutTeamScope()`). Dua kotak terakhir sengaja belum dicentang: audit jalur khusus, penghapusan `->forTeam()` yang redundan, dan verifikasi ulang suite isolasi adalah 2.2.4–2.2.7 (Selasa 13 Okt). Platform layer + seeder sudah hijau, `command` belum diaudit.
+> - **P-1** selesai, termasuk bukti mutation.
+> - **P-2** — 2.1 dan 2.2.1–2.2.3 selesai (scope aktif di seluruh 8 model, fail-loud, `withoutTeamScope()`). Audit jalur khusus, penghapusan `->forTeam()` yang redundan, dan verifikasi ulang suite isolasi (2.2.4–2.2.7) menyusul.
 > - **P-3**, **P-4**, **P-5** belum dimulai.
+>
+> **Koreksi 2026-10-13.** Kalimat lama di catatan ini — “gerbang CI belum pernah benar-benar berjalan” — **sudah tidak berlaku**: `e9e3246` mengubah filter branch menjadi semua branch, dan workflow-nya **berjalan hijau** di `syahrul-dev` (run #5, commit `a353ab5`).
 
 **P-3 — Database produksi**
 

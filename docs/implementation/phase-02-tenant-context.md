@@ -50,12 +50,14 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 
 ## Current State
 
-> Diperbarui 2026-10-12. Sebelumnya bagian ini menggambarkan kondisi sebelum 2.1–2.2.1 dikerjakan.
+> Diperbarui 2026-10-13. Sebelumnya bagian ini menggambarkan kondisi sebelum 2.1–2.2.1 dikerjakan.
 
 - Isolasi tenant kini **dijamin arsitektural**: `App\Scopes\TeamScope` memfilter setiap query model tenant-scoped, dan query tanpa tenant aktif **gagal keras** (`App\Exceptions\MissingTenantContext`).
 - `App\Support\TenantContext` adalah satu sumber tenant aktif per request/job. `CurrentTeam::from()`/`activate()` menulisnya; `ResetTenantContext` (per request) dan listener `JobProcessing` (per job) membersihkannya.
 - Seluruh model tenant-scoped sudah memakai scope: `company_profiles`, `projects`, `tasks`, `leads`, `content_items`, `transactions`, `portfolio_items`, `activity_logs`.
-- `->forTeam()` di controller masih ada dan kini **redundan** — scope adalah otoritasnya. Penghapusan menyusul di 2.2.6.
+- **Tidak ada lagi `->forTeam()` di kode produksi** (2.2.6, 2026-10-13). Scope adalah otoritasnya; `forTeam()` hanya menyempitkan, bukan mengamankan. Pemakaian yang tersisa hanya di test.
+- Escape hatch `withoutTeamScope()` **nol pemakaian di kode produksi**; tiga pemakaian yang ada semuanya di `tests/Feature/Tenancy/TeamGlobalScopeTest.php` dan masing-masing berkomentar alasan (2.2.4).
+- Jalur khusus sudah diaudit (2.2.5): platform layer hanya menyentuh `teams`/`users`/`memberships`, seeder memakai `TenantContext::runFor()`, command hanya menyentuh `users`, scheduler menyentuh `team_invitations` yang memang tidak tenant-scoped.
 - Route publik (`p/{team}`) tidak melewati segmen `{current_team}`, jadi controller-nya mengaktifkan tenant secara eksplisit.
 - Belum ada job sama sekali; pola konteks job sudah disiapkan (`runFor()` + reset per job) tetapi belum dipakai di produksi.
 - Cache: belum dipakai secara eksplisit; kunci cache belum ber-namespace.
@@ -210,6 +212,7 @@ Sangat minimal — tidak ada halaman tenant baru.
 | Test                 | Cakupan                                                            |
 | -------------------- | ------------------------------------------------------------------ |
 | Suite isolasi Fase 1 | Harus **tetap hijau** setelah global scope aktif — ini bukti utama |
+| Dashboard (2.2.7)    | Agregasi lima modul hanya memuat data tenant aktif                 |
 | Konteks tenant       | Konteks tidak bocor antar request; `runFor()` bekerja              |
 | Fail-loud            | Query model tenant-scoped tanpa konteks → exception                |
 | Escape hatch         | `withoutTeamScope()` benar-benar melewati scope                    |
@@ -234,6 +237,8 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 
 ## Acceptance Criteria
 
+> **Status 2026-10-13.** Kriteria **1–5, 9, 10** sudah terpenuhi untuk lingkup 2.1–2.2: suite isolasi hijau, mutasi ulang membuktikan scope adalah penjaganya, dan `forTeam()` sudah tidak dipakai di produksi. Tanda ✅ pada kriteria **6–8** (suspend, audit platform, cache namespace) masih **target** — tugas 2.3–2.6 belum dikerjakan.
+
 1. ✅ `TenantContext` menjadi satu-satunya sumber tenant aktif; tidak ada controller yang resolve tenant sendiri.
 2. ✅ Seluruh model tenant-scoped memakai global scope; query tanpa konteks gagal jelas.
 3. ✅ `withoutTeamScope()` ada dan setiap pemakaiannya punya alasan tertulis.
@@ -253,7 +258,7 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 | ----- | ---------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------ |
 | RF2-A | Global scope memecah query platform/seeder/command                           | **Tinggi** | Kerjakan per model; test setiap langkah; escape hatch eksplisit (RSK-01) |
 | RF2-B | Stale tenant context pada antrian panjang                                    | Tinggi     | Bersihkan konteks; test khusus                                           |
-| RF2-C | Scope ganda (global + `forTeam()`) membingungkan developer                   | Rendah     | Dokumentasikan; perlahan rapikan yang redundan                           |
+| RF2-C | Scope ganda (global + `forTeam()`) membingungkan developer                   | Rendah     | Sudah dirapikan 2026-10-13 (2.2.6): `forTeam()` tidak lagi dipakai di produksi                        |
 | RF2-D | Fail-loud memicu exception di tempat tak terduga (mis. Inertia shared props) | Sedang     | Uji semua halaman; tangani jalur konsol secara eksplisit                 |
 | RF2-E | Suspend tenant memutus akses tanpa peringatan                                | Sedang     | UI konfirmasi + audit log                                                |
 
@@ -291,6 +296,10 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 | 2026-10-08 | Query dari relasi yang di-_lazy load_ di dalam fixture test berjalan tanpa konteks tenant (`$task->project`).                                                            | Test gagal dengan exception, bukan assertion — membingungkan saat dibaca | Fixture memakai instance yang sudah dibuat. Catatan: `Model::fresh()` aman (`newQueryWithoutScopes`) dan `Rule::exists(Model::class)` aman (hanya nama tabel, tanpa scope)           |
 | 2026-10-08 | `AlfatechDemoSeeder` melakukan query pada model ber-scope tanpa konteks.                                                                                                 | `PlatformSeederTest` gagal                                               | Seeder dibungkus `TenantContext::runFor()`. Bagian dari 2.2.5, dikerjakan lebih awal karena scope langsung memblokirnya                                                              |
 | 2026-10-12 | `activity_logs` ikut ber-scope pada hari yang sama dengan model lain, bukan menyusul.                                                                                    | —                                                                        | Tidak ada penyesuaian khusus; `ActivityObserver` hanya menulis (`create`), tidak pernah query                                                                                        |
+| 2026-10-13 | **Audit `withoutTeamScope()` (2.2.4):** nol pemakaian di kode produksi; hanya tiga pemakaian di `TeamGlobalScopeTest`, semuanya diberi komentar alasan.                  | Escape hatch mudah diaudit saat code review                             | Quality gate tetap berlaku: setiap pemakaian baru wajib berkomentar alasan                                                                                                          |
+| 2026-10-13 | **Audit jalur khusus (2.2.5):** platform layer, seeder, command, scheduler, dan test tidak ada yang perlu `withoutTeamScope()` baru.                                     | Tidak ada konteks tenant palsu yang dipasang di jalur lintas tenant      | Rincian per jalur dicatat di bawah                                                                                                                                |
+| 2026-10-13 | **Mutasi ulang untuk 2.2.7:** `addGlobalScope(new TeamScope)` dinonaktifkan → 45 test gagal, termasuk 20 dari `TenantIsolationTest`.                                       | Membuktikan suite isolasi kini menjaga **global scope**, bukan `->forTeam()` | Penghapusan `->forTeam()` (2.2.6) aman: penjaganya sudah pindah ke scope                                                                                                            |
+| 2026-10-13 | **Gerbang penuh 2.2.7:** `composer test` hijau setelah 2.2.4–2.2.6 — pint bersih, phpstan level 7 nol error, 249 test / 1052 assertion.                                 | Tidak ada ekspektasi test yang diubah untuk membuatnya hijau              | Test baru: `test_dashboard_only_exposes_the_active_tenant_data`                                                                                                                     |
 
 ---
 
@@ -306,6 +315,9 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 | 2026-10-08 | Jalur khusus yang dibereskan lebih awal: route publik + seeder                                                                         | Keduanya langsung gagal begitu scope aktif; menundanya hanya membuat suite merah                                                   |
 | 2026-10-08 | Fail-loud memakai exception khusus yang menyebut nama model                                                                            | Penyebab langsung terlihat dari stack trace, tanpa perlu debug tambahan                                                            |
 | 2026-10-08 | `runFor()` **memulihkan** konteks sebelumnya (bukan sekadar menghapusnya)                                                              | `runFor()` bersarang tidak boleh melebarkan scope luar secara diam-diam, dan konteks tetap bersih bila callback melempar exception |
+| 2026-10-13 | **Hapus seluruh `->forTeam()` di kode produksi (2.2.6)**, bukan hanya sebagian                                                            | Dua sumber kebenaran untuk tenant selalu berakhir dengan yang salah satunya basi; `forTeam()` yang menunjuk tenant lain hanya mengembalikan nol baris, bukan error — jadi kegagalannya senyap |
+| 2026-10-13 | Tenant tetap diaktifkan lewat `CurrentTeam::from()` (`{current_team}`) / `TeamRequest::authorize()` / `activate()` (route publik)            | Middleware `ResolveTenant` (host-aware) baru masuk gelombang 2; memindahkannya sekarang berarti memperluas lingkup 2.2               |
+| 2026-10-13 | Nota validasi `Rule::exists(Project::class, 'id')->where('team_id', …)` **dipertahankan**                                                   | `Rule::exists()` hanya memakai nama tabel (tanpa scope), jadi `where('team_id')` di situ memang penjaga, bukan duplikasi              |
 
 ---
 
@@ -321,11 +333,43 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 
 ---
 
+## Audit 2.2.4–2.2.5 — Escape Hatch & Jalur Khusus
+
+> Dijalankan 2026-10-13, setelah seluruh model tenant-scoped ber-scope.
+
+### `withoutTeamScope()` — tugas 2.2.4
+
+Pencarian di seluruh repo menemukan **nol pemakaian di kode produksi** (`app/`, `routes/`, `database/`).
+Tiga pemakaian yang ada semuanya di test, masing-masing dengan komentar alasan:
+
+| Lokasi                                                                    | Alasan yang dicatat                                        |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `TeamGlobalScopeTest` — `test_without_team_scope_reaches_every_tenant`    | Membuktikan escape hatch benar-benar melepas scope saat tidak ada tenant aktif |
+| `TeamGlobalScopeTest` — `test_without_team_scope_escapes_an_active_tenant` | Membuktikan escape hatch melebarkan query yang sedang terkunci ke satu tenant |
+| `TeamGlobalScopeTest` — assertion di test yang sama                        | Membuktikan baris tenant lain dapat dijangkau — dan itu harus sengaja |
+
+Quality gate `implementation-schedule.md` §9 (“Setiap `withoutTeamScope()` wajib berkomentar alasan”) tetap berlaku untuk pemakaian baru.
+
+### Jalur khusus — tugas 2.2.5
+
+| Jalur                                       | Cara menangani tenant                                                                                          | Perlu `withoutTeamScope()`? |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Platform layer (`PlatformTenantController`)  | Hanya menyentuh `teams`, `users`, `memberships`, `team_invitations` — tidak ada model ber-scope                 | Tidak; memasang konteks tenant palsu justru dilarang (Implementation Note 4) |
+| `AlfatechDemoSeeder`                        | Seluruh penulisan/query tenant dibungkus `TenantContext::runFor($this->team, …)`                                | Tidak                       |
+| `platform:promote` (`PromotePlatformAdmin`)  | Hanya menyentuh `users`                                                                                        | Tidak                       |
+| Scheduler (`routes/console.php`)             | Menghapus `team_invitations` kedaluwarsa — model ini memang tidak tenant-scoped                                 | Tidak                       |
+| Route publik (`p/{team}`)                    | `CurrentTeam::activate($team)` di `PublicCompanyProfileController` & `PublicLeadController`                     | Tidak                       |
+| Test                                        | Fixture membuat baris dengan `team_id` eksplisit (`create()` tidak melewati scope); query yang butuh konteks memakai `runFor()` | Hanya di `TeamGlobalScopeTest` |
+
+Aturan validasi `Rule::exists(Project::class, 'id')->where('team_id', $teamId)` di `SaveTaskRequest` dan `SaveTransactionRequest` **dipertahankan**: `Rule::exists()` hanya memakai nama tabel tanpa scope, sehingga filter `team_id` di situ memang penjaga, bukan duplikasi.
+
+---
+
 ## Technical Debt
 
 | ID    | Utang                                                                              | Alasan diterima                             | Kapan ditinjau               |
 | ----- | ---------------------------------------------------------------------------------- | ------------------------------------------- | ---------------------------- |
-| TD2-1 | Sebagian `->forTeam()` masih tersisa setelah global scope (redundan)               | Menghapusnya berisiko; lebih aman dibiarkan | Saat refactor modul terkait  |
+| TD2-1 | ~~Sebagian `->forTeam()` masih tersisa setelah global scope (redundan)~~ **ditutup 2026-10-13 (2.2.6)** | — | —                       |
 | TD2-2 | Tidak ada audit historis aksi platform sebelum fase ini                            | Tidak dapat direkonstruksi                  | —                            |
 | TD2-3 | `suspended_at` mungkin belum menangani kasus "tenant disuspend karena gagal bayar" | Billing baru masuk gelombang 1              | Gelombang 1                  |
 | TD2-4 | Log aggregation belum disiapkan; `team_id` di log belum dimanfaatkan penuh         | Belum ada tooling                           | Fase 5 / DevOps              |
@@ -343,9 +387,9 @@ _Belum ada entri._
 
 ## Implementation Notes
 
-1. **Jangan mengerjakan 2.2 (global scope) dan 2.2.6 (hapus `forTeam`) dalam satu perubahan.** Pasang dulu, buktikan test hijau, baru rapikan.
+1. **Jangan mengerjakan 2.2 (global scope) dan 2.2.6 (hapus `forTeam`) dalam satu perubahan.** Pasang dulu, buktikan test hijau, baru rapikan. _(Dipatuhi: 2.2 mendarat di `8d9f292`, penghapusan `forTeam` menyusul 2026-10-13.)_
 2. **Verifikasi fail-loud benar-benar bekerja:** buat test yang menjalankan query model tenant-scoped tanpa konteks dan pastikan melempar exception.
 3. **Waspadai jalur konsol.** Seeder & command berjalan tanpa request; mereka **wajib** memakai `TenantContext::runFor()` atau `withoutTeamScope()` secara eksplisit.
 4. **Platform layer adalah kasus khusus** — operasinya memang lintas tenant. Jangan "memperbaiki"-nya dengan memberi konteks tenant yang salah.
-5. Bila `withoutTeamScope()` muncul lebih dari 2–3 kali di kode produksi, hentikan dan tinjau ulang desainnya.
+5. Bila `withoutTeamScope()` muncul lebih dari 2–3 kali di kode produksi, hentikan dan tinjau ulang desainnya. _(Status 2026-10-13: nol pemakaian di kode produksi — lihat bagian Audit.)_
 6. Perbarui `docs/IMPLEMENTATION_PLAN.md` Lampiran A bila kolom `settings`/`suspended_at` benar-benar dibuat.

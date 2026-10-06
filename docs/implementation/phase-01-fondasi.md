@@ -95,7 +95,7 @@ Checklist tugas. Kolom **Bergantung** menandakan keputusan yang harus ada sebelu
 | 1.2.2 | Test: `index` setiap modul hanya mengembalikan data tenant aktif                     | —          | projects, tasks, leads, contents, transactions, portfolio, activity-logs, company-profile |
 | 1.2.3 | Test: `update`/`delete` terhadap ID milik tenant lain → 404/403                      | —          | Menutup IDOR (R-4)                                                                        |
 | 1.2.4 | Test: user non-anggota tidak bisa membuka `{current_team}/dashboard` → 403           | —          | Menutup celah keanggotaan                                                                 |
-| 1.2.5 | Test: halaman publik tenant B tidak membocorkan data tenant A                        | —          | `forTeam()` di `PublicCompanyProfileController`                                           |
+| 1.2.5 | Test: halaman publik tenant B tidak membocorkan data tenant A                        | —          | `CurrentTeam::activate()` + global scope di `PublicCompanyProfileController`              |
 | 1.2.6 | Test: form konsultasi tenant B tidak menulis lead ke tenant A                        | —          | `PublicLeadController`                                                                    |
 | 1.2.7 | Jadikan kelompok test ini **wajib di CI**                                            | —          | Jangan pernah di-_skip_                                                                   |
 
@@ -369,5 +369,5 @@ Catatan praktis untuk pelaksana:
 2. **Jangan sekaligus** memasang global scope di fase ini. Itu mengubah perilaku query secara luas dan akan mengaburkan hasil test.
 3. **Perhatikan urutan build:** `npm run build` **wajib** sebelum `php artisan test`.
 4. Untuk 1.2.1, buat **dua** tenant di dalam satu test dengan data yang sengaja mirip (nama perusahaan sama, `team_id` berbeda) — inilah yang membuktikan isolasi, bukan dua tenant dengan data yang jelas berbeda.
-5. Untuk memverifikasi test isolasi benar-benar bekerja (acceptance #3): sementara hapus `->forTeam($team)` dari satu controller, jalankan test, pastikan **gagal**, lalu kembalikan. Catat hasilnya di [Post-Implementation Notes](#post-implementation-notes).
+5. Untuk memverifikasi test isolasi benar-benar bekerja (acceptance #3): sementara nonaktifkan penjaganya, jalankan test, pastikan **gagal**, lalu kembalikan. Sebelum P-2, penjaganya adalah pemanggilan `->forTeam($team)` di controller; sejak tugas 2.2.6 penjaganya adalah global scope, jadi mutasinya ikut pindah ke `static::addGlobalScope(new TeamScope);` di `app/Concerns/BelongsToTeam.php`. Catat hasilnya di [Post-Implementation Notes](#post-implementation-notes).
 6. Tugas yang bergantung pada D-01/D-09 boleh ditunda; jangan menebak keputusan.
