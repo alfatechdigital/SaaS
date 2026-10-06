@@ -62,11 +62,13 @@ jobs:
         include:
           - engine: mysql
             label: MySQL 8
+            server: MySQL
             port: 3306
             username: alfatech
             password: alfatech
           - engine: pgsql
             label: PostgreSQL 16
+            server: PostgreSQL
             port: 5432
             username: postgres
             password: postgres
@@ -135,6 +137,13 @@ jobs:
       # sekaligus bukti bahwa migrasi berjalan di engine ini, bukan di SQLite.
       - name: Setup Application
         run: composer setup
+
+      # Bukti bahwa suite benar-benar memakai engine ini. `phpunit.xml` masih
+      # menunjuk SQLite — ia hanya mengalah pada variabel environment — sehingga
+      # tanpa langkah ini kesalahan konfigurasi bisa membuat job tetap hijau
+      # sambil tidak menguji engine apa pun.
+      - name: Confirm the engine under test
+        run: php artisan db:show --no-ansi | grep -q '${{ matrix.server }}'
 
       - name: Run test suite
         run: php artisan test

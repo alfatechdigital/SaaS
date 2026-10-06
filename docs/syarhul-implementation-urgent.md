@@ -300,6 +300,7 @@ Bisa ditempel langsung sebagai issue atau GitHub Project.
 > - **Guard** — `App\Providers\ProductionConfigServiceProvider` + `App\Exceptions\UnsafeProductionDatabase` menolak boot saat `APP_ENV=production` memakai `sqlite`; diuji di `tests/Feature/ProductionConfigGuardTest`.
 > - **Cutover** — sengaja **belum** dikerjakan: langkah P-3 poin 3 menaruh cutover di deployment produksi pertama, bukan sekarang. Itu juga alasan `DB_CONNECTION` di `.env.example` dibiarkan `sqlite` sampai D-09 memutuskan engine.
 > - **Bukti lokal** — `composer ci:check` hijau, PHPStan level 7 nol error, `actionlint` bersih, dan guard terbukti melempar saat `APP_ENV=production DB_CONNECTION=sqlite`.
+> - **Iterasi CI.** Push pertama baris ini (commit `7a6ba48`) memerahkan job `ci`: `composer install` menjalankan `package:discover` yang memboot aplikasi **sebelum** `.env` ada, dan tanpa `APP_ENV` Laravel menyebut dirinya `production` — guard-nya menolak, jadi `composer install` gagal. Diperbaiki di commit berikutnya: guard hanya berlaku bila environment sudah **dideklarasikan** (`.env` ada atau `APP_ENV` ada di environment proses), dan aturannya dipindah ke fungsi murni `refusesToBoot()` supaya kasus "fresh clone" ikut teruji. Temuan ini juga dicatat di living document Fase 1.
 > - **Belum terbukti** — job MySQL/PostgreSQL hanya bisa dibuktikan di GitHub Actions: mesin lokal tidak punya server MySQL/PostgreSQL dan Docker Desktop tidak berjalan. Setelah di-push, job `database` inilah buktinya.
 
 **P-4 — Istilah "team"**
