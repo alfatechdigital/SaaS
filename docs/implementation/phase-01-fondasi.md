@@ -45,14 +45,14 @@ Fase ini menjawab tiga pertanyaan:
 
 ## Prerequisites
 
-| Prasyarat                                                                 | Status                                                          |
-| ------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| D-01 (penanganan referensi ADR/PDR lama) diputuskan                       | ❌ Belum — **wajib** sebelum menyentuh komentar kode            |
-| D-02 (model tenancy: shared DB) disetujui                                 | ❌ Belum                                                        |
-| D-03 (penerapan global scope) diketahui arahnya                           | ❌ Belum — hanya perlu _arah_, karena implementasinya di Fase 2 |
-| D-09 (infrastruktur produksi) minimal arahnya jelas                       | ❌ Belum — diperlukan untuk tugas konfigurasi                   |
-| `npm install` & `composer install` berhasil di mesin developer            | ✅ Diasumsikan                                                  |
-| `database/database.sqlite` sudah dibuat + `migrate:fresh --seed` berjalan | ✅ Diasumsikan                                                  |
+| Prasyarat                                                                 | Status                                                                                                                |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| D-01 (penanganan referensi ADR/PDR lama) diputuskan                       | ❌ Belum — **wajib** sebelum menyentuh komentar kode                                                                  |
+| D-02 (model tenancy: shared DB) disetujui                                 | ❌ Belum                                                                                                              |
+| D-03 (penerapan global scope) diketahui arahnya                           | ❌ Belum — hanya perlu _arah_, karena implementasinya di Fase 2                                                       |
+| D-09 (infrastruktur produksi) minimal arahnya jelas                       | ⚠️ Sebagian — tugas konfigurasi dikerjakan tanpa memilih engine (temuan 2026-10-14); engine final tetap menunggu D-09 |
+| `npm install` & `composer install` berhasil di mesin developer            | ✅ Diasumsikan                                                                                                        |
+| `database/database.sqlite` sudah dibuat + `migrate:fresh --seed` berjalan | ✅ Diasumsikan                                                                                                        |
 
 > **Catatan:** beberapa tugas di fase ini **tidak** bergantung pada keputusan yang belum tuntas (mis. test isolasi, konvensi storage). Tugas yang bergantung keputusan harus ditandai dan boleh ditunda sampai keputusan keluar.
 
@@ -62,12 +62,14 @@ Fase ini menjawab tiga pertanyaan:
 
 Ringkasan kondisi saat fase ini direncanakan (detail di [master plan §2–§5](../IMPLEMENTATION_PLAN.md#2-penilaian-arsitektur-saat-ini-current)):
 
+> **Diperbarui 2026-10-14.** Butir yang sudah berubah dari kondisi awal ditandai _(kini)_.
+
 - Multi-tenancy **sudah berjalan** lewat `team_id` + trait `BelongsToTeam` + middleware `EnsureTeamMembership`.
 - Isolasi tenant bergantung pada **scoping manual** — tidak ada global scope. Risiko tertinggi (RF-1).
 - `docs/IMPLEMENTATION_PLAN.md` **hilang**; ±50 komentar kode menunjuk ke sana.
 - Storage **kosong** — belum ada satu pun upload; `photo_path`, `media_url`, `image_url` hanya string.
 - SSR **aktif di config tetapi bundle tidak dibuild** (`bootstrap/ssr` tidak ada) → SEO publik lemah.
-- SQLite dipakai; cache/queue/session di database; mail `log`.
+- SQLite dipakai; cache/queue/session di database; mail `log`. _(kini)_ cache, session, dan queue memakai Redis; SQLite tinggal untuk lokal & test, dan `ProductionConfigServiceProvider` menolak boot produksi di atasnya.
 - Test per modul sudah ada (`tests/Feature/Domain/*`), termasuk `AuthorizationTest`, tetapi **belum ada** test isolasi lintas-tenant.
 
 ---
@@ -218,6 +220,7 @@ Satu-satunya pekerjaan terkait database adalah **pengujian lintas engine** (tuga
 1. **Test isolasi tenant** (`tests/Feature/Domain/TenantIsolation*`) — wajib, mencakup seluruh modul + halaman publik + form konsultasi.
 2. **Test helper storage** — prefix path & penolakan path di luar prefix.
 3. **Test meta SEO** — halaman publik memuat title/description dari data tenant.
+4. **Test guard produksi** (`tests/Feature/ProductionConfigGuardTest`) — `APP_ENV=production` menolak `sqlite`; lokal, testing, MySQL, dan PostgreSQL lolos.
 
 ### Test yang harus tetap hijau
 
@@ -230,6 +233,7 @@ Satu-satunya pekerjaan terkait database adalah **pengujian lintas engine** (tuga
 ```bash
 npm run build          # wajib sebelum php artisan test
 composer test
+npm run check          # termasuk format tabel Markdown di docs/
 ```
 
 ---
@@ -303,9 +307,11 @@ Kondisi yang sudah diketahui **sebelum** fase dimulai:
 
 _Belum ada entri._
 
-| Tanggal | Temuan | Dampak | Tindakan |
-| ------- | ------ | ------ | -------- |
-| —       | —      | —      | —        |
+| Tanggal    | Temuan                                                                                                                                                                                                                              | Dampak                                                        | Tindakan                                                                                                                                                                                                                                                                                                           |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-14 | **D-09 belum diputuskan**, padahal tugas 1.4.1/1.4.3/1.4.5 ditandai bergantung padanya.                                                                                                                                             | Tugas konfigurasi terancam ditunda                            | Dikerjakan **tanpa menebak**: CI menguji MySQL **dan** PostgreSQL sekaligus (jadi tidak perlu memilih), guard-nya netral engine (hanya melarang `sqlite`), dan `DB_CONNECTION` di `.env.example` dibiarkan `sqlite` dengan contoh MySQL/PostgreSQL sebagai komentar. Pembuatan rencana cutover tetap menunggu D-09 |
+| 2026-10-14 | `npm run check` (bagian dari `composer ci:check`) **juga memformat berkas `.md`**, termasuk perataan tabel dokumen fase.                                                                                                            | Perubahan tabel di dokumen bisa memerahkan CI                 | Jalankan `npm run check:fix` setiap kali menyunting tabel Markdown; dicatat di README bagian alur kerja                                                                                                                                                                                                            |
+| 2026-10-14 | `.env.example` kini menyetel `CACHE_STORE`/`SESSION_DRIVER`/`QUEUE_CONNECTION` ke `redis`, sehingga clone baru butuh Redis untuk menjalankan aplikasi (test tidak terdampak karena `phpunit.xml` menimpanya dengan `array`/`sync`). | Developer tanpa Redis akan menemui error saat menjalankan app | README diberi catatan fallback ke `database`/`file`, dan alasannya dijelaskan di dalam `.env.example`                                                                                                                                                                                                              |
 
 ---
 
@@ -315,9 +321,11 @@ _Belum ada entri._
 
 _Belum ada entri._
 
-| Tanggal | Keputusan | Alasan |
-| ------- | --------- | ------ |
-| —       | —         | —      |
+| Tanggal    | Keputusan                                                                                                                                                             | Alasan                                                                                                                                                        |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-14 | Guard produksi ditaruh di provider sendiri (`ProductionConfigServiceProvider`) + exception bernama (`UnsafeProductionDatabase`), bukan inline di `AppServiceProvider` | Bisa diuji apa adanya (memanggil `boot()` provider) tanpa memboot aplikasi dua kali — yang akan mendaftarkan `ActivityObserver` dua kali dan menggandakan log |
+| 2026-10-14 | Job CI baru (`database`) sebagai matriks terpisah, job `ci` tidak diubah                                                                                              | Jalur cepat SQLite tetap murah, dan nama check lama tidak berubah sehingga branch protection tidak rusak                                                      |
+| 2026-10-14 | Image uji: `mysql:8.0` dan `postgres:16`                                                                                                                              | MySQL 8 sesuai ADR-13; PostgreSQL 16 dipilih sebagai versi uji yang masih didukung — bukan keputusan engine produksi (itu D-09)                               |
 
 ---
 

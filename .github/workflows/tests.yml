@@ -45,3 +45,96 @@ jobs:
         run: >-
           php artisan test --filter=TenantIsolation
           --fail-on-skipped --fail-on-empty-test-suite
+
+  # P-3 — baris "Rabu, 14 Oktober 2026" (docs/implementation/implementation-schedule.md)
+  # dan tugas 1.4.5 (docs/implementation/phase-01-fondasi.md). Job `ci` di atas adalah
+  # jalur cepat: SQLite in-memory dari phpunit.xml. Job ini menimpa DB_CONNECTION lewat
+  # environment — variabel environment asli menang atas `.env` maupun phpunit.xml —
+  # sehingga migrasi dan suite yang sama benar-benar dijalankan di MySQL 8 dan
+  # PostgreSQL, bukan hanya di SQLite (RSK-06).
+  database:
+    name: database (${{ matrix.label }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - engine: mysql
+            label: MySQL 8
+            port: 3306
+            username: alfatech
+            password: alfatech
+          - engine: pgsql
+            label: PostgreSQL 16
+            port: 5432
+            username: postgres
+            password: postgres
+
+    services:
+      # Kedua service dinyalakan untuk kedua entri matriks; tiap run hanya
+      # menyentuh engine yang ditunjuk environment-nya.
+      mysql:
+        image: mysql:8.0
+        env:
+          # Aplikasi terhubung lewat TCP sebagai pengguna biasa, bukan root:
+          # pengguna `alfatech` sudah diberi akses penuh ke MYSQL_DATABASE.
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: alfatech_test
+          MYSQL_USER: alfatech
+          MYSQL_PASSWORD: alfatech
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host 127.0.0.1 --user=root --password=root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: alfatech_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready --username=postgres --dbname=alfatech_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DB_CONNECTION: ${{ matrix.engine }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: ${{ matrix.port }}
+      DB_DATABASE: alfatech_test
+      DB_USERNAME: ${{ matrix.username }}
+      DB_PASSWORD: ${{ matrix.password }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          extensions: pdo_mysql, pdo_pgsql
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      # `composer setup` menjalankan `php artisan migrate --force`, jadi langkah ini
+      # sekaligus bukti bahwa migrasi berjalan di engine ini, bukan di SQLite.
+      - name: Setup Application
+        run: composer setup
+
+      - name: Run test suite
+        run: php artisan test

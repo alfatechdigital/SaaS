@@ -288,10 +288,19 @@ Bisa ditempel langsung sebagai issue atau GitHub Project.
 
 **P-3 — Database produksi**
 
-- [ ] CI menjalankan migrasi di MySQL dan Postgres
-- [ ] Cache, session, queue dipindahkan ke Redis
-- [ ] Guard: `APP_ENV=production` tidak memakai SQLite
+- [x] CI menjalankan migrasi di MySQL dan Postgres
+- [x] Cache, session, queue dipindahkan ke Redis
+- [x] Guard: `APP_ENV=production` tidak memakai SQLite
 - [ ] Rencana cutover disiapkan untuk deployment pertama
+
+> **Status 2026-10-14 — baris "Rabu, 14 Oktober 2026" (P-3) selesai.**
+>
+> - **CI cross-engine** — job `database` di `.github/workflows/tests.yml` menjalankan matriks MySQL 8 & PostgreSQL 16: `composer setup` (termasuk `php artisan migrate --force`) lalu seluruh suite, dengan `DB_CONNECTION` ditimpa lewat environment sehingga menang atas `.env` **dan** `phpunit.xml`. Job `ci` (SQLite) tidak diubah supaya nama check-nya tetap.
+> - **Redis** — `CACHE_STORE`, `SESSION_DRIVER`, dan `QUEUE_CONNECTION` di `.env.example` kini `redis`, dengan catatan fallback lokal di berkas itu dan di README. Test tidak terdampak karena `phpunit.xml` menimpanya dengan `array`/`sync`.
+> - **Guard** — `App\Providers\ProductionConfigServiceProvider` + `App\Exceptions\UnsafeProductionDatabase` menolak boot saat `APP_ENV=production` memakai `sqlite`; diuji di `tests/Feature/ProductionConfigGuardTest`.
+> - **Cutover** — sengaja **belum** dikerjakan: langkah P-3 poin 3 menaruh cutover di deployment produksi pertama, bukan sekarang. Itu juga alasan `DB_CONNECTION` di `.env.example` dibiarkan `sqlite` sampai D-09 memutuskan engine.
+> - **Bukti lokal** — `composer ci:check` hijau, PHPStan level 7 nol error, `actionlint` bersih, dan guard terbukti melempar saat `APP_ENV=production DB_CONNECTION=sqlite`.
+> - **Belum terbukti** — job MySQL/PostgreSQL hanya bisa dibuktikan di GitHub Actions: mesin lokal tidak punya server MySQL/PostgreSQL dan Docker Desktop tidak berjalan. Setelah di-push, job `database` inilah buktinya.
 
 **P-4 — Istilah "team"**
 

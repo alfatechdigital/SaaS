@@ -27,17 +27,18 @@ Aplikasi ini **multi-tenant**: satu instalasi bisa melayani banyak tim/perusahaa
 
 ## Teknologi
 
-| Lapisan          | Teknologi                                                   |
-| ---------------- | ----------------------------------------------------------- |
-| Backend          | Laravel 13, PHP 8.3+                                        |
-| Frontend         | Vue 3.5 (`<script setup lang="ts">`), TypeScript, Inertia 3 |
-| Styling          | Tailwind CSS v4                                             |
-| Build tool       | Vite 8 (`vite-plus`)                                        |
-| Database         | SQLite                                                      |
-| Autentikasi      | Laravel Fortify (login, 2FA, passkey)                       |
-| Routing frontend | Wayfinder (helper rute di-generate otomatis)                |
-| Komponen UI      | reka-ui / shadcn-vue                                        |
-| Testing          | PHPUnit + Larastan (PHPStan level 7)                        |
+| Lapisan             | Teknologi                                                   |
+| ------------------- | ----------------------------------------------------------- |
+| Backend             | Laravel 13, PHP 8.3+                                        |
+| Frontend            | Vue 3.5 (`<script setup lang="ts">`), TypeScript, Inertia 3 |
+| Styling             | Tailwind CSS v4                                             |
+| Build tool          | Vite 8 (`vite-plus`)                                        |
+| Database            | SQLite (lokal & test) · MySQL 8 / PostgreSQL (produksi)     |
+| Cache/session/queue | Redis (lokal boleh `database`)                              |
+| Autentikasi         | Laravel Fortify (login, 2FA, passkey)                       |
+| Routing frontend    | Wayfinder (helper rute di-generate otomatis)                |
+| Komponen UI         | reka-ui / shadcn-vue                                        |
+| Testing             | PHPUnit + Larastan (PHPStan level 7)                        |
 
 Tidak ada Pinia. State global memakai composable + `provide`/`inject`.
 
@@ -51,8 +52,13 @@ Pastikan sudah terpasang:
 - **Composer 2**
 - **Node.js 20+** dan **npm** (proyek ini memakai **npm**, bukan pnpm/yarn)
 - **Git**
+- **Redis** — hanya bila ingin menjalankan `.env.example` apa adanya (lihat catatan di bawah)
 
 Ekstensi PHP yang dibutuhkan: `pdo_sqlite` (paling sering terlewat), `mbstring`, `openssl`, `ctype`, `dom`, `fileinfo`, `filter`, `hash`, `json`, `session`, `tokenizer`, `xml`. Sebagian besar sudah aktif secara bawaan; yang biasanya perlu diaktifkan manual di `php.ini` adalah `pdo_sqlite` dan `mbstring`.
+
+Untuk menjalankan aplikasi atau test di atas database produksi, tambahkan `pdo_mysql` (MySQL 8) atau `pdo_pgsql` (PostgreSQL) — keduanya juga dipakai CI.
+
+> **Catatan `.env.example`.** Berkas itu adalah **acuan nilai produksi** (Fase 1 tugas 1.4.1), jadi `CACHE_STORE`, `SESSION_DRIVER`, dan `QUEUE_CONNECTION` di dalamnya menunjuk ke `redis`, sedangkan `DB_CONNECTION` tetap `sqlite` untuk lokal. Kalau komputermu tidak menjalankan Redis, ubah ketiga nilai itu menjadi `database` (khusus `SESSION_DRIVER` boleh `file`) di `.env` setelah menyalinnya pada langkah 3.
 
 Cek cepat:
 
@@ -102,7 +108,7 @@ Lalu generate application key:
 php artisan key:generate
 ```
 
-Buka `.env` bila perlu menyesuaikan nama aplikasi, URL, atau konfigurasi mail.
+Buka `.env` bila perlu menyesuaikan nama aplikasi, URL, konfigurasi mail, atau bila lokalmu tidak menjalankan Redis (lihat [Persyaratan](#persyaratan)).
 
 ### 4. Buat file database SQLite
 
@@ -335,8 +341,9 @@ resources/js/
 
 1. **Baca dulu** [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md). Dokumen itu adalah sumber kebenaran tunggal untuk proyek ini — berisi keputusan arsitektur (ADR), peta model data, progres pengerjaan, dan catatan jebakan yang sudah pernah ditemui.
 2. Jalankan `npm run dev` **dan** `php artisan serve` saat mengerjakan UI. `npm run dev` juga merender halaman di server (SSR), sehingga error SSR muncul di terminal — type-check saja tidak cukup untuk menangkap masalah UI.
-3. Sebelum commit, jalankan `composer test` (sudah mencakup pint, phpstan, dan phpunit).
-4. File di `resources/js/routes/` dan `resources/js/actions/` **di-generate Wayfinder** — jangan diedit manual; keduanya juga diabaikan git.
+3. Sebelum commit, jalankan `composer test` (sudah mencakup pint, phpstan, dan phpunit). Untuk perubahan pada dokumen, jalankan juga `npm run check` — pemeriksaannya mencakup format tabel Markdown, dan itu ikut berjalan di CI.
+4. Setiap push dijalankan di CI ([`.github/workflows/tests.yml`](.github/workflows/tests.yml)): job `ci` = jalur cepat (pint + phpstan + phpunit di SQLite in-memory), lalu job `database` mengulang **migrasi + seluruh suite** di **MySQL 8** dan **PostgreSQL 16**.
+5. File di `resources/js/routes/` dan `resources/js/actions/` **di-generate Wayfinder** — jangan diedit manual; keduanya juga diabaikan git.
 
 ---
 
@@ -344,6 +351,7 @@ resources/js/
 
 - **SSR produksi belum diaktifkan.** `config/inertia.php` sudah `ssr.enabled => true`, tetapi bundle `bootstrap/ssr` belum dibuild dan server SSR belum berjalan — sehingga Inertia _fallback_ diam-diam ke rendering di klien. Aplikasi tetap berjalan normal; yang terdampak hanya SEO halaman publik. Langkah mengaktifkannya ada di [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) §13. Saat pengembangan (`npm run dev`), SSR **sudah** aktif lewat plugin Vite.
 - **Halaman `/settings/profile`, `/settings/security`, `/settings/teams`, dan `/settings/appearance`** masih memakai layout bawaan starter kit, sehingga sidebar-nya berbeda dari sidebar utama aplikasi. Ini keputusan yang disengaja (ADR-16).
+- **SQLite dilarang di produksi.** `App\Providers\ProductionConfigServiceProvider` menolak boot ketika `APP_ENV=production` masih memakai `sqlite`, karena SQLite mengunci seluruh berkas saat menulis dan tidak bisa dipakai beberapa app-server (ADR-13). Pesannya menyebut koneksi yang salah, jadi penyebabnya langsung terlihat di log.
 - **Data uang disimpan sebagai integer rupiah** (SQLite tidak punya tipe desimal). Formatting hanya dilakukan di frontend lewat `resources/js/utils/formatters.ts`.
 - **Tidak ada real-time push.** Perubahan data diterapkan lewat kunjungan Inertia biasa, bukan WebSocket (ADR-07).
 
