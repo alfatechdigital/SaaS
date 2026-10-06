@@ -58,7 +58,7 @@ Ekstensi PHP yang dibutuhkan: `pdo_sqlite` (paling sering terlewat), `mbstring`,
 
 Untuk menjalankan aplikasi atau test di atas database produksi, tambahkan `pdo_mysql` (MySQL 8) atau `pdo_pgsql` (PostgreSQL) — keduanya juga dipakai CI.
 
-> **Catatan `.env.example`.** Berkas itu adalah **acuan nilai produksi** (Fase 1 tugas 1.4.1), jadi `CACHE_STORE`, `SESSION_DRIVER`, dan `QUEUE_CONNECTION` di dalamnya menunjuk ke `redis`, sedangkan `DB_CONNECTION` tetap `sqlite` untuk lokal. Kalau komputermu tidak menjalankan Redis, ubah ketiga nilai itu menjadi `database` (khusus `SESSION_DRIVER` boleh `file`) di `.env` setelah menyalinnya pada langkah 3.
+> **Catatan `.env.example`.** Berkas itu adalah **acuan nilai produksi** (Fase 1 tugas 1.4.1), jadi `CACHE_STORE`, `SESSION_DRIVER`, dan `QUEUE_CONNECTION` di dalamnya menunjuk ke `redis`, sedangkan `DB_CONNECTION` tetap `sqlite` untuk lokal. Kalau komputermu tidak menjalankan Redis, ubah ketiga nilai itu menjadi `database` (khusus `SESSION_DRIVER` boleh `file`) di `.env` setelah menyalinnya pada langkah 3. Untuk produksi, set `DB_CONNECTION` ke `mysql` (MySQL 8) atau `pgsql` (PostgreSQL) beserta `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, dan `DB_PASSWORD` — aplikasi menolak boot selama `APP_ENV=production` masih memakai `sqlite`.
 
 Cek cepat:
 
