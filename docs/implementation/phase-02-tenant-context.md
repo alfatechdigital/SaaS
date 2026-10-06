@@ -50,7 +50,7 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 
 ## Current State
 
-> Diperbarui 2026-10-13. Sebelumnya bagian ini menggambarkan kondisi sebelum 2.1–2.2.1 dikerjakan.
+> Diperbarui 2026-10-15. Sebelumnya bagian ini menggambarkan kondisi sebelum 2.1–2.2.1 dikerjakan.
 
 - Isolasi tenant kini **dijamin arsitektural**: `App\Scopes\TeamScope` memfilter setiap query model tenant-scoped, dan query tanpa tenant aktif **gagal keras** (`App\Exceptions\MissingTenantContext`).
 - `App\Support\TenantContext` adalah satu sumber tenant aktif per request/job. `CurrentTeam::from()`/`activate()` menulisnya; `ResetTenantContext` (per request) dan listener `JobProcessing` (per job) membersihkannya.
@@ -63,7 +63,9 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 - Cache: belum dipakai secara eksplisit; kunci cache belum ber-namespace.
 - Log: belum membawa `team_id`.
 - `teams` belum punya status selain soft delete; `public_page_enabled` adalah satu-satunya saklar moderasi.
-- `activity_logs` mencatat aksi **di dalam** tenant; aksi **lintas tenant** oleh platform admin tidak tercatat.
+- `activity_logs` mencatat aksi **di dalam** tenant; aksi **lintas tenant** oleh platform admin kini tercatat terpisah di `platform_audit_logs` (2.4, 2026-10-15).
+- `platform_audit_logs` sengaja **tanpa `team_id`**, dan modelnya tidak memakai `BelongsToTeam` — isinya memang bukan milik satu tenant, sehingga pembacaan dari sisi platform tidak butuh escape hatch.
+- Backup harian sudah terdaftar di penjadwal (`db:backup`, 02:00) dengan retensi dari `BACKUP_KEEP_DAYS`. Backup bukan bagian Fase 2, tetapi dikerjakan di baris yang sama karena satu database menampung seluruh tenant.
 
 ---
 
@@ -113,6 +115,8 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 | 2.4.4 | Sedikan tampilan minimal (opsional) atau minimal query audit                     | Jangan bangun UI besar; ini untuk operator                                                                                                                                          |
 | 2.4.5 | Test: aksi platform tercatat dengan aktor yang benar                             | —                                                                                                                                                                                   |
 
+> **Selesai 2026-10-15 — kecuali bagian suspend.** 2.4.1–2.4.3 dan 2.4.5 dikerjakan; 2.4.4 memakai command `php artisan platform:audit-log` (20 catatan terbaru, bisa disaring `--action=`), bukan UI. Aksi yang tercatat: buat tenant, hapus tenant, dan toggle `public_page_enabled`. **Suspend/aktifkan tenant belum ada** karena tugas 2.3 belum dikerjakan — enum `App\Enums\PlatformAuditAction` tinggal menerima dua case baru saat itu tiba.
+
 ### 2.5 Tenant Settings
 
 | #     | Tugas                                                                          | Catatan                                         |
@@ -142,7 +146,7 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 | ----------------------------------------------------------------- | ---------------- | ---- |
 | `teams.suspended_at` (nullable timestamp) **atau** `teams.status` | Aditif, nullable | 2    |
 | `teams.settings` (JSON, nullable)                                 | Aditif, nullable | 2    |
-| `platform_audit_logs` (tabel baru)                                | Baru             | 2    |
+| `platform_audit_logs` (tabel baru, dibuat 2026-10-15)             | Baru             | 2    |
 | `cache`/`jobs` — tanpa perubahan skema                            | —                | 2    |
 
 Semua bersifat **aditif dan backward compatible** (ADR-17). Tidak ada kolom dihapus, tidak ada tabel di-_rename_.
@@ -185,11 +189,12 @@ Sangat minimal — tidak ada halaman tenant baru.
 
 ## Infrastructure Changes
 
-| Kebutuhan                                      | Status                            |
-| ---------------------------------------------- | --------------------------------- |
-| Queue worker berjalan (untuk pola konteks job) | Diperlukan bila job mulai dibuat  |
-| Log aggregation (opsional)                     | Disarankan agar `team_id` berguna |
-| Tidak ada perubahan infrastruktur lain         | —                                 |
+| Kebutuhan                                      | Status                                                                                                         |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Queue worker berjalan (untuk pola konteks job) | Diperlukan bila job mulai dibuat                                                                               |
+| Cron `php artisan schedule:run` tiap menit     | Diperlukan agar `db:backup` harian benar-benar berjalan; tanpa itu jadwal yang terdaftar tidak berarti apa-apa |
+| Log aggregation (opsional)                     | Disarankan agar `team_id` berguna                                                                              |
+| Tidak ada perubahan infrastruktur lain         | —                                                                                                              |
 
 ---
 
@@ -209,17 +214,18 @@ Sangat minimal — tidak ada halaman tenant baru.
 
 ## Testing Requirements
 
-| Test                 | Cakupan                                                            |
-| -------------------- | ------------------------------------------------------------------ |
-| Suite isolasi Fase 1 | Harus **tetap hijau** setelah global scope aktif — ini bukti utama |
-| Dashboard (2.2.7)    | Agregasi lima modul hanya memuat data tenant aktif                 |
-| Konteks tenant       | Konteks tidak bocor antar request; `runFor()` bekerja              |
-| Fail-loud            | Query model tenant-scoped tanpa konteks → exception                |
-| Escape hatch         | `withoutTeamScope()` benar-benar melewati scope                    |
-| Status tenant        | Suspend memblokir shell + halaman publik                           |
-| Audit platform       | Setiap aksi platform tercatat                                      |
-| Settings             | Default & override                                                 |
-| Cache namespace      | Tidak bertabrakan antar-tenant                                     |
+| Test                 | Cakupan                                                                                |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| Suite isolasi Fase 1 | Harus **tetap hijau** setelah global scope aktif — ini bukti utama                     |
+| Dashboard (2.2.7)    | Agregasi lima modul hanya memuat data tenant aktif                                     |
+| Konteks tenant       | Konteks tidak bocor antar request; `runFor()` bekerja                                  |
+| Fail-loud            | Query model tenant-scoped tanpa konteks → exception                                    |
+| Escape hatch         | `withoutTeamScope()` benar-benar melewati scope                                        |
+| Status tenant        | Suspend memblokir shell + halaman publik                                               |
+| Audit platform       | Setiap aksi platform tercatat                                                          |
+| Backup & restore     | Dump → ubah data → restore → data kembali seperti semula; retensi; driver tak didukung |
+| Settings             | Default & override                                                                     |
+| Cache namespace      | Tidak bertabrakan antar-tenant                                                         |
 
 Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:check`.
 
@@ -237,16 +243,16 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 
 ## Acceptance Criteria
 
-> **Status 2026-10-13.** Kriteria **1–5, 9, 10** sudah terpenuhi untuk lingkup 2.1–2.2: suite isolasi hijau, mutasi ulang membuktikan scope adalah penjaganya, dan `forTeam()` sudah tidak dipakai di produksi. Tanda ✅ pada kriteria **6–8** (suspend, audit platform, cache namespace) masih **target** — tugas 2.3–2.6 belum dikerjakan.
+> **Status 2026-10-15.** Kriteria **1–5, 7, 9, 10** sudah terpenuhi: isolasi dijaga global scope, mutasi ulang membuktikan penjaganya, `forTeam()` tidak lagi dipakai di produksi, dan aksi platform sudah tercatat di `platform_audit_logs` (2.4). Kriteria **6** (suspend tenant) dan **8** (namespace kunci cache) **belum** — tugas 2.3 dan 2.6 belum dikerjakan, dan tanda ⬜ di bawah adalah cara daftar ini mengatakannya.
 
 1. ✅ `TenantContext` menjadi satu-satunya sumber tenant aktif; tidak ada controller yang resolve tenant sendiri.
 2. ✅ Seluruh model tenant-scoped memakai global scope; query tanpa konteks gagal jelas.
 3. ✅ `withoutTeamScope()` ada dan setiap pemakaiannya punya alasan tertulis.
 4. ✅ Suite isolasi tenant (Fase 1) **tetap hijau** tanpa perubahan ekspektasi test.
 5. ✅ Platform layer berfungsi penuh setelah global scope aktif (buat/hapus/moderasi tenant).
-6. ✅ Tenant dapat disuspend; akses shell dan halaman publik diblokir.
+6. ⬜ Tenant dapat disuspend; akses shell dan halaman publik diblokir.
 7. ✅ Aksi platform tercatat di `platform_audit_logs`.
-8. ✅ Kunci cache ber-namespace tenant.
+8. ⬜ Kunci cache ber-namespace tenant.
 9. ✅ `composer test` dan `npm run types:check` hijau.
 10. ✅ Tidak ada fitur produk baru.
 
@@ -289,17 +295,21 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 
 > **Diisi oleh agen/developer saat pengerjaan.**
 
-| Tanggal    | Temuan                                                                                                                                                                   | Dampak                                                                       | Tindakan                                                                                                                                                                             |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-10-08 | **Suite isolasi tetap hijau meski `TeamScope` sengaja dirusak**, karena controller masih memanggil `->forTeam()`. Jadi suite isolasi belum menjadi penjaga global scope. | Global scope bisa rusak tanpa terdeteksi                                     | Tambah `tests/Feature/Tenancy/TeamGlobalScopeTest.php` (fail-loud + confinement + escape hatch per model). Suite isolasi baru efektif setelah `->forTeam()` redundan dihapus (2.2.6) |
-| 2026-10-08 | Route publik (`p/{team}`) tidak melewati segmen `{current_team}`, sehingga tidak punya tenant aktif dan query ber-scope gagal.                                           | Halaman publik 500 begitu `company_profiles` ber-scope                       | `CurrentTeam::activate()` dipanggil di `PublicCompanyProfileController` dan `PublicLeadController`                                                                                   |
-| 2026-10-08 | Query dari relasi yang di-_lazy load_ di dalam fixture test berjalan tanpa konteks tenant (`$task->project`).                                                            | Test gagal dengan exception, bukan assertion — membingungkan saat dibaca     | Fixture memakai instance yang sudah dibuat. Catatan: `Model::fresh()` aman (`newQueryWithoutScopes`) dan `Rule::exists(Model::class)` aman (hanya nama tabel, tanpa scope)           |
-| 2026-10-08 | `AlfatechDemoSeeder` melakukan query pada model ber-scope tanpa konteks.                                                                                                 | `PlatformSeederTest` gagal                                                   | Seeder dibungkus `TenantContext::runFor()`. Bagian dari 2.2.5, dikerjakan lebih awal karena scope langsung memblokirnya                                                              |
-| 2026-10-12 | `activity_logs` ikut ber-scope pada hari yang sama dengan model lain, bukan menyusul.                                                                                    | —                                                                            | Tidak ada penyesuaian khusus; `ActivityObserver` hanya menulis (`create`), tidak pernah query                                                                                        |
-| 2026-10-13 | **Audit `withoutTeamScope()` (2.2.4):** nol pemakaian di kode produksi; hanya tiga pemakaian di `TeamGlobalScopeTest`, semuanya diberi komentar alasan.                  | Escape hatch mudah diaudit saat code review                                  | Quality gate tetap berlaku: setiap pemakaian baru wajib berkomentar alasan                                                                                                           |
-| 2026-10-13 | **Audit jalur khusus (2.2.5):** platform layer, seeder, command, scheduler, dan test tidak ada yang perlu `withoutTeamScope()` baru.                                     | Tidak ada konteks tenant palsu yang dipasang di jalur lintas tenant          | Rincian per jalur dicatat di bawah                                                                                                                                                   |
-| 2026-10-13 | **Mutasi ulang untuk 2.2.7:** `addGlobalScope(new TeamScope)` dinonaktifkan → 45 test gagal, termasuk 20 dari `TenantIsolationTest`.                                     | Membuktikan suite isolasi kini menjaga **global scope**, bukan `->forTeam()` | Penghapusan `->forTeam()` (2.2.6) aman: penjaganya sudah pindah ke scope                                                                                                             |
-| 2026-10-13 | **Gerbang penuh 2.2.7:** `composer test` hijau setelah 2.2.4–2.2.6 — pint bersih, phpstan level 7 nol error, 249 test / 1052 assertion.                                  | Tidak ada ekspektasi test yang diubah untuk membuatnya hijau                 | Test baru: `test_dashboard_only_exposes_the_active_tenant_data`                                                                                                                      |
+| Tanggal    | Temuan                                                                                                                                                                                                                                                                | Dampak                                                                       | Tindakan                                                                                                                                                                             |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-08 | **Suite isolasi tetap hijau meski `TeamScope` sengaja dirusak**, karena controller masih memanggil `->forTeam()`. Jadi suite isolasi belum menjadi penjaga global scope.                                                                                              | Global scope bisa rusak tanpa terdeteksi                                     | Tambah `tests/Feature/Tenancy/TeamGlobalScopeTest.php` (fail-loud + confinement + escape hatch per model). Suite isolasi baru efektif setelah `->forTeam()` redundan dihapus (2.2.6) |
+| 2026-10-08 | Route publik (`p/{team}`) tidak melewati segmen `{current_team}`, sehingga tidak punya tenant aktif dan query ber-scope gagal.                                                                                                                                        | Halaman publik 500 begitu `company_profiles` ber-scope                       | `CurrentTeam::activate()` dipanggil di `PublicCompanyProfileController` dan `PublicLeadController`                                                                                   |
+| 2026-10-08 | Query dari relasi yang di-_lazy load_ di dalam fixture test berjalan tanpa konteks tenant (`$task->project`).                                                                                                                                                         | Test gagal dengan exception, bukan assertion — membingungkan saat dibaca     | Fixture memakai instance yang sudah dibuat. Catatan: `Model::fresh()` aman (`newQueryWithoutScopes`) dan `Rule::exists(Model::class)` aman (hanya nama tabel, tanpa scope)           |
+| 2026-10-08 | `AlfatechDemoSeeder` melakukan query pada model ber-scope tanpa konteks.                                                                                                                                                                                              | `PlatformSeederTest` gagal                                                   | Seeder dibungkus `TenantContext::runFor()`. Bagian dari 2.2.5, dikerjakan lebih awal karena scope langsung memblokirnya                                                              |
+| 2026-10-12 | `activity_logs` ikut ber-scope pada hari yang sama dengan model lain, bukan menyusul.                                                                                                                                                                                 | —                                                                            | Tidak ada penyesuaian khusus; `ActivityObserver` hanya menulis (`create`), tidak pernah query                                                                                        |
+| 2026-10-13 | **Audit `withoutTeamScope()` (2.2.4):** nol pemakaian di kode produksi; hanya tiga pemakaian di `TeamGlobalScopeTest`, semuanya diberi komentar alasan.                                                                                                               | Escape hatch mudah diaudit saat code review                                  | Quality gate tetap berlaku: setiap pemakaian baru wajib berkomentar alasan                                                                                                           |
+| 2026-10-13 | **Audit jalur khusus (2.2.5):** platform layer, seeder, command, scheduler, dan test tidak ada yang perlu `withoutTeamScope()` baru.                                                                                                                                  | Tidak ada konteks tenant palsu yang dipasang di jalur lintas tenant          | Rincian per jalur dicatat di bawah                                                                                                                                                   |
+| 2026-10-13 | **Mutasi ulang untuk 2.2.7:** `addGlobalScope(new TeamScope)` dinonaktifkan → 45 test gagal, termasuk 20 dari `TenantIsolationTest`.                                                                                                                                  | Membuktikan suite isolasi kini menjaga **global scope**, bukan `->forTeam()` | Penghapusan `->forTeam()` (2.2.6) aman: penjaganya sudah pindah ke scope                                                                                                             |
+| 2026-10-13 | **Gerbang penuh 2.2.7:** `composer test` hijau setelah 2.2.4–2.2.6 — pint bersih, phpstan level 7 nol error, 249 test / 1052 assertion.                                                                                                                               | Tidak ada ekspektasi test yang diubah untuk membuatnya hijau                 | Test baru: `test_dashboard_only_exposes_the_active_tenant_data`                                                                                                                      |
+| 2026-10-15 | **Restore SQLite senyap bila koneksi belum di-`purge`.** Dibuktikan dengan probe: berkas ditimpa lewat `copy()` lalu dibaca ulang — koneksi PDO yang sudah terbuka masih mengembalikan isi lama, sedangkan koneksi baru mengembalikan isi dump.                       | Restore tampak "berhasil" tetapi aplikasi tetap menyajikan data lama         | `DB::purge()` dipanggil sebelum **dan** sesudah restore di `DatabaseBackup::restore()`, lalu diuji lewat putaran penuh di `DatabaseBackupTest`                                       |
+| 2026-10-15 | Mencatat audit **di dalam** transaksi hapus tenant berarti kegagalan hapus tidak meninggalkan catatan audit.                                                                                                                                                          | Jejak audit tidak pernah mencatat aksi yang sebenarnya gagal                 | Disengaja: yang salah satu di antara "tercatat" dan "benar-benar terjadi", yang benar-benar terjadi lebih penting (2.4.2)                                                            |
+| 2026-10-15 | `Builder::soleOrFail()` tidak ada di Laravel 13; satu-satunya test yang memakainya gagal dengan `BadMethodCallException`.                                                                                                                                             | Test baru gagal karena API yang salah, bukan karena perilaku aplikasi        | Diganti `sole()` (3 test `PlatformAuditLogTest` memverifikasi asumsi yang sama)                                                                                                      |
+| 2026-10-15 | **"Ada request?" bukan cara yang benar mendeteksi jalur console.** Console kernel Laravel tetap mengikat `request`, jadi `app()->bound('request')` mengembalikan `true` di `artisan`/`tinker` — alamat loopback pun tercatat seolah operator memakai panel dari sana. | Audit bisa memuat alamat yang salah tanpa ada yang sadar                     | `RecordPlatformAudit` memakai `app()->runningInConsole()`; `ip_address` nullable, dan nilainya hanya diambil dari request HTTP                                                       |
 
 ---
 
@@ -318,6 +328,13 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 | 2026-10-13 | **Hapus seluruh `->forTeam()` di kode produksi (2.2.6)**, bukan hanya sebagian                                                         | Dua sumber kebenaran untuk tenant selalu berakhir dengan yang salah satunya basi; `forTeam()` yang menunjuk tenant lain hanya mengembalikan nol baris, bukan error — jadi kegagalannya senyap |
 | 2026-10-13 | Tenant tetap diaktifkan lewat `CurrentTeam::from()` (`{current_team}`) / `TeamRequest::authorize()` / `activate()` (route publik)      | Middleware `ResolveTenant` (host-aware) baru masuk gelombang 2; memindahkannya sekarang berarti memperluas lingkup 2.2                                                                        |
 | 2026-10-13 | Nota validasi `Rule::exists(Project::class, 'id')->where('team_id', …)` **dipertahankan**                                              | `Rule::exists()` hanya memakai nama tabel (tanpa scope), jadi `where('team_id')` di situ memang penjaga, bukan duplikasi                                                                      |
+| 2026-10-15 | **`platform_audit_logs` tanpa `team_id`, dan modelnya tidak memakai `BelongsToTeam`**                                                  | Isinya memang bukan milik satu tenant; tanpa trait itu, jalur platform tidak perlu `withoutTeamScope()` sama sekali — escape hatch tetap nol pemakaian di produksi                            |
+| 2026-10-15 | Penulisan audit terjadi lewat **satu action** (`RecordPlatformAudit`), bukan panggilan model langsung di controller                    | Satu jalur berarti satu tempat untuk mengubah bentuk catatan, dan mudah dicari saat audit kode                                                                                                |
+| 2026-10-15 | Catatan audit hapus tenant dibuat **di dalam** transaksi penghapusan                                                                   | Menghindari catatan "tenant dihapus" untuk penghapusan yang sebenarnya gagal dan di-rollback                                                                                                  |
+| 2026-10-15 | Backup dibuat **di dalam aplikasi** (`symfony/process` yang sudah jadi dependensi), bukan lewat paket pihak ketiga                     | Tanpa dependensi baru, perintahnya auditabel, dan hanya memakai dua biner klien yang memang ada di server database                                                                            |
+| 2026-10-15 | Retention dump dikonfigurasi di `config/backup.php` (`BACKUP_KEEP_DAYS`, default 7) dengan override `--keep-days`                      | Backup tanpa pembersihan akan memenuhi disk, dan itu baru terasa di produksi                                                                                                                  |
+| 2026-10-15 | `db:restore` memakai `ConfirmableTrait` — tanya dulu saat produksi, `--force` untuk runbook                                            | Ini perintah paling destruktif di repo: satu salah ketik berarti seluruh pelanggan kembali ke titik tertentu                                                                                  |
+| 2026-10-15 | **P-4: nama `team` dipertahankan**, ambigu hanya didokumentasikan (glosarium README + ADR-02)                                          | Rename menyentuh 11 tabel dan puluhan berkas demi nol manfaat bagi user; yang dibutuhkan hanya satu definisi tertulis yang jelas                                                              |
 
 ---
 
@@ -381,7 +398,13 @@ Aturan validasi `Rule::exists(Project::class, 'id')->where('team_id', $teamId)` 
 
 > **Diisi setelah fase selesai dieksekusi.**
 
-_Belum ada entri._
+**2026-10-15 — tugas 2.4 (audit platform) + P-4 (glosarium) + P-5 (backup).**
+
+- **2.4 audit platform.** Migrasi `2026_10_15_000001_create_platform_audit_logs_table.php` (`actor_id` nullable `nullOnDelete`, `action`, `target_type`, `target_id`, `details` JSON, `ip_address`, `created_at` saja), enum `App\Enums\PlatformAuditAction`, model + factory, dan satu jalur tulis `App\Actions\Platform\RecordPlatformAudit`. `PlatformTenantController` mencatat **tenant dibuat**, **halaman publik dinyalakan/dimatikan**, dan **tenant dihapus** (di dalam transaksi). Operator membaca lewat `php artisan platform:audit-log --limit= --action=`. Test: `tests/Feature/Platform/PlatformAuditLogTest.php` (7 test) — termasuk aksi yang **ditolak** tidak meninggalkan jejak, dan catatan tetap terbaca **tanpa** konteks tenant.
+- **2.4 belum lengkap secara sengaja.** Suspend/aktifkan tenant (2.3, tugas 2.4.2 bagian kedua) belum ada, jadi belum dicatat. `PlatformAuditAction` tinggal menerima case baru saat 2.3 dikerjakan.
+- **P-5 backup.** `config/backup.php` (`BACKUP_PATH`/`BACKUP_KEEP_DAYS`), `App\Support\DatabaseBackup`, command `db:backup` & `db:restore`, dan jadwal harian 02:00 di `routes/console.php`. SQLite disalin sebagai berkas; MySQL/MariaDB dan PostgreSQL memakai `mysqldump`/`mysql` dan `pg_dump`/`psql` dengan `--set=ON_ERROR_STOP=on`.
+- **Bukti restore di lingkungan lokal.** Backup dijalankan atas salinan database dev, satu nama tenant diubah menjadi penanda, lalu `db:restore --force` dijalankan: nilai kembali seperti semula dan jumlah tenant tetap 9. Putaran itu juga ditulis sebagai test (`tests/Feature/Backup/DatabaseBackupTest.php`, 11 test) sehingga tidak bergantung pada ingatan. **Restore MySQL/PostgreSQL belum pernah diuji** — binernya tidak ada di mesin ini; itu sebabnya README menyebut prosedurnya harus dicoba di server tujuan sebelum dianggap berhasil.
+- **P-4 glosarium.** `Team` = tenant ditulis di README (bagian Glosarium, dirujuk dari bagian Multi-Tenancy) dan ADR-02 di dokumen induk ditandai disetujui. **Tidak ada** tabel atau kolom yang di-rename.
 
 ---
 

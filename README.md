@@ -9,8 +9,19 @@ Aplikasi ini **multi-tenant**: satu instalasi bisa melayani banyak tim/perusahaa
 
 ---
 
+## Glosarium
+
+| Istilah      | Arti                                                                                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Team**     | **Tenant.** Satu perusahaan/organisasi yang berlangganan aplikasi ini. Kata "tim" di UI, rute, dan kode adalah sinonim dari "tenant".                           |
+| **Tenant**   | Nama peran untuk sebuah `Team`. Tidak ada tabel `tenants` terpisah dan `team_id` tidak pernah diganti nama ([ADR-02](docs/IMPLEMENTATION_PLAN.md), temuan A-3). |
+| **Platform** | Sisi operator lintas tenant: kelola tenant, pratinjau halaman publik, audit log. Bukan milik tenant mana pun, sehingga tidak memakai `team_id`.                 |
+
+---
+
 ## Daftar Isi
 
+- [Glosarium](#glosarium)
 - [Teknologi](#teknologi)
 - [Persyaratan](#persyaratan)
 - [Instalasi](#instalasi)
@@ -19,6 +30,7 @@ Aplikasi ini **multi-tenant**: satu instalasi bisa melayani banyak tim/perusahaa
 - [Akun Demo](#akun-demo)
 - [Multi-Tenancy & Hak Akses](#multi-tenancy--hak-akses)
 - [Perintah Penting](#perintah-penting)
+- [Audit Platform & Backup](#audit-platform--backup)
 - [Struktur Proyek](#struktur-proyek)
 - [Alur Kerja Pengembangan](#alur-kerja-pengembangan)
 - [Catatan & Keterbatasan](#catatan--keterbatasan)
@@ -243,7 +255,7 @@ Gunakan akun **Member** untuk menguji tampilan dengan hak akses terbatas: bebera
 
 ## Multi-Tenancy & Hak Akses
 
-Seluruh data domain memiliki kolom `team_id`, dan setiap query wajib ter-scope ke tim yang sedang aktif. Model memakai trait `App\Concerns\BelongsToTeam` dengan query scope `forTeam()`.
+Seluruh data domain memiliki kolom `team_id` (lihat [glosarium](#glosarium): tim = tenant). Model memakai trait `App\Concerns\BelongsToTeam`, dan **`App\Scopes\TeamScope` adalah satu-satunya penentu isolasi**: scope itu dipasang global, jadi query otomatis terbatas pada tim yang aktif dan penulis kode tidak perlu menambahkan `->where('team_id', …)` sendiri. Bila konteks tim belum aktif, scope **melempar error** alih-alih mengembalikan baris lintas tim — kebocoran ketahuan lebih awal. Query lintas tenant hanya boleh lewat `withoutTeamScope()` yang ditulis eksplisit, dan pemakaiannya dijaga oleh test.
 
 **Peran tim** (`App\Enums\TeamRole`):
 
@@ -280,6 +292,8 @@ Cara ini dipakai menu Sidebar untuk menyembunyikan item yang tidak boleh diakses
 | `npm run dev`                      | Vite dev server saja (hot reload)        |
 | `npm run build`                    | Build aset produksi → `public/build`     |
 | `php artisan migrate:fresh --seed` | Reset database + isi data demo           |
+| `php artisan db:backup`            | Dump database ke `storage/app/backups`   |
+| `php artisan db:restore <dump>`    | Pulihkan database dari dump (menimpa)    |
 
 ### Kualitas kode & test
 
@@ -295,6 +309,36 @@ Cara ini dipakai menu Sidebar untuk menyembunyikan item yang tidak boleh diakses
 | `npm run check`                      | Lint + format frontend                                 |
 
 > **Jalankan `npm run build` sebelum `php artisan test`** bila `public/build` belum ada, agar test yang me-render halaman Inertia tidak gagal.
+
+---
+
+## Audit Platform & Backup
+
+### Audit aksi platform
+
+Aksi operator yang menyentuh lintas tenant dicatat ke tabel `platform_audit_logs`: membuat tenant, menghapus tenant, dan mengubah status halaman publik tenant. Tabel ini sengaja **tanpa** `team_id` — isinya memang bukan milik satu tenant — dan hanya ditulis lewat satu jalur, `App\Actions\Platform\RecordPlatformAudit`, supaya setiap aksi destruktif punya jejak "siapa, apa, kapan".
+
+```bash
+php artisan platform:audit-log                          # 20 catatan terbaru
+php artisan platform:audit-log --limit=50
+php artisan platform:audit-log --action=tenant.deleted
+```
+
+### Backup & restore
+
+Seluruh tenant berbagi satu database, jadi satu backup yang tidak bisa dipulihkan berdampak ke **semua** pelanggan sekaligus. Backup harian sudah terdaftar di penjadwal (`routes/console.php`, pukul 02:00) dan menyimpan dump di `storage/app/backups`.
+
+```bash
+php artisan db:backup                                        # dump + hapus dump kedaluwarsa
+php artisan db:backup --keep-days=30
+php artisan db:restore storage/app/backups/backup-sqlite-2026-10-15_02-00-00.sqlite
+```
+
+- Lokasi dan masa simpan diatur lewat `BACKUP_PATH` dan `BACKUP_KEEP_DAYS` (default `storage/app/backups` dan 7 hari).
+- Jadwal hanya berjalan bila cron memanggil `php artisan schedule:run` setiap menit.
+- `db:restore` **menimpa** isi database, sehingga saat `APP_ENV=production` ia meminta konfirmasi; tambahkan `--force` untuk menjalankannya non-interaktif dari runbook.
+- SQLite dipulihkan dengan menyalin berkas; MySQL/MariaDB dan PostgreSQL memakai `mysqldump`/`mysql` serta `pg_dump`/`psql`, jadi biner klien itu harus tersedia di server.
+- Restore hanya bisa diuji otomatis untuk SQLite ([`tests/Feature/Backup/DatabaseBackupTest.php`](tests/Feature/Backup/DatabaseBackupTest.php)). Untuk MySQL/PostgreSQL prosedurnya diuji manual di server tujuan — jangan anggap sebuah backup "berhasil" sebelum restore-nya pernah dicoba.
 
 ---
 

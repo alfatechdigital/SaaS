@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Platform\RecordPlatformAudit;
 use App\Actions\Teams\CreateTeam;
+use App\Enums\PlatformAuditAction;
 use App\Http\Requests\Teams\SaveTeamRequest;
 use App\Models\Team;
 use App\Models\User;
@@ -46,7 +48,7 @@ class PlatformTenantController extends Controller
     /**
      * Create a new tenant on behalf of the platform.
      */
-    public function store(SaveTeamRequest $request, CreateTeam $createTeam): RedirectResponse
+    public function store(SaveTeamRequest $request, CreateTeam $createTeam, RecordPlatformAudit $audit): RedirectResponse
     {
         // `switchToTeam: false` — creating a tenant must not hijack the
         // operator's own active team.
@@ -55,6 +57,11 @@ class PlatformTenantController extends Controller
             $request->validated('name'),
             switchToTeam: false,
         );
+
+        $audit->handle(PlatformAuditAction::TenantCreated, $team, [
+            'name' => $team->name,
+            'slug' => $team->slug,
+        ]);
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -69,7 +76,7 @@ class PlatformTenantController extends Controller
      *
      * Deactivating only hides the page; the tenant's data is untouched.
      */
-    public function updatePublicPage(Request $request, Team $team): RedirectResponse
+    public function updatePublicPage(Request $request, Team $team, RecordPlatformAudit $audit): RedirectResponse
     {
         $request->validate([
             'enabled' => ['required', 'boolean'],
@@ -78,6 +85,14 @@ class PlatformTenantController extends Controller
         $enabled = $request->boolean('enabled');
 
         $team->update(['public_page_enabled' => $enabled]);
+
+        $audit->handle(
+            $enabled
+                ? PlatformAuditAction::PublicPageEnabled
+                : PlatformAuditAction::PublicPageDisabled,
+            $team,
+            ['enabled' => $enabled, 'name' => $team->name],
+        );
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -95,13 +110,13 @@ class PlatformTenantController extends Controller
      * Deleting a tenant is platform governance, so it lives here instead of in
      * the tenant's own screens — which is where it used to be (PDR-03, PDR-07).
      */
-    public function destroy(Team $team): RedirectResponse
+    public function destroy(Team $team, RecordPlatformAudit $audit): RedirectResponse
     {
         abort_if($team->is_personal, 403, __('A personal team cannot be deleted.'));
 
         $name = $team->name;
 
-        DB::transaction(function () use ($team): void {
+        DB::transaction(function () use ($team, $audit, $name): void {
             // Everyone whose active team was this tenant loses it. A user
             // created through an invitation has no personal team, so this may
             // legitimately end up null (PDR-06).
@@ -115,6 +130,10 @@ class PlatformTenantController extends Controller
             $team->invitations()->delete();
             $team->memberships()->delete();
             $team->delete();
+
+            // Inside the transaction on purpose: if the deletion rolls back, the
+            // trail must not claim that it happened.
+            $audit->handle(PlatformAuditAction::TenantDeleted, $team, ['name' => $name]);
         });
 
         Inertia::flash('toast', [

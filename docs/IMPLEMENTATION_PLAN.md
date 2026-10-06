@@ -131,6 +131,8 @@ Produk ingin berkembang menjadi **SaaS multi-tenant berbasis langganan**: banyak
 | A-9  | Environment produksi belum dipisahkan (SQLite, cache/queue/session di database).                         | Belum siap untuk beban multi-tenant nyata.                                                                  |
 | A-10 | `activity_logs` hanya tenant-scoped; tidak ada audit level platform.                                     | Aksi operator platform tidak terekam.                                                                       |
 
+> **Catatan 2026-10-15.** Dua temuan di atas sudah ada jawabannya: **A-3** selesai sebagai keputusan istilah — `Team` = tenant **dipertahankan** dan didefinisikan di [Lampiran B.3](#b3-glosarium-istilah), tanpa rename (P-4). **A-10** ditutup oleh tugas 2.4: tabel `platform_audit_logs` mencatat aksi operator lintas tenant, terpisah dari `activity_logs`. Temuan lain belum tersentuh.
+
 ### 2.5 Kekuatan yang Harus Dipertahankan
 
 - Konvensi `team_id` + trait `BelongsToTeam` sudah konsisten.
@@ -671,7 +673,7 @@ Analisis kekhawatiran arsitektur yang akan relevan nanti:
 | R-7  | Halaman publik tenant dinonaktifkan masih bisa diakses | Sudah di-_handle_ (404) — jaga testnya                                           |
 | R-8  | URL eksternal di `media_url`/`image_url`               | Validasi skema URL (http/https), jangan render sebagai HTML                      |
 | R-9  | Session/cookie lintas domain tenant                    | Tinjau `SESSION_DOMAIN` saat custom domain masuk                                 |
-| R-10 | Aktivitas operator platform tidak terekam              | Tambah `platform_audit_logs` (Fase 2)                                            |
+| R-10 | Aktivitas operator platform tidak terekam              | ✅ Ditutup 2026-10-15 — `platform_audit_logs` (Fase 2 tugas 2.4)                 |
 | R-11 | Tidak ada CSP/security header eksplisit                | Tinjau penambahan security header di Fase 1                                      |
 | R-12 | Password policy hanya aktif di produksi                | Sudah ada `Password::defaults` — pastikan benar-benar dijalankan di produksi     |
 
@@ -719,26 +721,26 @@ Analisis kekhawatiran arsitektur yang akan relevan nanti:
 ### 17.1 CURRENT
 
 - Pengembangan lokal: `composer dev` (server + queue + Vite).
-- SQLite; cache/queue/session di database.
+- SQLite di dev; template produksi (`.env.example`) memakai Redis untuk cache/session/queue sejak baris P-3 (2026-10-14).
 - Mail: `log` driver. Broadast: `log`.
 - Belum ada pipeline deployment, Docker, atau konfigurasi produksi di repository.
-- `.github/` ada (perlu ditinjau isinya untuk CI).
+- `.github/workflows/tests.yml` menjalankan job `ci` (SQLite) **dan** matriks MySQL 8 + PostgreSQL 16 (P-3, 2026-10-14).
 
 ### 17.2 Kebutuhan untuk SaaS (FOUNDATION → FUTURE)
 
-| Kebutuhan                                  | Status                     | Catatan                                               |
-| ------------------------------------------ | -------------------------- | ----------------------------------------------------- |
-| Pisahkan `.env` per environment            | **FOUNDATION**             | Jangan pakai default SQLite di produksi               |
-| Database produksi (MySQL 8 / PostgreSQL)   | **FOUNDATION** (persiapan) | Uji migrasi di CI                                     |
-| Queue worker permanen (Supervisor/systemd) | **FOUNDATION**             | `queue:listen` hanya untuk dev                        |
-| Scheduler (`schedule:run` via cron)        | **FOUNDATION**             | Sudah ada 1 task terjadwal                            |
-| SSR Node process                           | **FOUNDATION**             | Diperlukan agar SEO produksi benar                    |
-| Object storage                             | FUTURE                     | Setelah ada upload nyata                              |
-| Reverse proxy + SSL per domain             | FUTURE                     | Lihat [Bagian 10](#10-strategi-domain--custom-domain) |
-| Backup harian + uji restore                | **FOUNDATION**             | Untuk SaaS, _backup per tenant_ perlu dipertimbangkan |
-| Monitoring & error tracking                | FUTURE                     | Sentry/Bugsnag dsb.                                   |
-| Log aggregation dengan `team_id`           | FOUNDATION                 | Aids debugging multi-tenant                           |
-| Blue-green / zero-downtime deploy          | FUTURE                     | Menghindari downtime lintas tenant                    |
+| Kebutuhan                                  | Status                     | Catatan                                                                                                                                                                        |
+| ------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pisahkan `.env` per environment            | **FOUNDATION**             | Jangan pakai default SQLite di produksi                                                                                                                                        |
+| Database produksi (MySQL 8 / PostgreSQL)   | **FOUNDATION** (persiapan) | Uji migrasi di CI                                                                                                                                                              |
+| Queue worker permanen (Supervisor/systemd) | **FOUNDATION**             | `queue:listen` hanya untuk dev                                                                                                                                                 |
+| Scheduler (`schedule:run` via cron)        | **FOUNDATION**             | Sudah ada 2 task terjadwal (hapus invitation kedaluwarsa + `db:backup` harian)                                                                                                 |
+| SSR Node process                           | **FOUNDATION**             | Diperlukan agar SEO produksi benar                                                                                                                                             |
+| Object storage                             | FUTURE                     | Setelah ada upload nyata                                                                                                                                                       |
+| Reverse proxy + SSL per domain             | FUTURE                     | Lihat [Bagian 10](#10-strategi-domain--custom-domain)                                                                                                                          |
+| Backup harian + uji restore                | ✅ **ADA** (2026-10-15)    | `db:backup` harian 02:00 + `db:restore`; restore SQLite teruji otomatis, MySQL/PostgreSQL masih manual di server tujuan. Untuk SaaS, _backup per tenant_ perlu dipertimbangkan |
+| Monitoring & error tracking                | FUTURE                     | Sentry/Bugsnag dsb.                                                                                                                                                            |
+| Log aggregation dengan `team_id`           | FOUNDATION                 | Aids debugging multi-tenant                                                                                                                                                    |
+| Blue-green / zero-downtime deploy          | FUTURE                     | Menghindari downtime lintas tenant                                                                                                                                             |
 
 ### 17.3 Catatan Spesifik Multi-Tenant
 
@@ -893,38 +895,50 @@ Semua butir di bawah **tidak boleh** diputuskan sendiri oleh developer/agen impl
 
 ### B.1 Architecture Decision Record (ADR)
 
-| ID         | Keputusan                                                                                                             | Status                                                                 | Fase        |
-| ---------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ----------- |
-| **ADR-01** | Multi-tenancy memakai **shared database, shared schema** dengan isolasi baris lewat `team_id`                         | ⚠️ PERLU PERSETUJUAN (D-02)                                            | 1           |
-| **ADR-02** | **`Team` adalah Tenant.** Tidak dibuat tabel `tenants` terpisah; `team_id` tidak di-_rename_                          | ⚠️ PERLU PERSETUJUAN                                                   | 1           |
-| **ADR-03** | Isolasi tenant berlapis: **global scope + escape hatch `withoutTeamScope()` + test kebocoran wajib**                  | ⚠️ PERLU PERSETUJUAN (D-03)                                            | 2           |
-| **ADR-04** | Resolusi tenant lewat abstraksi **`TenantResolver`**; slug path sekarang, host/domain nanti                           | ⏸️ **DITUNDA** ke gelombang 2 (2026-09-30)                             | Gelombang 2 |
-| **ADR-05** | Storage tenant-aware dengan konvensi **`tenants/{team_id}/{kategori}/…`** via seam terpusat                           | ⚠️ PERLU PERSETUJUAN                                                   | 1           |
-| **ADR-06** | Akses fitur berbayar lewat **entitlement service** (`can(Feature)`); dilarang `if ($plan === …)` tersebar             | ✅ **DISETUJUI** (2026-09-30)                                          | Gelombang 1 |
-| **ADR-07** | Uang disimpan sebagai **integer rupiah** (tanpa subunit); formatting hanya di frontend                                | ✅ DISETUJUI (sudah berlaku)                                           | —           |
-| **ADR-08** | Resource API memakai `JsonResource::withoutWrapping()` dan pemetaan `snake_case` → `camelCase`                        | ✅ DISETUJUI (sudah berlaku)                                           | —           |
-| **ADR-09** | Cache, queue, dan log wajib membawa konteks tenant (namespace kunci / payload job)                                    | ⚠️ PERLU PERSETUJUAN                                                   | 2           |
-| **ADR-10** | Log aktivitas domain dicatat otomatis via `ActivityObserver` pada 7 model domain                                      | ✅ DISETUJUI (sudah berlaku)                                           | —           |
-| **ADR-11** | Otorisasi dibagi tegas: `TeamRole`/`TeamPermission` (tenant) vs `is_platform_admin` (platform) — tidak boleh dicampur | ✅ DISETUJUI (sudah berlaku)                                           | —           |
-| **ADR-12** | Registrasi hanya lewat undangan                                                                                       | ✅ SEMENTARA (lihat D-10)                                              | —           |
-| **ADR-13** | Database produksi **MySQL 8 / PostgreSQL**, SQLite hanya dev & test                                                   | ⚠️ PERLU PERSETUJUAN (D-09)                                            | 1           |
-| **ADR-14** | Definisi plan disimpan di **config**, bukan kode domain                                                               | ✅ **DISETUJUI** (2026-09-30) — config dulu; promosi ke tabel menyusul | Gelombang 1 |
-| **ADR-15** | Route publik tenant dipisahkan dari route internal agar bisa di-resolve per host                                      | ⏸️ **DITUNDA** ke gelombang 2 (2026-09-30)                             | Gelombang 2 |
-| **ADR-16** | SSR produksi diaktifkan (build `bootstrap/ssr` + proses Node) untuk SEO                                               | ⚠️ PERLU PERSETUJUAN                                                   | 1           |
-| **ADR-17** | Semua perubahan skema bersifat **aditif & backward compatible**                                                       | ✅ DISETUJUI                                                           | —           |
+| ID         | Keputusan                                                                                                             | Status                                                                                          | Fase        |
+| ---------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------- |
+| **ADR-01** | Multi-tenancy memakai **shared database, shared schema** dengan isolasi baris lewat `team_id`                         | ⚠️ PERLU PERSETUJUAN (D-02)                                                                     | 1           |
+| **ADR-02** | **`Team` adalah Tenant.** Tidak dibuat tabel `tenants` terpisah; `team_id` tidak di-_rename_                          | ✅ **DISETUJUI** (2026-10-15) — nama dipertahankan, lihat [Lampiran B.3](#b3-glosarium-istilah) | 1           |
+| **ADR-03** | Isolasi tenant berlapis: **global scope + escape hatch `withoutTeamScope()` + test kebocoran wajib**                  | ⚠️ PERLU PERSETUJUAN (D-03)                                                                     | 2           |
+| **ADR-04** | Resolusi tenant lewat abstraksi **`TenantResolver`**; slug path sekarang, host/domain nanti                           | ⏸️ **DITUNDA** ke gelombang 2 (2026-09-30)                                                      | Gelombang 2 |
+| **ADR-05** | Storage tenant-aware dengan konvensi **`tenants/{team_id}/{kategori}/…`** via seam terpusat                           | ⚠️ PERLU PERSETUJUAN                                                                            | 1           |
+| **ADR-06** | Akses fitur berbayar lewat **entitlement service** (`can(Feature)`); dilarang `if ($plan === …)` tersebar             | ✅ **DISETUJUI** (2026-09-30)                                                                   | Gelombang 1 |
+| **ADR-07** | Uang disimpan sebagai **integer rupiah** (tanpa subunit); formatting hanya di frontend                                | ✅ DISETUJUI (sudah berlaku)                                                                    | —           |
+| **ADR-08** | Resource API memakai `JsonResource::withoutWrapping()` dan pemetaan `snake_case` → `camelCase`                        | ✅ DISETUJUI (sudah berlaku)                                                                    | —           |
+| **ADR-09** | Cache, queue, dan log wajib membawa konteks tenant (namespace kunci / payload job)                                    | ⚠️ PERLU PERSETUJUAN                                                                            | 2           |
+| **ADR-10** | Log aktivitas domain dicatat otomatis via `ActivityObserver` pada 7 model domain                                      | ✅ DISETUJUI (sudah berlaku)                                                                    | —           |
+| **ADR-11** | Otorisasi dibagi tegas: `TeamRole`/`TeamPermission` (tenant) vs `is_platform_admin` (platform) — tidak boleh dicampur | ✅ DISETUJUI (sudah berlaku)                                                                    | —           |
+| **ADR-12** | Registrasi hanya lewat undangan                                                                                       | ✅ SEMENTARA (lihat D-10)                                                                       | —           |
+| **ADR-13** | Database produksi **MySQL 8 / PostgreSQL**, SQLite hanya dev & test                                                   | ⚠️ PERLU PERSETUJUAN (D-09)                                                                     | 1           |
+| **ADR-14** | Definisi plan disimpan di **config**, bukan kode domain                                                               | ✅ **DISETUJUI** (2026-09-30) — config dulu; promosi ke tabel menyusul                          | Gelombang 1 |
+| **ADR-15** | Route publik tenant dipisahkan dari route internal agar bisa di-resolve per host                                      | ⏸️ **DITUNDA** ke gelombang 2 (2026-09-30)                                                      | Gelombang 2 |
+| **ADR-16** | SSR produksi diaktifkan (build `bootstrap/ssr` + proses Node) untuk SEO                                               | ⚠️ PERLU PERSETUJUAN                                                                            | 1           |
+| **ADR-17** | Semua perubahan skema bersifat **aditif & backward compatible**                                                       | ✅ DISETUJUI                                                                                    | —           |
 
 ### B.2 Product Decision Record (PDR)
 
 | ID         | Keputusan Produk                                  | Status                                                                                                          |
 | ---------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | **PDR-01** | Paket langganan (Basic/Plus/Pro) dan isinya       | ⚠️ **SEGERA DIBUTUHKAN** — billing masuk gelombang 1 (2026-09-30)                                               |
-| **PDR-02** | Tenant = perusahaan/organisasi yang berlangganan  | ⚠️ PERLU PERSETUJUAN                                                                                            |
+| **PDR-02** | Tenant = perusahaan/organisasi yang berlangganan  | ✅ **DISETUJUI** (2026-10-15) — definisi resmi ada di [Lampiran B.3](#b3-glosarium-istilah)                     |
 | **PDR-03** | Model onboarding tenant: undangan vs self-service | ❓ TERBUKA (D-10)                                                                                               |
 | **PDR-04** | Custom domain sebagai fitur tier tinggi           | ❓ BELUM DISETUJUI                                                                                              |
 | **PDR-05** | Model harga & provider pembayaran                 | ⚠️ **SEGERA DIBUTUHKAN** — billing & payment masuk gelombang 1; pendaftaran provider harus dimulai Oktober 2026 |
 | **PDR-06** | Add-on per fitur di luar upgrade paket            | ❓ BELUM DISETUJUI                                                                                              |
 | **PDR-07** | AI/automation hanya di tier tertinggi             | ❓ BELUM DISETUJUI                                                                                              |
 | **PDR-08** | Kebijakan retensi & ekspor data tenant            | ❓ TERBUKA (OQ-03, OQ-05)                                                                                       |
+
+---
+
+### B.3 Glosarium Istilah
+
+| Istilah      | Arti                                                                                                                                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Team**     | **Tenant** — satu perusahaan/organisasi yang berlangganan aplikasi ini. Kata "tim" di UI, rute, dan kode adalah sinonim dari "tenant".  |
+| **Tenant**   | Peran sebuah `Team`. Tidak ada tabel `tenants` terpisah; kolomnya tetap `team_id` (ADR-02).                                             |
+| **Platform** | Sisi operator lintas tenant (kelola tenant, moderasi halaman publik, audit). Bukan milik tenant mana pun, jadi tidak memakai `team_id`. |
+
+> **Keputusan 2026-10-15 (P-4/ADR-02).** Ambiguitas istilah `Team` (temuan A-3) **diterima dan didokumentasikan**, bukan di-_rename_: namanya dipakai di 11 tabel dan puluhan berkas, sementara manfaatnya bagi user nol. Trigger yang membatalkan keputusan ini: bila tenant membutuhkan **sub-team atau departemen internal**, istilah "team" benar-benar bentrok dan pembahasan tabel `tenants` harus dimulai secara serius. Salinan glosarium ini juga ada di [`README.md`](../README.md#glosarium).
 
 ---
 

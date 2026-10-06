@@ -286,6 +286,8 @@ Bisa ditempel langsung sebagai issue atau GitHub Project.
 >
 > **Koreksi 2026-10-13.** Kalimat lama di catatan ini — “gerbang CI belum pernah benar-benar berjalan” — **sudah tidak berlaku**: `e9e3246` mengubah filter branch menjadi semua branch, dan workflow-nya **berjalan hijau** di `syahrul-dev` (run #5, commit `a353ab5`).
 
+> **Koreksi 2026-10-15.** Butir “**P-3**, **P-4**, **P-5** belum dimulai” di atas juga sudah tidak berlaku: **P-3** selesai 2026-10-14 (baris "Rabu, 14 Oktober 2026"), **P-4** dan **P-5** selesai 2026-10-15 — kecuali pencatatan suspend/aktifkan tenant, yang menunggu tugas 2.3. Jadi **P-0 sampai P-5 sudah selesai**; sisa urutan kerja ada di [`implementation/implementation-schedule.md`](implementation/implementation-schedule.md).
+
 **P-3 — Database produksi**
 
 - [x] CI menjalankan migrasi di MySQL dan Postgres
@@ -305,17 +307,26 @@ Bisa ditempel langsung sebagai issue atau GitHub Project.
 
 **P-4 — Istilah "team"**
 
-- [ ] Glosarium: `Team` = Tenant
-- [ ] Catatan di `README.md`
-- [ ] Dicatat sebagai ADR-02 di dokumen induk
-- [ ] **Tidak ada** rename tabel/kolom
+- [x] Glosarium: `Team` = Tenant
+- [x] Catatan di `README.md`
+- [x] Dicatat sebagai ADR-02 di dokumen induk
+- [x] **Tidak ada** rename tabel/kolom
 
 **P-5 — Audit & backup**
 
-- [ ] `platform_audit_logs` dibuat
-- [ ] Buat/hapus/suspend/moderasi tenant tercatat
-- [ ] Backup terjadwal
-- [ ] Restore diuji dan berhasil
+- [x] `platform_audit_logs` dibuat
+- [x] Buat/hapus tenant + moderasi `public_page_enabled` tercatat — **suspend/aktifkan belum**, karena tugas 2.3 (status tenant) belum dikerjakan
+- [x] Backup terjadwal
+- [x] Restore diuji dan berhasil
+
+> **Status 2026-10-15 — baris "Kamis, 15 Oktober 2026" (P-4 + P-5) selesai, dengan satu butir tertunda.**
+>
+> - **P-4 glosarium** — istilah `Team` = tenant ditulis di `README.md` (bagian **Glosarium**, dirujuk dari bagian Multi-Tenancy) dan dikunci sebagai **ADR-02 DISETUJUI (2026-10-15)** + **PDR-02** di `docs/IMPLEMENTATION_PLAN.md` (Lampiran B.3). Temuan **A-3** ditutup sebagai keputusan dokumentasi. **Tidak ada** tabel atau kolom yang di-rename; trigger peninjauan ulang (sub-team internal) ikut dicatat.
+> - **P-5 audit** — migrasi `platform_audit_logs` (tanpa `team_id`, `actor_id` `nullOnDelete`, `created_at` saja), enum `App\Enums\PlatformAuditAction`, model + factory, satu jalur tulis `App\Actions\Platform\RecordPlatformAudit`, dan command baca `php artisan platform:audit-log`. Aksi yang tercatat: **tenant dibuat**, **halaman publik dinyalakan/dimatikan**, **tenant dihapus** (di dalam transaksi, agar penghapusan yang gagal tidak meninggalkan catatan).
+> - **P-5 backup** — `config/backup.php` + `App\Support\DatabaseBackup` + command `db:backup`/`db:restore` + jadwal harian 02:00. Bukti restore: salinan database dev di-backup, satu nama tenant diubah jadi penanda, `db:restore --force` dikembalikan ke nilai semula (jumlah tenant tetap 9). Putaran yang sama juga jadi test otomatis (`tests/Feature/Backup/DatabaseBackupTest.php`, 11 test).
+> - **Yang belum** — suspend/aktifkan tenant (tugas 2.3 belum jalan, jadi belum ada yang bisa dicatat), dan **restore MySQL/PostgreSQL belum pernah diuji** karena binernya tidak ada di mesin ini; README menyebut prosedurnya harus dicoba di server tujuan sebelum dianggap berhasil.
+> - **Quality gate** — `composer ci:check` hijau: `vp check` bersih, `vue-tsc` bersih, pint bersih, **PHPStan level 7 nol error**, **276 test / 1116 assertion** (naik dari 257/1060).
+> - **Temuan yang dicatat** — restore SQLite **senyap** bila koneksi belum di-`purge` (dibuktikan dengan probe: koneksi lama masih membaca isi lama); dan `app()->bound('request')` **selalu** `true` juga di console, sehingga `runningInConsole()` dipakai untuk memutuskan pencatatan IP.
 
 **Quality gate sebelum setiap PR digabung**
 
