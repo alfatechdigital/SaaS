@@ -39,7 +39,6 @@ class TaskController extends Controller
     public function update(SaveTaskRequest $request): RedirectResponse
     {
         $model = Task::query()
-            ->forTeam($request->team())
             ->findOrFail((int) $request->route('task'));
 
         $model->update($request->validated());
@@ -62,7 +61,6 @@ class TaskController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageProjects);
 
         Task::query()
-            ->forTeam($team)
             ->findOrFail((int) $request->route('task'))
             ->delete();
 

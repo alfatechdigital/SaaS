@@ -24,7 +24,7 @@ use Illuminate\Database\Eloquent\Scope;
  *   none (queued job, seeder, command).
  *
  * @see BelongsToTeam
- * @see \docs\implementation\phase-02-tenant-context.md tugas 2.2.1 s/d 2.2.3
+ * @see \docs\implementation\phase-02-tenant-context.md tugas 2.2.1 s/d 2.2.7
  *
  * @implements Scope<Model>
  */

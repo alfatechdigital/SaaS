@@ -25,7 +25,6 @@ class ActivityLogController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ViewActivityLog);
 
         $logs = ActivityLog::query()
-            ->forTeam($team)
             ->with('performedBy:id,name')
             ->latest()
             ->limit(100)

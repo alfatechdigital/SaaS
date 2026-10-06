@@ -10,8 +10,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Applied to every model whose records are owned by a single team.
  *
+ * The global scope registered here is the *only* thing that enforces tenant
+ * isolation on reads; `->forTeam()` is a narrowing filter, not a safeguard, and
+ * the controllers therefore no longer rely on it (tugas 2.2.6).
+ *
  * @see \docs\IMPLEMENTATION_PLAN.md ADR-03
- * @see \docs\implementation\phase-02-tenant-context.md tugas 2.2.1 s/d 2.2.3
+ * @see \docs\implementation\phase-02-tenant-context.md tugas 2.2.1 s/d 2.2.7
  */
 trait BelongsToTeam
 {
@@ -40,10 +44,14 @@ trait BelongsToTeam
     }
 
     /**
-     * Scope the query to a single team.
+     * Narrow the query to a single team.
      *
-     * Still worth writing even where the global scope already applies: it states
-     * the intent at the call site and keeps working if the scope is lifted.
+     * The global scope is the authority, so this can never widen a query: asking
+     * for a team other than the active one returns no rows rather than that
+     * team's rows (pinned down by `TeamGlobalScopeTest`). Since the scope already
+     * confines every query to the active tenant, the tenant-owned controllers no
+     * longer pass `->forTeam()` — see tugas 2.2.6 — and this filter is left for
+     * call sites and tests that need to name a team explicitly.
      *
      * @param  Builder<$this>  $query
      * @return Builder<$this>

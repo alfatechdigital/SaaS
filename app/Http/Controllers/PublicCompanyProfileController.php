@@ -35,11 +35,9 @@ class PublicCompanyProfileController extends Controller
         CurrentTeam::activate($team);
 
         $profile = CompanyProfile::query()
-            ->forTeam($team)
             ->first();
 
         $portfolio = PortfolioItem::query()
-            ->forTeam($team)
             ->where('published', true)
             ->orderByDesc('completion_date')
             ->get();

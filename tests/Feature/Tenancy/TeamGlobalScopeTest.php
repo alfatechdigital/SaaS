@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * P-2 / tugas 2.2.1 s/d 2.2.3 — the team global scope.
+ * P-2 / tugas 2.2.1 s/d 2.2.7 — the team global scope.
  *
  * The isolation suite proves the scope end-to-end through HTTP; this file proves
  * the mechanics underneath it: a query without a tenant is refused, a query with
@@ -30,8 +30,12 @@ use Tests\TestCase;
  * Every tenant-owned model is covered: Fase 2 switches the scope on per model,
  * and this file is the per-model proof that the switch actually took effect.
  *
+ * tugas 2.2.4 — audit of every `withoutTeamScope()` call site. Each one below
+ * carries a comment saying why the query has to leave the tenant, which is what
+ * makes the escape hatch auditable instead of convenient.
+ *
  * @see TeamScope
- * @see \docs\implementation\phase-02-tenant-context.md tugas 2.2.1 s/d 2.2.3
+ * @see \docs\implementation\phase-02-tenant-context.md tugas 2.2.1 s/d 2.2.7
  */
 class TeamGlobalScopeTest extends TestCase
 {
@@ -153,8 +157,9 @@ class TeamGlobalScopeTest extends TestCase
         Project::factory()->create(['team_id' => Team::factory()->create()->id]);
         Project::factory()->create(['team_id' => Team::factory()->create()->id]);
 
-        // No tenant is active here, which is exactly the point: cross-tenant work
-        // such as the platform layer must be able to opt out of the scope.
+        // Reason for the escape hatch: cross-tenant work such as the platform
+        // layer must be able to opt out of the scope. No tenant is active here,
+        // which is exactly the point.
         $this->assertNull($this->context->team());
         $this->assertSame(2, Project::withoutTeamScope()->count());
     }
@@ -166,6 +171,10 @@ class TeamGlobalScopeTest extends TestCase
 
         $this->context->runFor($mine->team, function () use ($theirs): void {
             $this->assertSame(1, Project::query()->count());
+
+            // Reason for the escape hatch: this is the only way to reach a row
+            // that belongs to another tenant, and that has to be a deliberate,
+            // commented act rather than an accident.
             $this->assertSame(2, Project::query()->withoutTeamScope()->count());
             $this->assertTrue(
                 Project::query()->withoutTeamScope()->whereKey($theirs->id)->exists(),
@@ -176,8 +185,8 @@ class TeamGlobalScopeTest extends TestCase
     /**
      * The scope is the authority, so an explicit `forTeam()` cannot widen it.
      *
-     * Worth pinning down: it is why Fase 2 can later delete the `->forTeam()`
-     * calls that became redundant, and why a stray one is harmless meanwhile.
+     * Worth pinning down: it is what allowed tugas 2.2.6 to delete the `->forTeam()`
+     * calls that had become redundant, and why a stray one stays harmless.
      */
     public function test_for_team_cannot_widen_the_active_tenant(): void
     {

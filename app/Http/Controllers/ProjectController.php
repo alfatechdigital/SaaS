@@ -30,13 +30,11 @@ class ProjectController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageProjects);
 
         $projects = Project::query()
-            ->forTeam($team)
             ->with('pic:id,name,job_title')
             ->orderBy('deadline')
             ->get();
 
         $tasks = Task::query()
-            ->forTeam($team)
             ->with('assignee:id,name')
             ->orderBy('due_date')
             ->get();
@@ -72,7 +70,6 @@ class ProjectController extends Controller
     public function update(SaveProjectRequest $request): RedirectResponse
     {
         $model = Project::query()
-            ->forTeam($request->team())
             ->findOrFail((int) $request->route('project'));
 
         $model->update($request->validated());
@@ -95,7 +92,6 @@ class ProjectController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageProjects);
 
         Project::query()
-            ->forTeam($team)
             ->findOrFail((int) $request->route('project'))
             ->delete();
 

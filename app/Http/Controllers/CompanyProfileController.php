@@ -26,7 +26,7 @@ class CompanyProfileController extends Controller
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageCompanyProfile);
 
-        $profile = CompanyProfile::query()->forTeam($team)->first();
+        $profile = CompanyProfile::query()->first();
 
         return Inertia::render('admin/company-profile/Edit', [
             'profile' => $profile === null
@@ -43,7 +43,6 @@ class CompanyProfileController extends Controller
         $team = $request->team();
 
         $profile = CompanyProfile::query()
-            ->forTeam($team)
             ->firstOrNew(['team_id' => $team->id]);
 
         $profile->fill($request->validated());

@@ -27,7 +27,6 @@ class PortfolioItemController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManagePortfolio);
 
         $items = PortfolioItem::query()
-            ->forTeam($team)
             ->orderByDesc('completion_date')
             ->get();
 
@@ -60,7 +59,6 @@ class PortfolioItemController extends Controller
     public function update(SavePortfolioItemRequest $request): RedirectResponse
     {
         $item = PortfolioItem::query()
-            ->forTeam($request->team())
             ->findOrFail((int) $request->route('portfolioItem'));
 
         $item->update($request->validated());
@@ -83,7 +81,6 @@ class PortfolioItemController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManagePortfolio);
 
         PortfolioItem::query()
-            ->forTeam($team)
             ->findOrFail((int) $request->route('portfolioItem'))
             ->delete();
 

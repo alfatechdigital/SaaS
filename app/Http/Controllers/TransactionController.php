@@ -29,13 +29,11 @@ class TransactionController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageFinance);
 
         $transactions = Transaction::query()
-            ->forTeam($team)
             ->with(['project:id,name', 'createdBy:id,name'])
             ->orderByDesc('date')
             ->get();
 
         $projects = Project::query()
-            ->forTeam($team)
             ->orderBy('name')
             ->get(['id', 'name', 'client_name', 'project_value']);
 
@@ -48,8 +46,8 @@ class TransactionController extends Controller
                 'projectValue' => $project->project_value,
             ])->all(),
             'totals' => [
-                'income' => (int) Transaction::query()->forTeam($team)->where('type', 'income')->sum('amount'),
-                'expense' => (int) Transaction::query()->forTeam($team)->where('type', 'expense')->sum('amount'),
+                'income' => (int) Transaction::query()->where('type', 'income')->sum('amount'),
+                'expense' => (int) Transaction::query()->where('type', 'expense')->sum('amount'),
             ],
         ]);
     }
@@ -75,7 +73,6 @@ class TransactionController extends Controller
     public function update(SaveTransactionRequest $request): RedirectResponse
     {
         $model = Transaction::query()
-            ->forTeam($request->team())
             ->findOrFail((int) $request->route('transaction'));
 
         $this->persist($request, $model);
@@ -98,7 +95,6 @@ class TransactionController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageFinance);
 
         Transaction::query()
-            ->forTeam($team)
             ->findOrFail((int) $request->route('transaction'))
             ->delete();
 

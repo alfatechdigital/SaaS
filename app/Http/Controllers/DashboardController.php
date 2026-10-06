@@ -30,7 +30,10 @@ class DashboardController extends Controller
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
-        $team = CurrentTeam::from($request);
+
+        // Activate the request's tenant. Every query below is confined by the
+        // team global scope, so none of them needs an explicit `->forTeam()`.
+        CurrentTeam::from($request);
 
         $email = strtolower($user->email);
 
@@ -53,30 +56,25 @@ class DashboardController extends Controller
             ]);
 
         $projects = Project::query()
-            ->forTeam($team)
             ->with('pic:id,name,job_title')
             ->orderBy('deadline')
             ->get();
 
         $leads = Lead::query()
-            ->forTeam($team)
             ->orderByDesc('created_at')
             ->get();
 
         $contents = ContentItem::query()
-            ->forTeam($team)
             ->with('assignee:id,name')
             ->orderByDesc('created_at')
             ->limit(6)
             ->get();
 
         $transactions = Transaction::query()
-            ->forTeam($team)
             ->orderByDesc('date')
             ->get();
 
         $activityLogs = ActivityLog::query()
-            ->forTeam($team)
             ->with('performedBy:id,name')
             ->latest()
             ->limit(5)

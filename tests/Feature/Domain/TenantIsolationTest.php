@@ -19,11 +19,16 @@ use Inertia\Testing\AssertableInertia as Assert;
  * module; therefore a correctly scoped endpoint only ever exposes — or accepts —
  * the acting tenant's own row, and its `id` is the only value that can prove it.
  *
- * The `forTeam()` scoping that these tests guard is applied manually in
- * controllers, so they are expected to fail the moment that call is removed.
+ * The confinement these tests guard comes from the team global scope
+ * (`App\Scopes\TeamScope`), not from an explicit filter in the controller: the
+ * scope refuses a query with no active tenant and confines the rest to the
+ * active one, so a stray `->forTeam()` naming another team can never widen it.
+ * Tugas 2.2.6 removed those redundant calls; this suite is the proof that the
+ * scope, not the calls, is what isolates the tenants.
  *
  * @see docs/syarhul-implementation-urgent.md P-1
  * @see docs/implementation/phase-01-fondasi.md tugas 1.2.2, 1.2.3, 1.2.4
+ * @see docs/implementation/phase-02-tenant-context.md tugas 2.2.7
  */
 class TenantIsolationTest extends TenantIsolationTestCase
 {
@@ -183,6 +188,52 @@ class TenantIsolationTest extends TenantIsolationTestCase
                 ->component('admin/company-profile/Edit')
                 ->where('profile.id', $mine['company_profile']->id)
                 ->where('profile.companyName', $theirs['company_profile']->company_name));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 2.2.7 — the widest single read in the application
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * The dashboard aggregates all five tenant-owned modules in one response, so
+     * it is the broadest read the application performs.
+     *
+     * Tugas 2.2.6 removed the five `->forTeam()` calls from `DashboardController`.
+     * This test pins the behaviour down: confinement now comes from the team
+     * global scope alone, and every count below would double without it.
+     */
+    public function test_dashboard_only_exposes_the_active_tenant_data(): void
+    {
+        $mine = $this->seedLookAlikeData($this->team);
+        $this->seedLookAlikeData($this->otherTeam);
+
+        $mineIds = collect($mine)
+            ->map(static fn (Model $model): int => (int) $model->getKey())
+            ->all();
+
+        $this->actingAs($this->owner)
+            ->get($this->routeFor($this->team, 'dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('admin/dashboard/Index')
+                ->has('projects', 1)
+                ->where('projects.0.id', $mine['project']->id)
+                ->has('leads', 1)
+                ->where('leads.0.id', $mine['lead']->id)
+                ->has('contents', 1)
+                ->where('contents.0.id', $mine['content']->id)
+                ->has('transactions', 1)
+                ->where('transactions.0.id', $mine['transaction']->id)
+                // Each tenant owns seven logs and the dashboard renders the five
+                // most recent, so a count proves nothing on its own — every
+                // rendered row has to reference one of the acting tenant's records.
+                ->has('activityLogs', 5)
+                ->where('activityLogs', fn (mixed $logs): bool => is_iterable($logs)
+                    && collect($logs)->every(
+                        static fn ($log): bool => in_array((int) $log['entityId'], $mineIds, true),
+                    )));
     }
 
     /*

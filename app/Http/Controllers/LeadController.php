@@ -30,7 +30,6 @@ class LeadController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageLeads);
 
         $leads = Lead::query()
-            ->forTeam($team)
             ->orderByDesc('created_at')
             ->get();
 
@@ -63,7 +62,6 @@ class LeadController extends Controller
     public function update(SaveLeadRequest $request): RedirectResponse
     {
         $model = Lead::query()
-            ->forTeam($request->team())
             ->findOrFail((int) $request->route('lead'));
 
         $model->update($request->validated());
@@ -86,7 +84,6 @@ class LeadController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageLeads);
 
         Lead::query()
-            ->forTeam($team)
             ->findOrFail((int) $request->route('lead'))
             ->delete();
 
@@ -115,13 +112,11 @@ class LeadController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageLeads);
 
         $lead = Lead::query()
-            ->forTeam($team)
             ->findOrFail((int) $request->route('lead'));
 
         abort_unless($lead->status === LeadStatus::Won, 422, __('Hanya lead dengan status Menang yang dapat dikonversi.'));
 
         $alreadyConverted = Project::query()
-            ->forTeam($team)
             ->where('lead_id', $lead->id)
             ->exists();
 

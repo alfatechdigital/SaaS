@@ -28,7 +28,6 @@ class ContentItemController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageContent);
 
         $contents = ContentItem::query()
-            ->forTeam($team)
             ->with('assignee:id,name')
             ->orderByDesc('created_at')
             ->get();
@@ -63,7 +62,6 @@ class ContentItemController extends Controller
     public function update(SaveContentItemRequest $request): RedirectResponse
     {
         $model = ContentItem::query()
-            ->forTeam($request->team())
             ->findOrFail((int) $request->route('content'));
 
         $model->update($request->validated());
@@ -86,7 +84,6 @@ class ContentItemController extends Controller
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageContent);
 
         ContentItem::query()
-            ->forTeam($team)
             ->findOrFail((int) $request->route('content'))
             ->delete();
 
