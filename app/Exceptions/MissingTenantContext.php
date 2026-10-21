@@ -32,4 +32,18 @@ final class MissingTenantContext extends RuntimeException
             $model,
         ));
     }
+
+    /**
+     * Build the exception for tenant storage access.
+     *
+     * Without an active tenant there is no `tenants/{id}/` prefix to write to,
+     * and guessing one would put a file in another tenant's folder.
+     */
+    public static function forStorage(): self
+    {
+        return new self(
+            'Refusing to access tenant storage without an active tenant. '
+            .'Wrap the work in TenantContext::runFor().',
+        );
+    }
 }

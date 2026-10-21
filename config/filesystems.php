@@ -47,6 +47,17 @@ return [
             'report' => false,
         ],
 
+        // Tenant files live here. The root is configurable so production can point
+        // it at a dedicated volume, but paths inside the disk always follow
+        // `tenants/{team_id}/{category}/{file}` (ADR-05).
+        'tenants' => [
+            'driver' => 'local',
+            'root' => env('TENANT_STORAGE_ROOT') ?: storage_path('app'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

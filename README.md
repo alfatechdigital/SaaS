@@ -29,6 +29,7 @@ Aplikasi ini **multi-tenant**: satu instalasi bisa melayani banyak tim/perusahaa
 - [Cara Mengakses](#cara-mengakses)
 - [Akun Demo](#akun-demo)
 - [Multi-Tenancy & Hak Akses](#multi-tenancy--hak-akses)
+- [Storage Tenant](#storage-tenant)
 - [Perintah Penting](#perintah-penting)
 - [Audit Platform & Backup](#audit-platform--backup)
 - [Struktur Proyek](#struktur-proyek)
@@ -207,7 +208,6 @@ Setelah aplikasi berjalan di `http://localhost:8000`:
 | ------------------------------------------ | ------------------------------------ |
 | `http://localhost:8000/`                   | Halaman sambutan (Welcome)           |
 | `http://localhost:8000/login`              | Login portal internal                |
-| `http://localhost:8000/register`           | Registrasi akun baru                 |
 | `http://localhost:8000/alfatech/dashboard` | Dashboard portal internal            |
 | `http://localhost:8000/p/alfatech`         | **Website publik** profil perusahaan |
 | `http://localhost:8000/settings/profile`   | Pengaturan profil akun               |
@@ -225,12 +225,17 @@ Semua halaman internal mengikuti pola **`/{slug-tim}/...`**, contohnya:
 /alfatech/portfolio
 /alfatech/company-profile
 /alfatech/activity-logs
+/alfatech/team
 /alfatech/settings
 ```
 
 `alfatech` di situ adalah **slug tim**, bukan nama folder. Kalau kamu membuat tim baru, URL-nya ikut berubah sesuai slug tim tersebut.
 
 Tombol **"Buka Website Publik"** di halaman Profil Perusahaan juga langsung mengarah ke `/p/{slug-tim}`.
+
+### Registrasi hanya lewat undangan
+
+Tidak ada pendaftaran mandiri. Halaman `/register` hanya terbuka bila URL-nya membawa kode undangan yang masih berlaku (`/register?invitation={kode}`); tanpa itu pengunjung dialihkan ke `/login` dengan pesan _"Registration is by invitation only."_ Undangan dikirim dari halaman **Tim** (`/{slug-tim}/team`) oleh Owner/Admin, dan tautan di email mengarah ke `/login?invitation={kode}`.
 
 ---
 
@@ -278,6 +283,28 @@ if (can('canManageLeads')) {
 ```
 
 Cara ini dipakai menu Sidebar untuk menyembunyikan item yang tidak boleh diakses.
+
+---
+
+## Storage Tenant
+
+Belum ada fitur upload di aplikasi ini, tetapi **jalur penyimpanannya sudah dipasang** supaya penulis kode berikutnya tidak mengambil jalan pintas. Semua berkas tenant **wajib** lewat disk `tenants` (`config/filesystems.php`) dan helper `App\Support\TenantStorage` — jangan memanggil `Storage::disk(...)` dengan path buatan sendiri, dan jangan menyusun path dari `storage_path()`.
+
+**Konvensi path:** `tenants/{team_id}/{kategori}/{file}`, misalnya `tenants/7/portfolio/hero.jpg`. Prefix memakai `team_id` (bukan slug) agar tetap sama walau slug berubah.
+
+```php
+$storage = app(TenantStorage::class);
+
+$storage->put('portfolio', 'hero.jpg', $contents); // tenants/{id}/portfolio/hero.jpg
+$storage->path('portfolio', 'hero.jpg');
+$storage->exists('portfolio', 'hero.jpg');
+```
+
+Helper mengambil tenant aktif dari `App\Support\TenantContext`. Tanpa konteks tenant ia **melempar** `MissingTenantContext` alih-alih menulis ke folder default; di job/command bungkus pekerjaannya dengan `TenantContext::runFor()`. Path absolut, separator `\`, segmen `..`/`.`, segmen kosong, dan null byte ditolak dengan `InvalidArgumentException`, sehingga `../../.env` tidak pernah bisa keluar dari folder tenant.
+
+**Root disk** bisa diarahkan ke volume terpisah lewat `TENANT_STORAGE_ROOT` (default `storage/app`, sehingga path final menjadi `{root}/tenants/{team_id}/…`). Karena helper hanya memakai Flysystem, pindah ke S3 nanti cukup mengganti konfigurasi disk `tenants` tanpa menyentuh kode pemanggil.
+
+**Aturan validasi upload (untuk pemakaian mendatang):** whitelist mime, batas ukuran, sanitasi nama file dan simpan nama acak (bukan nama asli), jangan simpan di `public/` langsung, dan hapus berkas lewat job terpisah saat tenant dihapus. Detail keputusan: [ADR-05](docs/IMPLEMENTATION_PLAN.md#92-foundation--konvensi--seam-adr-05).
 
 ---
 
@@ -394,7 +421,7 @@ resources/js/
 ## Catatan & Keterbatasan
 
 - **SSR produksi belum diaktifkan.** `config/inertia.php` sudah `ssr.enabled => true`, tetapi bundle `bootstrap/ssr` belum dibuild dan server SSR belum berjalan — sehingga Inertia _fallback_ diam-diam ke rendering di klien. Aplikasi tetap berjalan normal; yang terdampak hanya SEO halaman publik. Langkah mengaktifkannya ada di [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) §13. Saat pengembangan (`npm run dev`), SSR **sudah** aktif lewat plugin Vite.
-- **Halaman `/settings/profile`, `/settings/security`, `/settings/teams`, dan `/settings/appearance`** masih memakai layout bawaan starter kit, sehingga sidebar-nya berbeda dari sidebar utama aplikasi. Ini keputusan yang disengaja (ADR-16).
+- **Halaman `/settings/profile`, `/settings/security`, dan `/settings/appearance`** masih memakai layout bawaan starter kit, sehingga sidebar-nya berbeda dari sidebar utama aplikasi. Ini keputusan yang disengaja (ADR-16). Halaman tim starter kit (`/settings/teams`) sudah dihapus; pengelolaan anggota pindah ke `/{slug-tim}/team` di shell tenant.
 - **SQLite dilarang di produksi.** `App\Providers\ProductionConfigServiceProvider` menolak boot ketika `APP_ENV=production` masih memakai `sqlite`, karena SQLite mengunci seluruh berkas saat menulis dan tidak bisa dipakai beberapa app-server (ADR-13). Pesannya menyebut koneksi yang salah, jadi penyebabnya langsung terlihat di log.
 - **Data uang disimpan sebagai integer rupiah** (SQLite tidak punya tipe desimal). Formatting hanya dilakukan di frontend lewat `resources/js/utils/formatters.ts`.
 - **Tidak ada real-time push.** Perubahan data diterapkan lewat kunjungan Inertia biasa, bukan WebSocket (ADR-07).
