@@ -1,6 +1,6 @@
 # Fase 1 — Fondasi & Titik Aman
 
-> **Status:** RENCANA — belum dimulai.
+> **Status:** ✅ **SELESAI** — Gate Fase 1 lolos di mesin lokal pada 2026-10-21 (lihat [Post-Implementation Notes](#post-implementation-notes)).
 > **Ketergantungan:** tidak ada. **Fase ini wajib dikerjakan lebih dulu.**
 > **Menambah fitur produk?** ❌ Tidak. Fase ini murni arsitektur, keamanan, dan dokumentasi.
 > **Dokumen induk:** [`../IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md)
@@ -202,14 +202,14 @@ Satu-satunya pekerjaan terkait database adalah **pengujian lintas engine** (tuga
 
 ## Security Considerations
 
-| ID   | Risiko                                       | Tindakan di fase ini                                         |
-| ---- | -------------------------------------------- | ------------------------------------------------------------ |
-| RF-1 | Kebocoran data antar-tenant (scoping manual) | **Buktikan lewat test** (1.2); perbaikan definitif di Fase 2 |
-| RF-2 | Eskalasi `is_platform_admin`                 | Audit (1.6.1)                                                |
-| RF-3 | Mass assignment `team_id`                    | Audit (1.6.2)                                                |
-| RF-4 | URL eksternal tidak tervalidasi              | Validasi skema (1.6.3)                                       |
-| RF-5 | Path traversal pada storage                  | Test helper (1.3.3)                                          |
-| RF-6 | Password policy tidak aktif di produksi      | Konfirmasi (1.6.5)                                           |
+| ID   | Risiko                                       | Tindakan di fase ini                                                       |
+| ---- | -------------------------------------------- | -------------------------------------------------------------------------- |
+| RF-1 | Kebocoran data antar-tenant (scoping manual) | **Buktikan lewat test** (1.2); perbaikan definitif di Fase 2               |
+| RF-2 | Eskalasi `is_platform_admin`                 | Audit (1.6.1) — **selesai 2026-10-21**, dikunci test mass-assignment       |
+| RF-3 | Mass assignment `team_id`                    | Audit (1.6.2) — **selesai 2026-10-21**, `team_id` selalu dari tenant aktif |
+| RF-4 | URL eksternal tidak tervalidasi              | Validasi skema (1.6.3) — **selesai 2026-10-21**, `url:http,https`          |
+| RF-5 | Path traversal pada storage                  | Test helper (1.3.3) — **selesai 2026-10-19**                               |
+| RF-6 | Password policy tidak aktif di produksi      | Konfirmasi (1.6.5) — **selesai 2026-10-21**                                |
 
 **Prinsip:** fase ini **menemukan dan membuktikan**, bukan menambal secara luas. Penambalan arsitektural (global scope) sengaja ditunda ke Fase 2 agar fasenya tetap kecil dan dapat diuji.
 
@@ -354,14 +354,15 @@ Berasal dari fase ini, tetapi sengaja **tidak** dikerjakan:
 
 Utang teknis yang **diketahui** dan diterima untuk sementara (dicatat, bukan dibiarkan tanpa jejak):
 
-| ID   | Utang                                                 | Alasan diterima                                    | Kapan ditinjau                 |
-| ---- | ----------------------------------------------------- | -------------------------------------------------- | ------------------------------ |
-| TD-1 | Isolasi tenant masih manual setelah Fase 1            | Perbaikan definitif di Fase 2                      | Fase 2                         |
-| TD-2 | `photo_path` tidak terpakai                           | Belum ada kebutuhan                                | Saat fitur upload dibuat       |
-| TD-3 | `next_follow_up`/`scheduled_at` berupa teks           | Perubahan perilaku berisiko tanpa keputusan produk | Saat reminder otomatis diminta |
-| TD-4 | Referensi ADR/PDR lama mungkin masih ada setelah D-01 | Bergantung keputusan                               | Setelah D-01                   |
-| TD-5 | Cache/queue belum tenant-aware                        | Belum ada pemakaian nyata                          | Fase 2                         |
-| TD-6 | Tidak ada security header eksplisit                   | Belum diputuskan                                   | Setelah 1.6.4                  |
+| ID   | Utang                                                 | Alasan diterima                                                                              | Kapan ditinjau                 |
+| ---- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------ |
+| TD-1 | Isolasi tenant masih manual setelah Fase 1            | Perbaikan definitif di Fase 2                                                                | Fase 2                         |
+| TD-2 | `photo_path` tidak terpakai                           | Belum ada kebutuhan                                                                          | Saat fitur upload dibuat       |
+| TD-3 | `next_follow_up`/`scheduled_at` berupa teks           | Perubahan perilaku berisiko tanpa keputusan produk                                           | Saat reminder otomatis diminta |
+| TD-4 | Referensi ADR/PDR lama mungkin masih ada setelah D-01 | **Ditutup 2026-10-19** — Lampiran C permanen, komentar kode tetap warisan                    | —                              |
+| TD-5 | Cache/queue belum tenant-aware                        | Belum ada pemakaian nyata                                                                    | Fase 2                         |
+| TD-6 | Tidak ada security header eksplisit                   | Rekomendasi 2026-10-21: X-Frame-Options/nosniff/Referrer-Policy dulu, CSP setelah nonce siap | Butuh keputusan                |
+| TD-7 | `social_links` profil belum divalidasi skema URL      | Belum dirender di halaman publik; risiko nol sampai fitur itu dibuat                         | Saat tautan sosial ditampilkan |
 
 ---
 
@@ -389,6 +390,17 @@ _Belum ada entri lain._
 - **1.5.2 dokumentasi.** README mendapat bagian **SSR produksi** (build, `inertia:start-ssr`, `inertia:check-ssr`, alamat/port, rebuild setelah UI berubah) dan catatan bahwa pemilihan host/proses manager menunggu D-09. Butir **Catatan & Keterbatasan** soal SSR diperbarui: bundle ada, proses belum di-deploy.
 - **Catatan perilaku.** `bootstrap/ssr` hanya berisi bundle; **tidak ada** yang otomatis menjalankan proses Node. Selama proses itu mati, Inertia tetap _fallback_ ke klien, jadi tidak ada regresi bila bundle belum dibangun di server.
 - **Belum dikerjakan (memang tugas 21 Oktober).** 1.5.3 (meta title/description dari profil tenant) dan 1.5.4 (verifikasi HTML SSR berisi konten halaman publik).
+
+**2026-10-21 — tugas 1.5.3, 1.5.4, 1.6 (audit keamanan) + Gate Fase 1.**
+
+- **1.5.3 meta dari data tenant.** `PublicCompanyProfileController` kini mengirim prop `meta`: `title` = `company_profiles.company_name` (fallback nama tim) dan `description` = `description` profil, fallback ke `about` yang sudah di-`strip_tags`, dipotong `Str::limit(…, 160)`, dan bila keduanya kosong memakai kalimat netral berisi nama tim. Halaman publik memakai prop itu di `<Head>`; teks marketing hardcoded ("Software House & IT Consulting", "aplikasi mobile, sistem ERP…") **dihapus** karena itu copy milik satu tenant dan salah untuk tenant lain.
+- **1.5.4 verifikasi HTML mentah.** Dengan `node bootstrap/ssr/ssr.js` + `php artisan serve`, `GET /p/alfatech` mengembalikan HTML jadi: `<title data-inertia="">PT Alfatech Digital Solutions - Laravel</title>`, `<meta name="description" content="Software house and tech consulting agency based in Jakarta, Indonesia." data-inertia="description">`, dan `<div data-server-rendered="true" id="app">` berisi konten halaman (nama perusahaan, "Portofolio", "Kirim"). Artinya meta **dan** body benar-benar dirender server, bukan hanya dikirim sebagai props.
+- **1.6.1 `is_platform_admin`.** Audit: kolom itu hanya disentuh seeder, factory, dan `platform:promote-admin`; `CreateNewUser` hanya menulis `name`/`email`/`password`, dan `ProfileUpdateRequest` hanya memvalidasi `name`/`email` sehingga `fill($request->validated())` membuang kunci lain. Dikunci oleh `tests/Feature/Security/MassAssignmentTest.php`.
+- **1.6.2 `team_id`.** `team_id` tetap fillable (dibutuhkan seeder/factory), tetapi **tidak pernah** berasal dari request: setiap controller menulisnya dari `$request->team()` dan menyebar `$request->validated()` yang sudah tersaring. Test mengirim `team_id` tenant lain saat membuat portfolio dan membuktikan barisnya tetap masuk ke tenant aktif.
+- **1.6.3 validasi skema URL (R-8).** `media_url` (content), `image_url`, dan `project_url` (portfolio) kini memakai `url:http,https`. `project_url` ikut divalidasi karena dirender sebagai `href` di halaman publik — `javascript:` di situ bisa dieksekusi saat diklik, bukan sekadar masalah tampilan.
+- **1.6.4 security header — rekomendasi, belum diterapkan.** Lihat [Technical Debt](#technical-debt) TD-6. Ringkas: CSP ketat belum bisa dipasang sebelum audit inline script/style (`app.blade.php` memuat dua blok inline) dan sumber font eksternal; urutan aman adalah `X-Frame-Options: DENY` + `X-Content-Type-Options: nosniff` + `Referrer-Policy: strict-origin-when-cross-origin` dulu, CSP menyusul setelah nonce/hash disiapkan. Butuh keputusan, jadi tidak dikerjakan di fase ini.
+- **1.6.5 `Password::defaults`.** Dikonfirmasi aktif di `AppServiceProvider::configureDefaults()`: produksi menuntut minimal 12 karakter, huruf besar/kecil, angka, simbol, dan `uncompromised`. Dikunci `tests/Feature/Security/PasswordDefaultsTest.php` (produksi ketat, lokal tetap default framework).
+- **Gate Fase 1 — lolos di mesin lokal.** `composer test` (pint + phpstan level 7 + phpunit **303 test / 1204 assertion**), `npm run types:check`, `npm run check`, dan `npm run build:ssr` semuanya hijau. CI menjalankan rangkaian yang sama (job `ci` + matriks MySQL/PostgreSQL), jadi hasil pipeline tetap otoritatif untuk push berikutnya.
 
 ---
 
