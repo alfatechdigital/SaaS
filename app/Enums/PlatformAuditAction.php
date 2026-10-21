@@ -17,6 +17,8 @@ enum PlatformAuditAction: string
 {
     case TenantCreated = 'tenant.created';
     case TenantDeleted = 'tenant.deleted';
+    case TenantSuspended = 'tenant.suspended';
+    case TenantActivated = 'tenant.activated';
     case PublicPageEnabled = 'tenant.public_page.enabled';
     case PublicPageDisabled = 'tenant.public_page.disabled';
 
@@ -28,6 +30,8 @@ enum PlatformAuditAction: string
         return match ($this) {
             self::TenantCreated => 'Tenant dibuat',
             self::TenantDeleted => 'Tenant dihapus',
+            self::TenantSuspended => 'Tenant disuspend',
+            self::TenantActivated => 'Tenant diaktifkan kembali',
             self::PublicPageEnabled => 'Halaman publik diaktifkan',
             self::PublicPageDisabled => 'Halaman publik dinonaktifkan',
         };

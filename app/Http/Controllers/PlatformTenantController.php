@@ -39,6 +39,8 @@ class PlatformTenantController extends Controller
                     'slug' => $team->slug,
                     'isPersonal' => $team->is_personal,
                     'publicPageEnabled' => $team->public_page_enabled,
+                    'suspended' => $team->isSuspended(),
+                    'suspendedAt' => $team->suspended_at?->toISOString(),
                     'membersCount' => $team->members_count ?? 0,
                     'createdAt' => $team->created_at?->toISOString(),
                 ]),
@@ -99,6 +101,46 @@ class PlatformTenantController extends Controller
             'message' => $enabled
                 ? __('Halaman publik ":name" aktif kembali.', ['name' => $team->name])
                 : __('Halaman publik ":name" dinonaktifkan.', ['name' => $team->name]),
+        ]);
+
+        return to_route('platform.tenants.index');
+    }
+
+    /**
+     * Suspend a tenant, or lift the suspension (Fase 2, tugas 2.3.3).
+     *
+     * Suspension blocks the tenant shell and hides the public page; nothing is
+     * deleted, so lifting it restores the tenant exactly as it was.
+     */
+    public function updateSuspension(Request $request, Team $team, RecordPlatformAudit $audit): RedirectResponse
+    {
+        abort_if($team->is_personal, 403, __('A personal team cannot be suspended.'));
+
+        $request->validate([
+            'suspended' => ['required', 'boolean'],
+        ]);
+
+        $suspended = $request->boolean('suspended');
+
+        // Update and trail in one transaction: a suspension that leaves no audit
+        // entry would be indistinguishable from an accident.
+        DB::transaction(function () use ($team, $suspended, $audit): void {
+            $team->update(['suspended_at' => $suspended ? now() : null]);
+
+            $audit->handle(
+                $suspended
+                    ? PlatformAuditAction::TenantSuspended
+                    : PlatformAuditAction::TenantActivated,
+                $team,
+                ['suspended' => $suspended, 'name' => $team->name],
+            );
+        });
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $suspended
+                ? __('Tenant ":name" disuspend.', ['name' => $team->name])
+                : __('Tenant ":name" diaktifkan kembali.', ['name' => $team->name]),
         ]);
 
         return to_route('platform.tenants.index');

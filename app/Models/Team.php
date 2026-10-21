@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string $slug
  * @property bool $is_personal
  * @property bool $public_page_enabled
+ * @property Carbon|null $suspended_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -36,7 +37,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, PortfolioItem> $portfolioItems
  * @property-read Collection<int, ActivityLog> $activityLogs
  */
-#[Fillable(['name', 'slug', 'is_personal', 'public_page_enabled'])]
+#[Fillable(['name', 'slug', 'is_personal', 'public_page_enabled', 'suspended_at'])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
@@ -186,6 +187,17 @@ class Team extends Model
     }
 
     /**
+     * Whether the platform operator has suspended this tenant.
+     *
+     * Suspension blocks the tenant shell and the public page, but deletes
+     * nothing (Fase 2, tugas 2.3).
+     */
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -195,6 +207,7 @@ class Team extends Model
         return [
             'is_personal' => 'boolean',
             'public_page_enabled' => 'boolean',
+            'suspended_at' => 'datetime',
         ];
     }
 

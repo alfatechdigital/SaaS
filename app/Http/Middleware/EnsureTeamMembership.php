@@ -22,6 +22,14 @@ class EnsureTeamMembership
 
         abort_if(! $user || ! $team || ! $user->belongsToTeam($team), 403);
 
+        // A suspended tenant is blocked before anything else runs: no dashboard,
+        // no data, and no "switch team" side effect (Fase 2, tugas 2.3.2).
+        abort_if(
+            $team->isSuspended(),
+            403,
+            __('Tenant ini sedang disuspend. Hubungi operator platform.'),
+        );
+
         $this->ensureTeamMemberHasRequiredRole($user, $team, $minimumRole);
 
         if ($request->route('current_team') && ! $user->isCurrentTeam($team)) {

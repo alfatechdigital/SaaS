@@ -364,13 +364,25 @@ Helper mengambil tenant aktif dari `App\Support\TenantContext`. Tanpa konteks te
 
 ### Audit aksi platform
 
-Aksi operator yang menyentuh lintas tenant dicatat ke tabel `platform_audit_logs`: membuat tenant, menghapus tenant, dan mengubah status halaman publik tenant. Tabel ini sengaja **tanpa** `team_id` — isinya memang bukan milik satu tenant — dan hanya ditulis lewat satu jalur, `App\Actions\Platform\RecordPlatformAudit`, supaya setiap aksi destruktif punya jejak "siapa, apa, kapan".
+Aksi operator yang menyentuh lintas tenant dicatat ke tabel `platform_audit_logs`: membuat tenant, menghapus tenant, menyuspend/mengaktifkan tenant, dan mengubah status halaman publik tenant. Tabel ini sengaja **tanpa** `team_id` — isinya memang bukan milik satu tenant — dan hanya ditulis lewat satu jalur, `App\Actions\Platform\RecordPlatformAudit`, supaya setiap aksi destruktif punya jejak "siapa, apa, kapan".
 
 ```bash
 php artisan platform:audit-log                          # 20 catatan terbaru
 php artisan platform:audit-log --limit=50
 php artisan platform:audit-log --action=tenant.deleted
 ```
+
+### Suspend tenant
+
+Operator platform bisa menyuspend tenant dari halaman **Tenant** (`/platform/tenants`) lewat tombol jeda, lalu mengaktifkannya kembali kapan saja. Suspend **tidak menghapus data apa pun**:
+
+| Jalur                        | Perilaku saat tenant disuspend                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Shell tenant (`/{slug}/...`) | `403` dengan pesan bahwa tenant sedang disuspend — anggota tetap login, tetapi tidak bisa membuka satu halaman pun |
+| Halaman publik (`/p/{slug}`) | `404` — tenant tampak tidak ada                                                                                    |
+| Form konsultasi publik       | `404`, tidak ada lead yang dibuat                                                                                  |
+
+Tenant personal (tim bawaan satu user) **tidak** bisa disuspend, sama seperti tidak bisa dihapus. Setiap suspend/aktivasi tercatat sebagai `tenant.suspended` / `tenant.activated`.
 
 ### Backup & restore
 

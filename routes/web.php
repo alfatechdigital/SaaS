@@ -77,6 +77,7 @@ Route::prefix('platform')
         Route::post('tenants', [PlatformTenantController::class, 'store'])->name('tenants.store');
         Route::delete('tenants/{team}', [PlatformTenantController::class, 'destroy'])->name('tenants.destroy');
         Route::patch('tenants/{team}/public-page', [PlatformTenantController::class, 'updatePublicPage'])->name('tenants.public-page');
+        Route::patch('tenants/{team}/suspension', [PlatformTenantController::class, 'updateSuspension'])->name('tenants.suspension');
     });
 
 require __DIR__.'/settings.php';

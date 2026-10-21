@@ -136,7 +136,7 @@ class PlatformAuditLogTest extends TestCase
 
     public function test_the_command_rejects_an_action_it_does_not_know(): void
     {
-        $exitCode = Artisan::call('platform:audit-log', ['--action' => 'tenant.suspended']);
+        $exitCode = Artisan::call('platform:audit-log', ['--action' => 'tenant.unknown-action']);
 
         $this->assertSame(1, $exitCode);
         $this->assertStringContainsString('Aksi tidak dikenal', Artisan::output());

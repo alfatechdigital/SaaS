@@ -30,6 +30,10 @@ class PublicCompanyProfileController extends Controller
         // exists at all.
         abort_unless($team->public_page_enabled, 404);
 
+        // Suspension (Fase 2, tugas 2.3.5) hides the public page for the same
+        // reason: a suspended tenant must look like it does not exist.
+        abort_if($team->isSuspended(), 404);
+
         // The page is reachable without a `{current_team}` segment, so this is
         // the only place that can tell the team global scope which tenant the
         // queries below belong to.

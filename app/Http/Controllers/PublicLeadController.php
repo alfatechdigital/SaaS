@@ -26,6 +26,9 @@ class PublicLeadController extends Controller
         // A deactivated public page must not accept submissions either (PDR-12).
         abort_unless($team->public_page_enabled, 404);
 
+        // A suspended tenant has no public presence at all (tugas 2.3.5).
+        abort_if($team->isSuspended(), 404);
+
         // Public routes reach their tenant through a route binding, so activate
         // it here to keep the "one active tenant per request" invariant intact.
         CurrentTeam::activate($team);

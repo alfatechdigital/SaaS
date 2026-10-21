@@ -22,6 +22,7 @@ import {
     destroy as destroyTenant,
     publicPage as togglePublicPageRoute,
     store,
+    suspension as toggleSuspensionRoute,
 } from '@/routes/platform/tenants';
 
 type TenantRow = {
@@ -30,6 +31,8 @@ type TenantRow = {
     slug: string;
     isPersonal: boolean;
     publicPageEnabled: boolean;
+    suspended: boolean;
+    suspendedAt: string | null;
     membersCount: number;
     createdAt: string | null;
 };
@@ -80,6 +83,19 @@ function togglePublicPage(tenant: TenantRow) {
     router.patch(
         togglePublicPageRoute.url(tenant.slug),
         { enabled: !tenant.publicPageEnabled },
+        { preserveScroll: true },
+    );
+}
+
+/**
+ * Suspend a tenant, or lift the suspension (Fase 2, tugas 2.3.4). A suspended
+ * tenant keeps all of its data; members simply cannot enter the shell and the
+ * public page returns 404.
+ */
+function toggleSuspension(tenant: TenantRow) {
+    router.patch(
+        toggleSuspensionRoute.url(tenant.slug),
+        { suspended: !tenant.suspended },
         { preserveScroll: true },
     );
 }
@@ -161,7 +177,7 @@ function formatDate(value: string | null): string {
         </div>
 
         <div
-            class="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
         >
             <table class="w-full text-left text-sm">
                 <thead
@@ -173,6 +189,7 @@ function formatDate(value: string | null): string {
                         <th class="px-4 py-3 font-semibold">Anggota</th>
                         <th class="px-4 py-3 font-semibold">Dibuat</th>
                         <th class="px-4 py-3 font-semibold">Halaman Publik</th>
+                        <th class="px-4 py-3 font-semibold">Status</th>
                         <th class="px-4 py-3 font-semibold">
                             <span class="sr-only">Aksi</span>
                         </th>
@@ -247,27 +264,66 @@ function formatDate(value: string | null): string {
                                 </Button>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-right">
-                            <Button
-                                v-if="!tenant.isPersonal"
-                                data-test="platform-tenant-delete-button"
-                                variant="ghost"
-                                size="sm"
-                                title="Hapus tenant"
-                                @click="confirmDelete(tenant)"
+                        <td class="px-4 py-3">
+                            <Badge
+                                :variant="
+                                    tenant.suspended ? 'destructive' : 'default'
+                                "
+                                :title="
+                                    tenant.suspendedAt
+                                        ? `Disuspend ${formatDate(tenant.suspendedAt)}`
+                                        : undefined
+                                "
+                                data-test="platform-tenant-suspension-badge"
                             >
-                                <span
-                                    class="material-symbols-outlined text-[18px]"
+                                {{ tenant.suspended ? 'Disuspend' : 'Aktif' }}
+                            </Badge>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <Button
+                                    v-if="!tenant.isPersonal"
+                                    data-test="platform-tenant-toggle-suspension"
+                                    variant="ghost"
+                                    size="sm"
+                                    :title="
+                                        tenant.suspended
+                                            ? 'Aktifkan kembali tenant'
+                                            : 'Suspend tenant'
+                                    "
+                                    @click="toggleSuspension(tenant)"
                                 >
-                                    delete
-                                </span>
-                            </Button>
+                                    <span
+                                        class="material-symbols-outlined text-[18px]"
+                                    >
+                                        {{
+                                            tenant.suspended
+                                                ? 'play_circle'
+                                                : 'pause_circle'
+                                        }}
+                                    </span>
+                                </Button>
+                                <Button
+                                    v-if="!tenant.isPersonal"
+                                    data-test="platform-tenant-delete-button"
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Hapus tenant"
+                                    @click="confirmDelete(tenant)"
+                                >
+                                    <span
+                                        class="material-symbols-outlined text-[18px]"
+                                    >
+                                        delete
+                                    </span>
+                                </Button>
+                            </div>
                         </td>
                     </tr>
 
                     <tr v-if="tenants.length === 0">
                         <td
-                            colspan="6"
+                            colspan="7"
                             class="px-4 py-8 text-center text-slate-500 dark:text-slate-400"
                         >
                             Belum ada tenant.
