@@ -60,6 +60,22 @@ class PortfolioItemTest extends DomainTestCase
             ->assertSessionHasErrors('title');
     }
 
+    public function test_links_must_use_http_or_https(): void
+    {
+        foreach (['image_url', 'project_url'] as $field) {
+            $this->actingAs($this->owner)
+                ->post($this->teamRoute('portfolio.store'), $this->payload([$field => 'javascript:alert(1)']))
+                ->assertSessionHasErrors($field);
+        }
+
+        $this->actingAs($this->owner)
+            ->post($this->teamRoute('portfolio.store'), $this->payload([
+                'image_url' => 'https://example.com/image.jpg',
+                'project_url' => 'https://example.com/case-study',
+            ]))
+            ->assertSessionDoesntHaveErrors(['image_url', 'project_url']);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>

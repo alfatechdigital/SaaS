@@ -49,6 +49,17 @@ class ContentItemTest extends DomainTestCase
             ->assertSessionHasErrors('platform');
     }
 
+    public function test_media_url_must_use_http_or_https(): void
+    {
+        $this->actingAs($this->owner)
+            ->post($this->teamRoute('contents.store'), $this->payload(['media_url' => 'javascript:alert(1)']))
+            ->assertSessionHasErrors('media_url');
+
+        $this->actingAs($this->owner)
+            ->post($this->teamRoute('contents.store'), $this->payload(['media_url' => 'https://example.com/media.jpg']))
+            ->assertSessionDoesntHaveErrors('media_url');
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>

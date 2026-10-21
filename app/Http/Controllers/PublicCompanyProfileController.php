@@ -8,6 +8,7 @@ use App\Models\CompanyProfile;
 use App\Models\PortfolioItem;
 use App\Models\Team;
 use App\Support\CurrentTeam;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -51,6 +52,25 @@ class PublicCompanyProfileController extends Controller
                 ? null
                 : CompanyProfileResource::make($profile)->resolve(),
             'portfolio' => PortfolioItemResource::collection($portfolio),
+            // Basic SEO meta, derived from the tenant's own data so a tenant
+            // never inherits another tenant's marketing copy.
+            'meta' => [
+                'title' => $profile instanceof CompanyProfile ? $profile->company_name : $team->name,
+                'description' => $this->metaDescription($profile, $team),
+            ],
         ]);
+    }
+
+    /**
+     * Build a plain-text description from the profile, falling back to a
+     * neutral sentence naming the tenant.
+     */
+    private function metaDescription(?CompanyProfile $profile, Team $team): string
+    {
+        $text = trim(strip_tags((string) ($profile?->description ?: $profile?->about)));
+
+        return $text !== ''
+            ? Str::limit($text, 160)
+            : __('Profil :name: layanan, portofolio, dan formulir konsultasi.', ['name' => $team->name]);
     }
 }

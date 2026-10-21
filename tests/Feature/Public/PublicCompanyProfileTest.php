@@ -224,6 +224,53 @@ class PublicCompanyProfileTest extends DomainTestCase
         $this->get($this->publicRoute())->assertOk();
     }
 
+    public function test_meta_title_and_description_come_from_the_tenant_profile(): void
+    {
+        CompanyProfile::factory()->create([
+            'team_id' => $this->team->id,
+            'company_name' => 'PT Contoh Digital',
+            'description' => 'Kami membangun aplikasi ERP dan portal pelanggan.',
+            'about' => 'Teks ini tidak dipakai karena `description` sudah terisi.',
+        ]);
+
+        $this->get($this->publicRoute())
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('meta.title', 'PT Contoh Digital')
+                ->where('meta.description', 'Kami membangun aplikasi ERP dan portal pelanggan.'));
+    }
+
+    public function test_meta_falls_back_to_the_team_name_when_there_is_no_profile(): void
+    {
+        $this->get($this->publicRoute())
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('meta.title', $this->team->name)
+                ->where('meta.description', 'Profil '.$this->team->name.': layanan, portofolio, dan formulir konsultasi.'));
+    }
+
+    public function test_meta_description_is_plain_text_and_bounded(): void
+    {
+        CompanyProfile::factory()->create([
+            'team_id' => $this->team->id,
+            'company_name' => 'PT Contoh',
+            'description' => null,
+            'about' => '<p>'.str_repeat('Layanan digital terpercaya. ', 20).'</p>',
+        ]);
+
+        $description = null;
+
+        $this->get($this->publicRoute())
+            ->assertOk()
+            ->assertInertia(function (Assert $page) use (&$description): void {
+                $description = $page->toArray()['props']['meta']['description'];
+            });
+
+        $this->assertIsString($description);
+        $this->assertStringNotContainsString('<p>', $description);
+        $this->assertLessThanOrEqual(163, mb_strlen($description));
+    }
+
     private function publicRoute(): string
     {
         return route('public.company-profile', ['team' => $this->team->slug]);

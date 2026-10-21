@@ -32,7 +32,7 @@ class SaveContentItemRequest extends TeamRequest
             'caption' => ['nullable', 'string', 'max:10000'],
             'platform' => ['required', Rule::enum(ContentPlatform::class)],
             'content_type' => ['nullable', 'string', 'max:255'],
-            'media_url' => ['nullable', 'string', 'max:2048'],
+            'media_url' => ['nullable', 'string', 'max:2048', 'url:http,https'],
             'status' => ['required', Rule::enum(ContentStatus::class)],
             'scheduled_at' => ['nullable', 'string', 'max:255'],
             'assignee_id' => ['nullable', 'integer', new TeamMember($this->team())],

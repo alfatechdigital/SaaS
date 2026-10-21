@@ -48,6 +48,7 @@ const props = defineProps<{
     team: { name: string; slug: string };
     profile: CompanyProfile | null;
     portfolio: PortfolioItem[];
+    meta: { title: string; description: string };
 }>();
 
 const { updateAppearance } = useAppearance();
@@ -220,11 +221,11 @@ function toggleTheme(): void {
 </script>
 
 <template>
-    <Head :title="`${companyName} — Software House & IT Consulting`">
+    <Head :title="meta.title">
         <meta
             head-key="description"
             name="description"
-            :content="`${companyName}: layanan pengembangan software kustom, aplikasi mobile, sistem ERP, dan arsitektur cloud untuk bisnis Anda.`"
+            :content="meta.description"
         />
     </Head>
 
