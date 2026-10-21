@@ -119,22 +119,22 @@ Checklist tugas. Kolom **Bergantung** menandakan keputusan yang harus ada sebelu
 
 ### 1.4 Konfigurasi & Environment
 
-| #     | Tugas                                                                            | Bergantung | Catatan                                               |
-| ----- | -------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------- |
-| 1.4.1 | Rapikan `.env.example` sebagai acuan nilai yang benar untuk produksi             | D-09       | Jangan sertakan secret nyata                          |
-| 1.4.2 | Tambahkan kunci config `tenancy.*` (`base_domain`, dsb.) dengan default `null`   | —          | Tanpa perilaku yang bergantung padanya                |
-| 1.4.3 | Pastikan `APP_ENV=production` tidak memakai SQLite (guard/validasi)              | D-09, D-13 | Bisa lewat validasi boot atau dokumentasi operasional |
-| 1.4.4 | Tinjau `.github/` dan tetapkan CI: pint + phpstan + phpunit                      | —          | Test isolasi (1.2.7) masuk ke sini                    |
-| 1.4.5 | Pastikan CI menjalankan migrasi pada MySQL **dan** Postgres (bukan hanya SQLite) | D-09       | Deteksi dini perbedaan perilaku (RSK-06)              |
+| #     | Tugas                                                                            | Bergantung           | Catatan                                               |
+| ----- | -------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------- |
+| 1.4.1 | Rapikan `.env.example` sebagai acuan nilai yang benar untuk produksi             | D-09                 | Jangan sertakan secret nyata                          |
+| 1.4.2 | Tambahkan kunci config `tenancy.*` (`base_domain`, dsb.) dengan default `null`   | —                    | Tanpa perilaku yang bergantung padanya                |
+| 1.4.3 | Pastikan `APP_ENV=production` tidak memakai SQLite (guard/validasi)              | D-09 (adopsi ADR-13) | Bisa lewat validasi boot atau dokumentasi operasional |
+| 1.4.4 | Tinjau `.github/` dan tetapkan CI: pint + phpstan + phpunit                      | —                    | Test isolasi (1.2.7) masuk ke sini                    |
+| 1.4.5 | Pastikan CI menjalankan migrasi pada MySQL **dan** Postgres (bukan hanya SQLite) | D-09                 | Deteksi dini perbedaan perilaku (RSK-06)              |
 
 ### 1.5 Fondasi SEO
 
-| #     | Tugas                                                                 | Bergantung | Catatan                        |
-| ----- | --------------------------------------------------------------------- | ---------- | ------------------------------ |
-| 1.5.1 | Build SSR: `npm run build:ssr` → pastikan `bootstrap/ssr` terbentuk   | D-16       | ADR-16                         |
-| 1.5.2 | Siapkan cara menjalankan proses SSR (dokumentasi/langkah operasional) | D-09       | Jangan menyentuh fitur         |
-| 1.5.3 | Meta dasar halaman publik dari data profil tenant (title/description) | —          | Data sudah tersedia            |
-| 1.5.4 | Verifikasi output SSR benar-benar berisi HTML halaman publik          | 1.5.1      | Bandingkan dengan render klien |
+| #     | Tugas                                                                 | Bergantung                    | Catatan                        |
+| ----- | --------------------------------------------------------------------- | ----------------------------- | ------------------------------ |
+| 1.5.1 | Build SSR: `npm run build:ssr` → pastikan `bootstrap/ssr` terbentuk   | ADR-16 (disetujui 2026-10-20) | ADR-16                         |
+| 1.5.2 | Siapkan cara menjalankan proses SSR (dokumentasi/langkah operasional) | D-09                          | Jangan menyentuh fitur         |
+| 1.5.3 | Meta dasar halaman publik dari data profil tenant (title/description) | —                             | Data sudah tersedia            |
+| 1.5.4 | Verifikasi output SSR benar-benar berisi HTML halaman publik          | 1.5.1                         | Bandingkan dengan render klien |
 
 > Detail SEO lanjutan (OG, canonical, sitemap, robots, structured data) → **Fase 3**. Jangan dikerjakan sekarang.
 
@@ -292,14 +292,14 @@ Fase dianggap selesai bila **semua** terpenuhi:
 
 Kondisi yang sudah diketahui **sebelum** fase dimulai:
 
-| #    | Isu                                                                                    | Status                                                                            |
-| ---- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| KI-1 | `docs/IMPLEMENTATION_PLAN.md` hilang; ±50 komentar kode menunjuk ke sana               | **Ditutup 2026-10-19 (D-01)** — dokumen ada, rujukan lama dipetakan di Lampiran C |
-| KI-2 | Tidak ada global scope isolasi tenant                                                  | **Diketahui**, perbaikan di Fase 2                                                |
-| KI-3 | `users.photo_path` ada di skema tetapi tidak pernah diisi                              | Diketahui; biarkan, jangan dihapus tanpa keputusan                                |
-| KI-4 | `leads.next_follow_up` & `content_items.scheduled_at` adalah teks bebas, bukan tanggal | Technical debt warisan                                                            |
-| KI-5 | `README.md` menyebut `/settings/teams` dan `/register` yang sudah tidak sesuai         | **Ditutup 2026-10-19 (1.1.5)**                                                    |
-| KI-6 | SSR produksi tidak aktif                                                               | Akan disiapkan (1.5)                                                              |
+| #    | Isu                                                                                    | Status                                                                                                   |
+| ---- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| KI-1 | `docs/IMPLEMENTATION_PLAN.md` hilang; ±50 komentar kode menunjuk ke sana               | **Ditutup 2026-10-19 (D-01)** — dokumen ada, rujukan lama dipetakan di Lampiran C                        |
+| KI-2 | Tidak ada global scope isolasi tenant                                                  | **Diketahui**, perbaikan di Fase 2                                                                       |
+| KI-3 | `users.photo_path` ada di skema tetapi tidak pernah diisi                              | Diketahui; biarkan, jangan dihapus tanpa keputusan                                                       |
+| KI-4 | `leads.next_follow_up` & `content_items.scheduled_at` adalah teks bebas, bukan tanggal | Technical debt warisan                                                                                   |
+| KI-5 | `README.md` menyebut `/settings/teams` dan `/register` yang sudah tidak sesuai         | **Ditutup 2026-10-19 (1.1.5)**                                                                           |
+| KI-6 | SSR produksi tidak aktif                                                               | **Sebagian 2026-10-20** — bundle `bootstrap/ssr` sudah bisa dibangun; proses Node belum di-deploy (D-09) |
 
 ---
 
@@ -315,6 +315,7 @@ _Belum ada entri._
 | 2026-10-14 | `npm run check` (bagian dari `composer ci:check`) **juga memformat `.md`** (perataan tabel dokumen fase), dan `npm run check:fix` **menghapus komentar di `.env.example`** tanpa mengubah nilainya.                                                                                                                                                    | Perubahan tabel di dokumen bisa memerahkan CI                 | Jalankan `npm run check:fix` setiap kali menyunting tabel Markdown; karena `--fix` menghapus komentar di `.env.example`, panduan nilainya ditaruh di README. Dicatat juga di README bagian alur kerja                                                                                                                  |
 | 2026-10-14 | `.env.example` kini menyetel `CACHE_STORE`/`SESSION_DRIVER`/`QUEUE_CONNECTION` ke `redis`, sehingga clone baru butuh Redis untuk menjalankan aplikasi (test tidak terdampak karena `phpunit.xml` menimpanya dengan `array`/`sync`).                                                                                                                    | Developer tanpa Redis akan menemui error saat menjalankan app | README diberi catatan fallback ke `database`/`file` sekaligus panduan nilai produksi                                                                                                                                                                                                                                   |
 | 2026-10-14 | **Guard produksi memerahkan CI pada push pertama.** `composer install` menjalankan `php artisan package:discover`, yang memboot aplikasi **sebelum** `.env` dibuat. Tanpa `APP_ENV`, Laravel menyebut dirinya `production`, sehingga guard langsung melempar dan `composer install` gagal — seluruh job CI (termasuk matriks) mati di langkah pertama. | CI merah, walaupun kode aplikasinya sendiri benar             | Guard hanya berlaku setelah environment benar-benar dideklarasikan (`.env` ada, atau `APP_ENV` ada di environment proses). Aturannya dijadikan fungsi murni `refusesToBoot()` supaya kasus "fresh clone" ikut teruji, bukan hanya kasus produksi                                                                       |
+| 2026-10-20 | **Rujukan keputusan `D-13` dan `D-16` tidak ada di register §21** (yang ada hanya `D-01` s/d `D-12`), padahal jadwal dan tabel tugas memakainya sebagai prasyarat 1.4.3 dan 1.5.1.                                                                                                                                                                     | Prasyarat tidak bisa dicek; tugas bisa tertahan tanpa alasan  | Dibaca sebagai rujukan ke **ADR-13** dan **ADR-16** (dua ADR yang memang masih "perlu persetujuan"), lalu rujukannya dirapikan di jadwal + tabel tugas fase ini. Tidak ada nomor keputusan baru yang dikarang.                                                                                                         |
 
 ---
 
@@ -378,6 +379,16 @@ Utang teknis yang **diketahui** dan diterima untuk sementara (dicatat, bukan dib
 - **Belum dikerjakan (sengaja).** Tidak ada fitur upload, UI, tabel media, maupun kuota tenant — Fase 1 hanya memasang seam.
 
 _Belum ada entri lain._
+
+**2026-10-20 — tugas 1.4.2 (config tenancy) + 1.5.1/1.5.2 (SSR).**
+
+- **1.4.2 `config/tenancy.*`.** Kunci `base_domain` dan `subdomain_enabled` ditambahkan dengan default `null`, tanpa perilaku yang membacanya (ADR-04 masih ditunda). Dijaga oleh `tests/Feature/Configuration/TenancyConfigTest.php`, yang gagal bila default berubah menjadi nilai nyata tanpa keputusan.
+- **`.env.example` (1.4.1).** Tetap menjadi acuan nilai produksi (Redis, MySQL/Postgres, penjelasan di README). Dua kunci `TENANCY_*` **sengaja tidak** dicantumkan: nilainya belum diputuskan, dan menulisnya kosong akan mengubah default `null` menjadi string kosong pada salinan `.env` baru.
+- **1.5.1 build SSR.** Entry `resources/js/ssr.ts` ditambahkan dan didaftarkan sebagai `ssr` pada plugin `laravel()` di `vite.config.ts`. `npm run build:ssr` menghasilkan `bootstrap/ssr/ssr.js` (±337 kB) beserta aset per halaman; direktori itu sudah di-`gitignore`. Judul halaman dan pemetaan layout dipindah ke `resources/js/app-config.ts` supaya render klien dan server memakai sumber yang sama — kalau tidak, `<title>`/layout bisa berbeda antara HTML SSR dan hidrasi klien.
+- **Bukti proses hidup.** `node bootstrap/ssr/ssr.js` dijalankan, `php artisan inertia:check-ssr` menjawab "Inertia SSR server is running.", lalu proses dihentikan kembali. Jadi bundle tidak hanya terbentuk, tetapi bisa dirender.
+- **1.5.2 dokumentasi.** README mendapat bagian **SSR produksi** (build, `inertia:start-ssr`, `inertia:check-ssr`, alamat/port, rebuild setelah UI berubah) dan catatan bahwa pemilihan host/proses manager menunggu D-09. Butir **Catatan & Keterbatasan** soal SSR diperbarui: bundle ada, proses belum di-deploy.
+- **Catatan perilaku.** `bootstrap/ssr` hanya berisi bundle; **tidak ada** yang otomatis menjalankan proses Node. Selama proses itu mati, Inertia tetap _fallback_ ke klien, jadi tidak ada regresi bila bundle belum dibangun di server.
+- **Belum dikerjakan (memang tugas 21 Oktober).** 1.5.3 (meta title/description dari profil tenant) dan 1.5.4 (verifikasi HTML SSR berisi konten halaman publik).
 
 ---
 

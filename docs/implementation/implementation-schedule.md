@@ -321,8 +321,8 @@ Sebuah tugas selesai **hanya bila** (master plan §19.2):
 | ------------------------- | ----------- | ----------------------------------------- |
 | Mulai P-2 Global scope    | 07 Okt 2026 | **D-03**                                  |
 | Fase 1 dokumentasi (D-01) | 19 Okt 2026 | **D-01**                                  |
-| Fase 1 config produksi    | 20 Okt 2026 | **D-09**, **D-13**                        |
-| Fase 1 SSR                | 20 Okt 2026 | **D-16**                                  |
+| Fase 1 config produksi    | 20 Okt 2026 | **D-09** (adopsi **ADR-13**)              |
+| Fase 1 SSR                | 20 Okt 2026 | **ADR-16**                                |
 | Fase 2 settings           | 26 Okt 2026 | **D-04**                                  |
 | Fase 4 plan               | 03 Nov 2026 | **D-06**, **ADR-06/14**, draft **PDR-01** |
 | **WhatsApp**              | 05 Nov 2026 | **Keputusan provider WhatsApp**           |
