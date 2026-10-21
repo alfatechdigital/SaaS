@@ -198,6 +198,26 @@ npm run dev
 
 Untuk melihat versi produksi, gunakan `npm run build` dan akses lewat server Laravel — aset akan dilayani dari `public/build`.
 
+### SSR produksi (server-side rendering)
+
+SSR hanya dibutuhkan agar **halaman publik** terkirim sebagai HTML jadi (SEO). Aplikasi tetap berjalan tanpanya: bila proses Node mati, Inertia _fallback_ ke render di klien.
+
+```bash
+npm run build          # aset klien → public/build
+npm run build:ssr      # bundle SSR → bootstrap/ssr (di-ignore git)
+php artisan inertia:start-ssr   # proses Node di 127.0.0.1:13714
+```
+
+| Langkah                    | Keterangan                                                                                                                                               |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Menjalankan                | `php artisan inertia:start-ssr` harus **tetap hidup** selama aplikasi melayani permintaan — jalankan lewat supervisor/systemd, bukan terminal interaktif |
+| Memeriksa                  | `php artisan inertia:check-ssr` menjawab "Inertia SSR server is running." bila prosesnya sehat                                                           |
+| Menghentikan               | `php artisan inertia:stop-ssr`                                                                                                                           |
+| Alamat & port              | `config/inertia.php` → `ssr.url` (`http://127.0.0.1:13714`)                                                                                              |
+| Rebuild setelah UI berubah | ulangi `npm run build:ssr`, lalu restart prosesnya                                                                                                       |
+
+> Pilihan host, proses manager, dan strategi restart **belum diputuskan** (D-09). Langkah di atas menjelaskan cara menjalankannya, bukan resep deployment.
+
 ---
 
 ## Cara Mengakses
@@ -312,15 +332,16 @@ Helper mengambil tenant aktif dari `App\Support\TenantContext`. Tanpa konteks te
 
 ### Pengembangan
 
-| Perintah                           | Fungsi                                   |
-| ---------------------------------- | ---------------------------------------- |
-| `composer dev`                     | Jalankan server + queue + Vite sekaligus |
-| `php artisan serve`                | Server Laravel saja                      |
-| `npm run dev`                      | Vite dev server saja (hot reload)        |
-| `npm run build`                    | Build aset produksi → `public/build`     |
-| `php artisan migrate:fresh --seed` | Reset database + isi data demo           |
-| `php artisan db:backup`            | Dump database ke `storage/app/backups`   |
-| `php artisan db:restore <dump>`    | Pulihkan database dari dump (menimpa)    |
+| Perintah                           | Fungsi                                    |
+| ---------------------------------- | ----------------------------------------- |
+| `composer dev`                     | Jalankan server + queue + Vite sekaligus  |
+| `php artisan serve`                | Server Laravel saja                       |
+| `npm run dev`                      | Vite dev server saja (hot reload)         |
+| `npm run build`                    | Build aset produksi → `public/build`      |
+| `npm run build:ssr`                | Build aset + bundle SSR → `bootstrap/ssr` |
+| `php artisan migrate:fresh --seed` | Reset database + isi data demo            |
+| `php artisan db:backup`            | Dump database ke `storage/app/backups`    |
+| `php artisan db:restore <dump>`    | Pulihkan database dari dump (menimpa)     |
 
 ### Kualitas kode & test
 
@@ -420,7 +441,7 @@ resources/js/
 
 ## Catatan & Keterbatasan
 
-- **SSR produksi belum diaktifkan.** `config/inertia.php` sudah `ssr.enabled => true`, tetapi bundle `bootstrap/ssr` belum dibuild dan server SSR belum berjalan — sehingga Inertia _fallback_ diam-diam ke rendering di klien. Aplikasi tetap berjalan normal; yang terdampak hanya SEO halaman publik. Langkah mengaktifkannya ada di [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) §13. Saat pengembangan (`npm run dev`), SSR **sudah** aktif lewat plugin Vite.
+- **SSR produksi belum dijalankan.** Bundle `bootstrap/ssr` sekarang bisa dibangun (`npm run build:ssr`) dan sudah diuji sehat lewat `php artisan inertia:check-ssr`, tetapi **belum ada proses Node yang di-deploy** — Inertia _fallback_ ke rendering klien, sehingga SEO halaman publik belum optimal. Cara menjalankannya ada di [SSR produksi](#ssr-produksi-server-side-rendering); keputusan host/proses manager menunggu D-09. Saat pengembangan (`npm run dev`), SSR **sudah** aktif lewat plugin Vite.
 - **Halaman `/settings/profile`, `/settings/security`, dan `/settings/appearance`** masih memakai layout bawaan starter kit, sehingga sidebar-nya berbeda dari sidebar utama aplikasi. Ini keputusan yang disengaja (ADR-16). Halaman tim starter kit (`/settings/teams`) sudah dihapus; pengelolaan anggota pindah ke `/{slug-tim}/team` di shell tenant.
 - **SQLite dilarang di produksi.** `App\Providers\ProductionConfigServiceProvider` menolak boot ketika `APP_ENV=production` masih memakai `sqlite`, karena SQLite mengunci seluruh berkas saat menulis dan tidak bisa dipakai beberapa app-server (ADR-13). Pesannya menyebut koneksi yang salah, jadi penyebabnya langsung terlihat di log.
 - **Data uang disimpan sebagai integer rupiah** (SQLite tidak punya tipe desimal). Formatting hanya dilakukan di frontend lewat `resources/js/utils/formatters.ts`.

@@ -10,6 +10,9 @@ export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.ts'],
+            // `npm run build:ssr` compiles this into the git-ignored
+            // `bootstrap/ssr` directory (ADR-16).
+            ssr: 'resources/js/ssr.ts',
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {
