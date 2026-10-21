@@ -7,6 +7,8 @@
 
 > ⚠️ **Dokumen ini adalah _living document_.** Agen/developer yang mengerjakan fase ini **wajib** memperbarui bagian [Discovered During Implementation](#discovered-during-implementation), [Decisions Made During Implementation](#decisions-made-during-implementation), [Technical Debt](#technical-debt), dan [Post-Implementation Notes](#post-implementation-notes) setiap kali menemukan hal baru.
 
+> ℹ️ **Penomoran kode = warisan (D-01, 2026-10-19).** Komentar `ADR-*`/`PDR-*` di kode memakai penomoran dokumen lama; artinya ada di [Lampiran C](../IMPLEMENTATION_PLAN.md#lampiran-c--referensi-aturan-lama-legacy), bukan di Lampiran B.
+
 ---
 
 ## Objective
@@ -47,7 +49,7 @@ Fase ini menjawab tiga pertanyaan:
 
 | Prasyarat                                                                 | Status                                                                                                                |
 | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| D-01 (penanganan referensi ADR/PDR lama) diputuskan                       | ❌ Belum — **wajib** sebelum menyentuh komentar kode                                                                  |
+| D-01 (penanganan referensi ADR/PDR lama) diputuskan                       | ✅ **Diputuskan 2026-10-19** — Lampiran C dipertahankan permanen; komentar kode **tidak** diubah                      |
 | D-02 (model tenancy: shared DB) disetujui                                 | ❌ Belum                                                                                                              |
 | D-03 (penerapan global scope) diketahui arahnya                           | ❌ Belum — hanya perlu _arah_, karena implementasinya di Fase 2                                                       |
 | D-09 (infrastruktur produksi) minimal arahnya jelas                       | ⚠️ Sebagian — tugas konfigurasi dikerjakan tanpa memilih engine (temuan 2026-10-14); engine final tetap menunggu D-09 |
@@ -277,12 +279,12 @@ Fase dianggap selesai bila **semua** terpenuhi:
 
 ## Open Questions
 
-| ID      | Pertanyaan                                                                                                                   |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| OQ-F1-1 | Apakah D-01 memilih "perbarui komentar" atau "tabel pemetaan permanen"? Menentukan besar-kecilnya pekerjaan 1.1.4.           |
-| OQ-F1-2 | Apakah proses SSR Node akan dijalankan di host yang sama atau terpisah? (menentukan instruksi operasional)                   |
-| OQ-F1-3 | Apakah ada alasan bisnis untuk tetap memakai SQLite di produksi? (mis. hosting murah) — bila ya, RSK-04 perlu ditinjau ulang |
-| OQ-F1-4 | Apakah CSP benar-benar dibutuhkan sekarang, atau cukup dicatat?                                                              |
+| ID      | Pertanyaan                                                                                                                                                                          |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OQ-F1-1 | ~~Apakah D-01 memilih "perbarui komentar" atau "tabel pemetaan permanen"?~~ **Terjawab 2026-10-19: tabel pemetaan permanen**, jadi 1.1.4 hanya berupa catatan di tiap dokumen fase. |
+| OQ-F1-2 | Apakah proses SSR Node akan dijalankan di host yang sama atau terpisah? (menentukan instruksi operasional)                                                                          |
+| OQ-F1-3 | Apakah ada alasan bisnis untuk tetap memakai SQLite di produksi? (mis. hosting murah) — bila ya, RSK-04 perlu ditinjau ulang                                                        |
+| OQ-F1-4 | Apakah CSP benar-benar dibutuhkan sekarang, atau cukup dicatat?                                                                                                                     |
 
 ---
 
@@ -290,14 +292,14 @@ Fase dianggap selesai bila **semua** terpenuhi:
 
 Kondisi yang sudah diketahui **sebelum** fase dimulai:
 
-| #    | Isu                                                                                    | Status                                                     |
-| ---- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| KI-1 | `docs/IMPLEMENTATION_PLAN.md` hilang; ±50 komentar kode menunjuk ke sana               | Sebagian ditangani (dokumen dibuat); sisanya menunggu D-01 |
-| KI-2 | Tidak ada global scope isolasi tenant                                                  | **Diketahui**, perbaikan di Fase 2                         |
-| KI-3 | `users.photo_path` ada di skema tetapi tidak pernah diisi                              | Diketahui; biarkan, jangan dihapus tanpa keputusan         |
-| KI-4 | `leads.next_follow_up` & `content_items.scheduled_at` adalah teks bebas, bukan tanggal | Technical debt warisan                                     |
-| KI-5 | `README.md` menyebut `/settings/teams` dan `/register` yang sudah tidak sesuai         | Akan diperbaiki (1.1.5)                                    |
-| KI-6 | SSR produksi tidak aktif                                                               | Akan disiapkan (1.5)                                       |
+| #    | Isu                                                                                    | Status                                                                            |
+| ---- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| KI-1 | `docs/IMPLEMENTATION_PLAN.md` hilang; ±50 komentar kode menunjuk ke sana               | **Ditutup 2026-10-19 (D-01)** — dokumen ada, rujukan lama dipetakan di Lampiran C |
+| KI-2 | Tidak ada global scope isolasi tenant                                                  | **Diketahui**, perbaikan di Fase 2                                                |
+| KI-3 | `users.photo_path` ada di skema tetapi tidak pernah diisi                              | Diketahui; biarkan, jangan dihapus tanpa keputusan                                |
+| KI-4 | `leads.next_follow_up` & `content_items.scheduled_at` adalah teks bebas, bukan tanggal | Technical debt warisan                                                            |
+| KI-5 | `README.md` menyebut `/settings/teams` dan `/register` yang sudah tidak sesuai         | **Ditutup 2026-10-19 (1.1.5)**                                                    |
+| KI-6 | SSR produksi tidak aktif                                                               | Akan disiapkan (1.5)                                                              |
 
 ---
 
@@ -366,7 +368,16 @@ Utang teknis yang **diketahui** dan diterima untuk sementara (dicatat, bukan dib
 
 > **Diisi setelah fase selesai dieksekusi.** Ringkasan hasil, penyimpangan dari rencana, dan pelajaran yang didapat.
 
-_Belum ada entri._
+**2026-10-19 — tugas 1.1.3–1.1.5 (dokumentasi + D-01) dan 1.3 (storage seam).**
+
+- **D-01 (1.1.3/1.1.4).** Dipilih **opsi 2**: [Lampiran C](../IMPLEMENTATION_PLAN.md#lampiran-c--referensi-aturan-lama-legacy) dipertahankan permanen sebagai tabel pemetaan, dan kelima dokumen fase diberi catatan "penomoran kode = warisan". Tidak ada komentar kode yang disentuh. Alasan: ±80 baris komentar di 61 berkas tidak mengubah perilaku, sedangkan risiko konfliknya nyata (RF-B).
+- **README (1.1.5).** Tiga temuan Lampiran E ditutup. **E-1:** `/settings/teams` dihapus dari daftar halaman starter kit (rutenya memang sudah dihapus di `routes/settings.php`, PDR-07) dan diganti bagian **Storage Tenant** yang menyebut `/{slug-tim}/team`. **E-2:** baris `/register` diganti penjelasan bahwa registrasi **hanya** lewat tautan undangan (`FortifyServiceProvider::registerView` mengalihkan ke login tanpa undangan valid). **E-3:** diverifikasi — tombol "Buka Website Publik" masih ada di `resources/js/pages/admin/company-profile/Edit.vue`.
+- **Storage seam (1.3.1–1.3.3).** Disk `tenants` di `config/filesystems.php` dengan root terparameterisasi (`TENANT_STORAGE_ROOT`, default `storage/app`), lalu `App\Support\TenantStorage` yang selalu memakai prefix `tenants/{team_id}/` dari `TenantContext`. Path absolut, separator `\`, segmen `..`/`.`, segmen kosong, dan null byte ditolak dengan `InvalidArgumentException`; tanpa tenant aktif helper melempar `MissingTenantContext::forStorage()` alih-alih menebak folder. Test: `tests/Feature/Storage/TenantStorageTest.php` (16 test).
+- **Konvensi path (1.3.4).** Didokumentasikan di README bagian **Storage Tenant**, termasuk aturan validasi upload untuk pemakaian mendatang (whitelist mime, batas ukuran, nama acak, tidak di `public/`, hapus lewat job).
+- **1.3.5 tidak butuh test terpisah.** Helper hanya memakai `FilesystemManager`, dan test penulisan berjalan di atas `Storage::fake('tenants')` — root sementara di luar `storage/app` — sehingga terbukti helper tidak bergantung pada `storage_path()`.
+- **Belum dikerjakan (sengaja).** Tidak ada fitur upload, UI, tabel media, maupun kuota tenant — Fase 1 hanya memasang seam.
+
+_Belum ada entri lain._
 
 ---
 

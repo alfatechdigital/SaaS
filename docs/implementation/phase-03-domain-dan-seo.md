@@ -7,6 +7,8 @@
 
 > ⚠️ **Living document.** Perbarui saat pengerjaan. Jadwal: [`implementation-schedule.md`](implementation-schedule.md) v2.0.0.
 
+> ℹ️ **Penomoran kode = warisan (D-01, 2026-10-19).** Komentar `ADR-*`/`PDR-*` di kode memakai penomoran dokumen lama; artinya ada di [Lampiran C](../IMPLEMENTATION_PLAN.md#lampiran-c--referensi-aturan-lama-legacy), bukan di Lampiran B.
+
 ---
 
 ## Objective

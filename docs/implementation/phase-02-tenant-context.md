@@ -7,6 +7,8 @@
 
 > ⚠️ **Living document.** Perbarui bagian temuan/utang teknis saat pengerjaan berlangsung.
 
+> ℹ️ **Penomoran kode = warisan (D-01, 2026-10-19).** Komentar `ADR-*`/`PDR-*` di kode memakai penomoran dokumen lama; artinya ada di [Lampiran C](../IMPLEMENTATION_PLAN.md#lampiran-c--referensi-aturan-lama-legacy), bukan di Lampiran B.
+
 ---
 
 ## Objective

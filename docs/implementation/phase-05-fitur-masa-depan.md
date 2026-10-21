@@ -11,6 +11,8 @@
 > Item lain di dokumen ini **tetap DEFERRED**. Urutan & tanggal kerja: [`implementation-schedule.md`](implementation-schedule.md) v2.0.0.
 > **Lingkup versi gelombang 1 sengaja dipersempit** — jangan melebar tanpa keputusan baru.
 
+> ℹ️ **Penomoran kode = warisan (D-01, 2026-10-19).** Komentar `ADR-*`/`PDR-*` di kode memakai penomoran dokumen lama; artinya ada di [Lampiran C](../IMPLEMENTATION_PLAN.md#lampiran-c--referensi-aturan-lama-legacy), bukan di Lampiran B.
+
 > ⚠️ **PERINGATAN PENTING**
 > Dokumen ini **bukan** rencana kerja. Ini adalah **daftar tunggu** agar ide-ide produk tidak "bocor" ke fase fondasi.
 > **Setiap** item di sini memerlukan **persetujuan produk** terpisah sebelum boleh dikerjakan. Tidak ada satu pun item yang boleh dikerjakan atas dasar "kelihatannya akan dibutuhkan".
