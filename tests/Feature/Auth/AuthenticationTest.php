@@ -50,6 +50,7 @@ class AuthenticationTest extends TestCase
     public function test_users_can_authenticate_using_the_login_screen()
     {
         $user = User::factory()->create();
+        $this->createTeamFor($user);
 
         $response = $this->post(route('login.store'), [
             'email' => $user->email,
@@ -63,6 +64,7 @@ class AuthenticationTest extends TestCase
     public function test_passkey_login_response_redirects_to_the_current_team_dashboard(): void
     {
         $user = User::factory()->create();
+        $team = $this->createTeamFor($user);
 
         $request = Request::create(route('login', absolute: false), 'GET', server: [
             'HTTP_ACCEPT' => 'application/json',
@@ -73,7 +75,7 @@ class AuthenticationTest extends TestCase
         $jsonResponse = app(PasskeyLoginResponse::class)->toResponse($request);
 
         $this->assertSame(
-            route('dashboard', ['current_team' => $user->personalTeam()->slug]),
+            route('dashboard', ['current_team' => $team->slug]),
             $jsonResponse->getData()->redirect,
         );
     }

@@ -16,7 +16,7 @@ class SettingsOverviewTest extends TestCase
     public function test_guests_are_redirected_to_the_login_page(): void
     {
         $user = User::factory()->create();
-        $team = $user->currentTeam;
+        $team = $this->createTeamFor($user);
 
         $this->get(route('settings.index', ['current_team' => $team->slug]))
             ->assertRedirect(route('login'));

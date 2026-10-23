@@ -37,7 +37,6 @@ class PlatformTenantController extends Controller
                     'id' => $team->id,
                     'name' => $team->name,
                     'slug' => $team->slug,
-                    'isPersonal' => $team->is_personal,
                     'publicPageEnabled' => $team->public_page_enabled,
                     'suspended' => $team->isSuspended(),
                     'suspendedAt' => $team->suspended_at?->toISOString(),
@@ -114,8 +113,6 @@ class PlatformTenantController extends Controller
      */
     public function updateSuspension(Request $request, Team $team, RecordPlatformAudit $audit): RedirectResponse
     {
-        abort_if($team->is_personal, 403, __('A personal team cannot be suspended.'));
-
         $request->validate([
             'suspended' => ['required', 'boolean'],
         ]);
@@ -154,19 +151,18 @@ class PlatformTenantController extends Controller
      */
     public function destroy(Team $team, RecordPlatformAudit $audit): RedirectResponse
     {
-        abort_if($team->is_personal, 403, __('A personal team cannot be deleted.'));
-
         $name = $team->name;
 
         DB::transaction(function () use ($team, $audit, $name): void {
-            // Everyone whose active team was this tenant loses it. A user
-            // created through an invitation has no personal team, so this may
-            // legitimately end up null (PDR-06).
+            // Everyone whose active team was this tenant loses it and falls back
+            // to any other tenant they belong to. A user onboarded through an
+            // invitation has only this one tenant, so `null` is a valid outcome
+            // (PDR-06, PDR-10).
             User::query()
                 ->where('current_team_id', $team->id)
                 ->get()
                 ->each(fn (User $member) => $member->update([
-                    'current_team_id' => $member->personalTeam()?->id,
+                    'current_team_id' => $member->fallbackTeam($team)?->id,
                 ]));
 
             $team->invitations()->delete();

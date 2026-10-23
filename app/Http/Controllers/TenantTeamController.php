@@ -42,7 +42,6 @@ class TenantTeamController extends Controller
                 'id' => $team->id,
                 'name' => $team->name,
                 'slug' => $team->slug,
-                'isPersonal' => $team->is_personal,
             ],
             'members' => $team->members()->get()->map(function (User $member): array {
                 /** @var Membership $membership */
@@ -144,9 +143,9 @@ class TenantTeamController extends Controller
             ->delete();
 
         if ($user->isCurrentTeam($team)) {
-            // A user created through an invitation has no personal team, so
-            // there may genuinely be nowhere to fall back to (PDR-06).
-            $fallback = $user->personalTeam() ?? $user->fallbackTeam($team);
+            // Onboarding is invitation-only (PDR-06), so a user may belong to no
+            // other tenant at all — `null` is a valid result.
+            $fallback = $user->fallbackTeam($team);
 
             $user->update(['current_team_id' => $fallback?->id]);
         }

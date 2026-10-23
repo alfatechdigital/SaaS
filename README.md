@@ -382,7 +382,7 @@ Operator platform bisa menyuspend tenant dari halaman **Tenant** (`/platform/ten
 | Halaman publik (`/p/{slug}`) | `404` — tenant tampak tidak ada                                                                                    |
 | Form konsultasi publik       | `404`, tidak ada lead yang dibuat                                                                                  |
 
-Tenant personal (tim bawaan satu user) **tidak** bisa disuspend, sama seperti tidak bisa dihapus. Setiap suspend/aktivasi tercatat sebagai `tenant.suspended` / `tenant.activated`.
+Setiap tenant diperlakukan sama — tidak ada lagi konsep "tim personal" bawaan starter kit. Setiap suspend/aktivasi tercatat sebagai `tenant.suspended` / `tenant.activated`.
 
 ### Backup & restore
 

@@ -68,16 +68,13 @@ class PlatformTenantTest extends TestCase
 
         $this->assertDatabaseHas('teams', [
             'name' => 'Klien Baru',
-            'is_personal' => false,
         ]);
     }
 
     public function test_creating_a_tenant_does_not_move_the_operator_into_it()
     {
         $admin = User::factory()->platformAdmin()->create();
-        $ownTeamId = $admin->currentTeam?->id;
-
-        $this->assertNotNull($ownTeamId);
+        $ownTeamId = $this->createTeamFor($admin)->id;
 
         $this->actingAs($admin)
             ->post(route('platform.tenants.store'), ['name' => 'Klien Baru']);
@@ -128,19 +125,6 @@ class PlatformTenantTest extends TestCase
             'id' => $team->id,
             'deleted_at' => null,
         ]);
-    }
-
-    public function test_personal_teams_cannot_be_deleted_from_the_platform_panel()
-    {
-        $admin = User::factory()->platformAdmin()->create();
-        $personalTeam = $admin->personalTeam();
-
-        $this->assertNotNull($personalTeam);
-
-        $this
-            ->actingAs($admin)
-            ->delete(route('platform.tenants.destroy', $personalTeam))
-            ->assertForbidden();
     }
 
     public function test_platform_admin_can_deactivate_a_tenants_public_page()
@@ -209,10 +193,10 @@ class PlatformTenantTest extends TestCase
     {
         $admin = User::factory()->platformAdmin()->create();
 
-        // Invitation-only onboarding means a member may have no personal team,
-        // so there is genuinely nowhere for them to fall back to (PDR-06).
+        // Invitation-only onboarding means a member may belong to no other
+        // tenant, so there is genuinely nowhere for them to fall back to
+        // (PDR-06, PDR-10).
         $member = User::factory()->create();
-        $member->personalTeam()?->delete();
 
         $team = Team::factory()->create();
         $team->members()->attach($member, ['role' => TeamRole::Member->value]);

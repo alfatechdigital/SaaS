@@ -117,18 +117,6 @@ class TenantSuspensionTest extends TestCase
         $this->assertDatabaseCount('leads', 0);
     }
 
-    public function test_a_personal_team_cannot_be_suspended(): void
-    {
-        $personal = Team::factory()->personal()->create();
-
-        $this->actingAs($this->admin)
-            ->patch(route('platform.tenants.suspension', $personal), ['suspended' => true])
-            ->assertForbidden();
-
-        $this->assertNull($personal->fresh()?->suspended_at);
-        $this->assertDatabaseCount('platform_audit_logs', 0);
-    }
-
     public function test_tenant_owners_cannot_suspend(): void
     {
         $this->actingAs($this->owner)

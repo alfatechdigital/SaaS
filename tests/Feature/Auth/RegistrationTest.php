@@ -83,8 +83,10 @@ class RegistrationTest extends TestCase
         $this->assertEquals($team->id, $user->fresh()->current_team_id);
         $this->assertNotNull($invitation->fresh()->accepted_at);
 
-        // The whole point of invitation-only signup: no tenant of their own.
-        $this->assertNull($user->personalTeam());
+        // The whole point of invitation-only signup: the new user joins the
+        // inviting tenant and no tenant of their own is created.
+        $this->assertSame(1, $user->teams()->count());
+        $this->assertSame(1, Team::query()->count());
     }
 
     public function test_registration_without_an_invitation_is_rejected()
@@ -100,7 +102,7 @@ class RegistrationTest extends TestCase
 
         $this->assertGuest();
         $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
-        $this->assertDatabaseMissing('teams', ['is_personal' => true, 'name' => "Test User's Team"]);
+        $this->assertDatabaseCount('teams', 0);
     }
 
     public function test_registration_with_an_expired_invitation_is_rejected()

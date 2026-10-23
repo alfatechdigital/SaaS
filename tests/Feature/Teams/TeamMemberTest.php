@@ -210,11 +210,11 @@ class TeamMemberTest extends TestCase
         );
     }
 
-    public function test_removed_member_current_team_is_set_to_personal_team()
+    public function test_removed_member_current_team_falls_back_to_their_other_tenant()
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
-        $personalTeam = $member->personalTeam();
+        $otherTenant = $this->createTeamFor($member, TeamRole::Member);
         $team = Team::factory()->create();
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
@@ -226,6 +226,24 @@ class TeamMemberTest extends TestCase
             ->actingAs($owner)
             ->delete(route('team.members.destroy', ['current_team' => $team->slug, 'user' => $member->id]));
 
-        $this->assertEquals($personalTeam->id, $member->fresh()->current_team_id);
+        $this->assertEquals($otherTenant->id, $member->fresh()->current_team_id);
+    }
+
+    public function test_removed_member_with_no_other_tenant_ends_up_without_a_current_team()
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $team = Team::factory()->create();
+
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+
+        $member->update(['current_team_id' => $team->id]);
+
+        $this
+            ->actingAs($owner)
+            ->delete(route('team.members.destroy', ['current_team' => $team->slug, 'user' => $member->id]));
+
+        $this->assertNull($member->fresh()->current_team_id);
     }
 }

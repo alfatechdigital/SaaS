@@ -16,17 +16,14 @@ class DashboardTest extends TestCase
 
     public function test_guests_are_redirected_to_the_login_page()
     {
-        $user = User::factory()->create();
-        $team = $user->currentTeam;
-
-        $response = $this->get(route('dashboard'));
-        $response->assertRedirect(route('login'));
+        $this->get(route('dashboard', ['current_team' => 'any-tenant']))
+            ->assertRedirect(route('login'));
     }
 
     public function test_authenticated_users_can_visit_the_dashboard()
     {
         $user = User::factory()->create();
-        $team = $user->currentTeam;
+        $this->createTeamFor($user);
 
         $response = $this
             ->actingAs($user)
@@ -38,6 +35,7 @@ class DashboardTest extends TestCase
     public function test_the_dashboard_receives_the_operational_collections()
     {
         $user = User::factory()->create();
+        $this->createTeamFor($user);
 
         $this
             ->actingAs($user)
@@ -59,6 +57,8 @@ class DashboardTest extends TestCase
         $team = Team::factory()->create(['name' => 'Laravel Team']);
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+
+        $this->createTeamFor($invitedUser);
 
         $invitation = TeamInvitation::factory()->create([
             'team_id' => $team->id,
@@ -90,6 +90,8 @@ class DashboardTest extends TestCase
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
 
+        $this->createTeamFor($invitedUser);
+
         TeamInvitation::factory()->accepted()->create([
             'team_id' => $team->id,
             'email' => 'invited@example.com',
@@ -114,6 +116,8 @@ class DashboardTest extends TestCase
         $team = Team::factory()->create();
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+
+        $this->createTeamFor($invitedUser);
 
         $invitation = TeamInvitation::factory()->expired()->create([
             'team_id' => $team->id,
@@ -143,6 +147,8 @@ class DashboardTest extends TestCase
         $team = Team::factory()->create();
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+
+        $this->createTeamFor($invitedUser);
 
         $invitation = TeamInvitation::factory()->expired()->create([
             'team_id' => $team->id,

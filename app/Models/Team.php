@@ -19,7 +19,6 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $name
  * @property string $slug
- * @property bool $is_personal
  * @property bool $public_page_enabled
  * @property Carbon|null $suspended_at
  * @property Carbon|null $created_at
@@ -37,7 +36,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, PortfolioItem> $portfolioItems
  * @property-read Collection<int, ActivityLog> $activityLogs
  */
-#[Fillable(['name', 'slug', 'is_personal', 'public_page_enabled', 'suspended_at'])]
+#[Fillable(['name', 'slug', 'public_page_enabled', 'suspended_at'])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
@@ -205,7 +204,6 @@ class Team extends Model
     protected function casts(): array
     {
         return [
-            'is_personal' => 'boolean',
             'public_page_enabled' => 'boolean',
             'suspended_at' => 'datetime',
         ];

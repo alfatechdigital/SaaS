@@ -92,7 +92,7 @@ class TeamInvitationTest extends TestCase
         $this->assertNull($invitation->fresh()->accepted_at);
     }
 
-    public function test_owning_a_personal_team_does_not_block_accepting_an_invitation()
+    public function test_a_user_without_any_tenant_can_accept_an_invitation()
     {
         $invitingOwner = User::factory()->create();
         $team = Team::factory()->create();
@@ -106,8 +106,8 @@ class TeamInvitationTest extends TestCase
 
         $joiner = User::factory()->create(['email' => 'joiner@example.com']);
 
-        // A personal team is a leftover of the old signup flow, not another tenant.
-        $this->assertNotNull($joiner->personalTeam());
+        // Invitation-only onboarding: a fresh account belongs to no tenant yet.
+        $this->assertSame(0, $joiner->teams()->count());
 
         $this
             ->actingAs($joiner)
@@ -298,6 +298,8 @@ class TeamInvitationTest extends TestCase
         $team = Team::factory()->create();
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+
+        $this->createTeamFor($invitedUser);
 
         $invitation = TeamInvitation::factory()->create([
             'team_id' => $team->id,

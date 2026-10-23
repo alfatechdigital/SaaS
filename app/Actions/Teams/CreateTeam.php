@@ -18,13 +18,10 @@ class CreateTeam
      *                              tenant for someone else must not move the
      *                              operator out of their own team.
      */
-    public function handle(User $user, string $name, bool $isPersonal = false, bool $switchToTeam = true): Team
+    public function handle(User $user, string $name, bool $switchToTeam = true): Team
     {
-        return DB::transaction(function () use ($user, $name, $isPersonal, $switchToTeam) {
-            $team = Team::create([
-                'name' => $name,
-                'is_personal' => $isPersonal,
-            ]);
+        return DB::transaction(function () use ($user, $name, $switchToTeam) {
+            $team = Team::create(['name' => $name]);
 
             $team->memberships()->create([
                 'user_id' => $user->id,

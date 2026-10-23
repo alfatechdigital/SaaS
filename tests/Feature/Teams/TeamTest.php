@@ -102,22 +102,14 @@ class TeamTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_personal_team_returns_the_team_owned_by_the_user()
+    public function test_a_user_belongs_to_at_most_one_tenant()
     {
-        $otherUser = User::factory()->create();
-        $user = User::factory()->make();
-        $user->save();
+        $user = User::factory()->create();
+        $team = $this->createTeamFor($user);
 
-        $otherUser->personalTeam()->members()->attach($user, [
-            'role' => TeamRole::Member->value,
-        ]);
-
-        $personalTeam = Team::factory()->personal()->create();
-        $personalTeam->members()->attach($user, [
-            'role' => TeamRole::Owner->value,
-        ]);
-
-        $this->assertTrue($personalTeam->is($user->personalTeam()));
+        $this->assertTrue($user->belongsToTeam($team));
+        $this->assertSame(1, $user->teams()->count());
+        $this->assertFalse($user->belongsToAnotherTeam($team));
     }
 
     /**

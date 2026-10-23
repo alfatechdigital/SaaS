@@ -29,7 +29,6 @@ type TenantRow = {
     id: number;
     name: string;
     slug: string;
-    isPersonal: boolean;
     publicPageEnabled: boolean;
     suspended: boolean;
     suspendedAt: string | null;
@@ -203,17 +202,7 @@ function formatDate(value: string | null): string {
                         class="border-t border-slate-100 dark:border-slate-800"
                     >
                         <td class="px-4 py-3">
-                            <div class="flex items-center gap-2">
-                                <span class="font-medium">{{
-                                    tenant.name
-                                }}</span>
-                                <Badge
-                                    v-if="tenant.isPersonal"
-                                    variant="secondary"
-                                >
-                                    Personal
-                                </Badge>
-                            </div>
+                            <span class="font-medium">{{ tenant.name }}</span>
                         </td>
                         <td
                             class="px-4 py-3 text-slate-500 dark:text-slate-400"
@@ -282,7 +271,6 @@ function formatDate(value: string | null): string {
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
                                 <Button
-                                    v-if="!tenant.isPersonal"
                                     data-test="platform-tenant-toggle-suspension"
                                     variant="ghost"
                                     size="sm"
@@ -304,7 +292,6 @@ function formatDate(value: string | null): string {
                                     </span>
                                 </Button>
                                 <Button
-                                    v-if="!tenant.isPersonal"
                                     data-test="platform-tenant-delete-button"
                                     variant="ghost"
                                     size="sm"

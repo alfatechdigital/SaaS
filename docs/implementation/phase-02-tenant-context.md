@@ -389,13 +389,14 @@ Aturan validasi `Rule::exists(Project::class, 'id')->where('team_id', $teamId)` 
 
 ## Technical Debt
 
-| ID    | Utang                                                                                                   | Alasan diterima                | Kapan ditinjau                                                                              |
-| ----- | ------------------------------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
-| TD2-1 | ~~Sebagian `->forTeam()` masih tersisa setelah global scope (redundan)~~ **ditutup 2026-10-13 (2.2.6)** | —                              | —                                                                                           |
-| TD2-2 | Tidak ada audit historis aksi platform sebelum fase ini                                                 | Tidak dapat direkonstruksi     | —                                                                                           |
-| TD2-3 | `suspended_at` mungkin belum menangani kasus "tenant disuspend karena gagal bayar"                      | Billing baru masuk gelombang 1 | Gelombang 1 — **mekanisme suspend sudah ada (2026-10-22); otomatisasinya menunggu billing** |
-| TD2-4 | Log aggregation belum disiapkan; `team_id` di log belum dimanfaatkan penuh                              | Belum ada tooling              | Fase 5 / DevOps                                                                             |
-| TD2-5 | Belum ada pemantauan performa query setelah global scope                                                | Belum ada beban                | Setelah data uji lebih besar                                                                |
+| ID    | Utang                                                                                                   | Alasan diterima                          | Kapan ditinjau                                                                              |
+| ----- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
+| TD2-1 | ~~Sebagian `->forTeam()` masih tersisa setelah global scope (redundan)~~ **ditutup 2026-10-13 (2.2.6)** | —                                        | —                                                                                           |
+| TD2-2 | Tidak ada audit historis aksi platform sebelum fase ini                                                 | Tidak dapat direkonstruksi               | —                                                                                           |
+| TD2-3 | `suspended_at` mungkin belum menangani kasus "tenant disuspend karena gagal bayar"                      | Billing baru masuk gelombang 1           | Gelombang 1 — **mekanisme suspend sudah ada (2026-10-22); otomatisasinya menunggu billing** |
+| TD2-4 | Log aggregation belum disiapkan; `team_id` di log belum dimanfaatkan penuh                              | Belum ada tooling                        | Fase 5 / DevOps                                                                             |
+| TD2-5 | Belum ada pemantauan performa query setelah global scope                                                | Belum ada beban                          | Setelah data uji lebih besar                                                                |
+| TD2-6 | `User::ownedTeams()` (relation "teams I own") kini tidak dipakai kode produksi                          | Tidak berbahaya, semantiknya masih benar | Saat ada fitur yang butuh daftar kepemilikan                                                |
 
 ---
 
@@ -415,11 +416,23 @@ Aturan validasi `Rule::exists(Project::class, 'id')->where('team_id', $teamId)` 
 
 - **2.3.1 `teams.suspended_at`.** Dipilih kolom timestamp nullable, bukan enum status: "tidak disuspend" adalah ketiadaan nilai, membatalkan suspend hanya mengosongkan satu kolom, dan waktu suspend tetap tersimpan untuk operator. Migrasi `2026_10_22_000001_add_suspended_at_to_teams_table.php`; `Team::isSuspended()` jadi satu-satunya cara bertanya.
 - **2.3.2 guard.** Pemeriksaan diletakkan di `EnsureTeamMembership` **sebelum** cek role dan sebelum `switchTeam()`, supaya tenant disuspend tidak bisa membuka satu halaman shell pun dan konteks pengguna tidak ikut berpindah. Status **403 + pesan jelas** ("Tenant ini sedang disuspend…") untuk shell, sedangkan halaman publik **404** agar keberadaan tenant tidak dikonfirmasi. Ini **deviasi sadar** dari kalimat jadwal yang menulis 404 untuk keduanya — diputuskan pemilik produk 2026-10-22 karena anggota yang sudah login perlu tahu sebabnya, sementara pengunjung publik tidak.
-- **2.3.3 aksi platform.** `PlatformTenantController::updateSuspension` mengikuti pola `updatePublicPage`; update kolom + catatan audit (`tenant.suspended` / `tenant.activated`) dibungkus **satu transaksi**, jadi tidak ada suspend tanpa jejak. Tenant personal ditolak 403 (sama seperti penghapusan), karena menyuspend workspace pribadi berarti memblokir user dari satu-satunya timnya.
-- **2.3.4 UI.** Halaman `platform/tenants/Index.vue` mendapat kolom **Status** (badge Aktif/Disuspend dengan tooltip tanggal) dan tombol jeda/putar per tenant; tombolnya disembunyikan untuk tenant personal.
-- **2.3.5 bukti.** `tests/Feature/Platform/TenantSuspensionTest.php` (9 test): suspend/aktivasi + audit, shell 403, akses pulih setelah aktivasi, halaman publik 404, form konsultasi 404 tanpa lead, tenant personal ditolak tanpa jejak audit, owner tenant ditolak, validasi `suspended`, dan status tampil di daftar tenant.
+- **2.3.3 aksi platform.** `PlatformTenantController::updateSuspension` mengikuti pola `updatePublicPage`; update kolom + catatan audit (`tenant.suspended` / `tenant.activated`) dibungkus **satu transaksi**, jadi tidak ada suspend tanpa jejak. ~~Tenant personal ditolak 403~~ — konsep personal team dihapus 2026-10-23 (lihat [cleanup-personal-team.md](cleanup-personal-team.md)), sehingga semua tenant kini setara.
+- **2.3.4 UI.** Halaman `platform/tenants/Index.vue` mendapat kolom **Status** (badge Aktif/Disuspend dengan tooltip tanggal) dan tombol jeda/putar per tenant; ~~tombolnya disembunyikan untuk tenant personal~~ (dihapus 2026-10-23).
+- **2.3.5 bukti.** `tests/Feature/Platform/TenantSuspensionTest.php` (9 test): suspend/aktivasi + audit, shell 403, akses pulih setelah aktivasi, halaman publik 404, form konsultasi 404 tanpa lead, ~~tenant personal ditolak tanpa jejak audit~~ (test dihapus 2026-10-23), owner tenant ditolak, validasi `suspended`, dan status tampil di daftar tenant.
 - **Test lama disesuaikan.** `PlatformAuditLogTest` memakai `tenant.suspended` sebagai contoh "aksi tidak dikenal"; karena sekarang menjadi aksi nyata, contohnya diganti `tenant.unknown-action` — maksud test tidak berubah.
 - **Belum dikerjakan (memang di luar 2.3).** Suspensi belum memutus sesi yang sedang berjalan (request berikutnya tetap ditolak), belum mengirim email ke owner tenant, dan belum otomatis dari billing (TD2-3).
+
+**2026-10-23 — pembersihan konsep "personal team" (di luar penomoran fase).**
+
+Rencana lengkap: [cleanup-personal-team.md](cleanup-personal-team.md).
+
+- **Skema.** Migrasi `2026_10_23_000001_remove_personal_teams.php` hanya melakukan `dropColumn('is_personal')` (tanpa migrasi data), karena DB dev dibangun ulang dengan `migrate:fresh --seed`. Rollback mengembalikan kolom dengan default `false` — diuji bolak-balik di lokal.
+- **Model & domain.** `Team` kehilangan properti/fillable/cast; `HasTeams::personalTeam()` dihapus; `belongsToAnotherTeam()` kini cukup membandingkan membership; `UserTeam` tidak lagi membawa `isPersonal`; `CreateTeam` kehilangan parameter `$isPersonal`.
+- **Fallback.** `RedirectsToCurrentTeam`, `PlatformTenantController::destroy`, dan `TenantTeamController::destroyMember` memakai `fallbackTeam()` (bukan `personalTeam()`), sehingga user tanpa tenant lain berakhir dengan `current_team_id = null`.
+- **Guard platform.** Dua `abort_if($team->is_personal, 403)` dihapus; UI `platform/tenants/Index.vue` tidak lagi menampilkan badge "Personal" dan tombol suspend/hapus muncul untuk semua tenant.
+- **Factory (PT-4).** `UserFactory` tidak lagi membuat tim — fixture tenant dibuat eksplisit lewat `Tests\TestCase::createTeamFor()`. `TeamFactory::personal()` dihapus.
+- **Test.** 24 test terdampak diperbaiki tanpa mengubah ekspektasi yang tidak terkait (dua di antaranya diganti maknanya: "owning a personal team…" → "user tanpa tenant bisa menerima undangan", dan test fallback anggota dikeluarkan kini menguji dua kasus: punya tenant lain vs tidak punya). Test baru: `tests/Feature/Tenancy/NoPersonalTeamTest.php` (kolom tidak ada, factory tidak membuat tim, payload platform tanpa `isPersonal`).
+- **Hasil.** `migrate:fresh --seed` menyisakan satu tenant (`alfatech`) dengan 6 anggota, tidak ada user dengan lebih dari satu tim.
 
 ---
 

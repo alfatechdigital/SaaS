@@ -67,16 +67,6 @@ trait HasTeams
     }
 
     /**
-     * Get the user's personal team.
-     */
-    public function personalTeam(): ?Team
-    {
-        return $this->ownedTeams()
-            ->where('teams.is_personal', true)
-            ->first();
-    }
-
-    /**
      * Switch to the given team.
      */
     public function switchTeam(Team $team): bool
@@ -104,12 +94,13 @@ trait HasTeams
     /**
      * Determine if the user belongs to a tenant other than the given one.
      *
-     * Personal teams are ignored: they are leftovers from the old self-service
-     * signup flow, not somebody else's company (PDR-10).
+     * Tenant means "somebody else's company" (PDR-10). Since a user belongs to
+     * at most one tenant, this only rules out memberships in a *different*
+     * tenant.
      */
     public function belongsToAnotherTeam(?Team $except = null): bool
     {
-        $query = $this->teams()->where('teams.is_personal', false);
+        $query = $this->teams();
 
         if ($except) {
             $query->where('teams.id', '!=', $except->id);
@@ -170,7 +161,6 @@ trait HasTeams
             id: $team->id,
             name: $team->name,
             slug: $team->slug,
-            isPersonal: $team->is_personal,
             role: $role?->value,
             roleLabel: $role?->label(),
             isCurrent: $this->isCurrentTeam($team),
