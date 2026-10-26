@@ -52,7 +52,7 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 
 ## Current State
 
-> Diperbarui 2026-10-15. Sebelumnya bagian ini menggambarkan kondisi sebelum 2.1–2.2.1 dikerjakan.
+> Diperbarui 2026-10-26. Sebelumnya bagian ini menggambarkan kondisi sebelum 2.1–2.2.1 dikerjakan.
 
 - Isolasi tenant kini **dijamin arsitektural**: `App\Scopes\TeamScope` memfilter setiap query model tenant-scoped, dan query tanpa tenant aktif **gagal keras** (`App\Exceptions\MissingTenantContext`).
 - `App\Support\TenantContext` adalah satu sumber tenant aktif per request/job. `CurrentTeam::from()`/`activate()` menulisnya; `ResetTenantContext` (per request) dan listener `JobProcessing` (per job) membersihkannya.
@@ -62,9 +62,9 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 - Jalur khusus sudah diaudit (2.2.5): platform layer hanya menyentuh `teams`/`users`/`memberships`, seeder memakai `TenantContext::runFor()`, command hanya menyentuh `users`, scheduler menyentuh `team_invitations` yang memang tidak tenant-scoped.
 - Route publik (`p/{team}`) tidak melewati segmen `{current_team}`, jadi controller-nya mengaktifkan tenant secara eksplisit.
 - Belum ada job sama sekali; pola konteks job sudah disiapkan (`runFor()` + reset per job) tetapi belum dipakai di produksi.
-- Cache: belum dipakai secara eksplisit; kunci cache belum ber-namespace.
-- Log: belum membawa `team_id`.
-- `teams` belum punya status selain soft delete; `public_page_enabled` adalah satu-satunya saklar moderasi.
+- Cache: belum ada pemakaian eksplisit di kode produksi, tetapi kuncinya sudah ber-namespace lewat `App\Support\TenantCache` (`tenant:{id}:…`, 2.6.1) dan helper itu gagal keras tanpa tenant aktif.
+- Log: setiap baris log yang ditulis saat tenant aktif membawa `team_id` di konteksnya; `forget()` membersihkannya lagi (2.6.3).
+- `teams` punya `suspended_at` (siklus hidup tenant, 2.3) dan `settings` JSON (preferensi `locale`/`timezone`/`currency`, 2.5); `public_page_enabled` adalah saklar moderasi halaman publik.
 - `activity_logs` mencatat aksi **di dalam** tenant; aksi **lintas tenant** oleh platform admin kini tercatat terpisah di `platform_audit_logs` (2.4, 2026-10-15).
 - `platform_audit_logs` sengaja **tanpa `team_id`**, dan modelnya tidak memakai `BelongsToTeam` — isinya memang bukan milik satu tenant, sehingga pembacaan dari sisi platform tidak butuh escape hatch.
 - Backup harian sudah terdaftar di penjadwal (`db:backup`, 02:00) dengan retensi dari `BACKUP_KEEP_DAYS`. Backup bukan bagian Fase 2, tetapi dikerjakan di baris yang sama karena satu database menampung seluruh tenant.
@@ -147,8 +147,7 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 | Perubahan                                                         | Tipe             | Fase |
 | ----------------------------------------------------------------- | ---------------- | ---- |
 | `teams.suspended_at` (nullable timestamp) **atau** `teams.status` | Aditif, nullable | 2    |
-| `teams.settings` (JSON, nullable)                                 | Aditif, nullable | 2    |
-| `platform_audit_logs` (tabel baru, dibuat 2026-10-15)             | Baru             | 2    |
+| `teams.settings` (JSON, nullable)                                 | Aditif, nullable | 2    || `platform_audit_logs` (tabel baru, dibuat 2026-10-15)             | Baru             | 2    |
 | `cache`/`jobs` — tanpa perubahan skema                            | —                | 2    |
 
 Semua bersifat **aditif dan backward compatible** (ADR-17). Tidak ada kolom dihapus, tidak ada tabel di-_rename_.
@@ -160,6 +159,7 @@ Semua bersifat **aditif dan backward compatible** (ADR-17). Tidak ada kolom diha
 | Area                                            | Perubahan                                             |
 | ----------------------------------------------- | ----------------------------------------------------- |
 | `App\Support\TenantContext`                     | **Baru**                                              |
+| `App\Support\TenantCache`                       | **Baru** — kunci `tenant:{id}:…` (tugas 2.6.1)        |
 | `App\Scopes\TeamScope`                          | **Baru** — filter tenant + fail-loud                  |
 | `App\Exceptions\MissingTenantContext`           | **Baru**                                              |
 | `App\Http\Middleware\ResetTenantContext`        | **Baru** — bersihkan konteks per request              |
@@ -245,16 +245,16 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 
 ## Acceptance Criteria
 
-> **Status 2026-10-15.** Kriteria **1–5, 7, 9, 10** sudah terpenuhi: isolasi dijaga global scope, mutasi ulang membuktikan penjaganya, `forTeam()` tidak lagi dipakai di produksi, dan aksi platform sudah tercatat di `platform_audit_logs` (2.4). Kriteria **6** (suspend tenant) dan **8** (namespace kunci cache) **belum** — tugas 2.3 dan 2.6 belum dikerjakan, dan tanda ⬜ di bawah adalah cara daftar ini mengatakannya.
+> **Status 2026-10-26.** Kesepuluh kriteria terpenuhi: isolasi dijaga global scope, mutasi ulang membuktikan penjaganya, `forTeam()` tidak lagi dipakai di produksi, aksi platform tercatat (`platform_audit_logs`), **tenant dapat disuspend** (2.3, 2026-10-22), dan **kunci cache ber-namespace tenant** (2.6.1, 2026-10-26). Sisa pekerjaan Fase 2 hanya pola job tenant-aware + tinjauan scheduler (2.6.2, 2.6.4) untuk Gate Fase 2.
 
 1. ✅ `TenantContext` menjadi satu-satunya sumber tenant aktif; tidak ada controller yang resolve tenant sendiri.
 2. ✅ Seluruh model tenant-scoped memakai global scope; query tanpa konteks gagal jelas.
 3. ✅ `withoutTeamScope()` ada dan setiap pemakaiannya punya alasan tertulis.
 4. ✅ Suite isolasi tenant (Fase 1) **tetap hijau** tanpa perubahan ekspektasi test.
 5. ✅ Platform layer berfungsi penuh setelah global scope aktif (buat/hapus/moderasi tenant).
-6. ⬜ Tenant dapat disuspend; akses shell dan halaman publik diblokir.
+6. ✅ Tenant dapat disuspend; akses shell dan halaman publik diblokir.
 7. ✅ Aksi platform tercatat di `platform_audit_logs`.
-8. ⬜ Kunci cache ber-namespace tenant.
+8. ✅ Kunci cache ber-namespace tenant.
 9. ✅ `composer test` dan `npm run types:check` hijau.
 10. ✅ Tidak ada fitur produk baru.
 
@@ -313,6 +313,7 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 | 2026-10-15 | `Builder::soleOrFail()` tidak ada di Laravel 13; satu-satunya test yang memakainya gagal dengan `BadMethodCallException`.                                                                                                                                             | Test baru gagal karena API yang salah, bukan karena perilaku aplikasi        | Diganti `sole()` (3 test `PlatformAuditLogTest` memverifikasi asumsi yang sama)                                                                                                                   |
 | 2026-10-15 | **"Ada request?" bukan cara yang benar mendeteksi jalur console.** Console kernel Laravel tetap mengikat `request`, jadi `app()->bound('request')` mengembalikan `true` di `artisan`/`tinker` — alamat loopback pun tercatat seolah operator memakai panel dari sana. | Audit bisa memuat alamat yang salah tanpa ada yang sadar                     | `RecordPlatformAudit` memakai `app()->runningInConsole()`; `ip_address` nullable, dan nilainya hanya diambil dari request HTTP                                                                    |
 | 2026-10-22 | **Jadwal 22 Okt dan dokumen fase berbeda soal status HTTP tenant disuspend**: jadwal menulis 404 untuk shell **dan** publik, sedangkan 2.3.2 meminta "pesan jelas".                                                                                                   | Tanpa keputusan, implementasi bisa mengikuti salah satu dokumen secara acak  | Diputuskan pemilik produk: **403 + pesan** untuk shell, **404** untuk halaman publik & form konsultasi. Tercatat di [Decisions Made During Implementation](#decisions-made-during-implementation) |
+| 2026-10-26 | **`Log::withContext()` lewat facade hanya menyentuh kanal default**, dan `Log::sharedContext()` tetap kosong. Pembersihan harus lewat `Log::withoutContext(['team_id'])` pada kanal yang sudah ter-resolve.                                                            | Konteks tenant bisa tertinggal di proses panjang (queue worker, Octane)      | `Log::withoutContext(['team_id'])` dipanggil di `TenantContext::forget()`; diuji dengan `MessageLogged` (tugas 2.6.3)                                                                             |
 
 ---
 
@@ -340,6 +341,10 @@ Perintah: `composer test` (pint + phpstan level 7 + phpunit) dan `npm run types:
 | 2026-10-15 | **P-4: nama `team` dipertahankan**, ambigu hanya didokumentasikan (glosarium README + ADR-02)                                          | Rename menyentuh 11 tabel dan puluhan berkas demi nol manfaat bagi user; yang dibutuhkan hanya satu definisi tertulis yang jelas                                                              |
 | 2026-10-22 | **2.3.1: `suspended_at` nullable**, bukan kolom enum `status`                                                                          | Revert cukup mengosongkan satu kolom, tidak ada state machine yang harus dijaga, dan waktu suspend tetap terekam                                                                              |
 | 2026-10-22 | Tenant disuspend: shell **403 + pesan**, halaman publik **404**                                                                        | Anggota yang sudah login perlu tahu kenapa dashboard mati; pengunjung anonim tidak boleh tahu tenant itu ada. Jadwal menulis 404 untuk keduanya — deviasi dicatat di temuan 2026-10-22        |
+| 2026-10-26 | **2.5: kolom JSON `teams.settings`** dengan default di `config/tenancy.php` (`locale` `id`, `timezone` `Asia/Jakarta`, `currency` `IDR`) | Tiga preferensi skalar belum butuh tabel + join; default tinggal di config supaya `$team->setting('locale')` selalu punya nilai tanpa backfill                                                  |
+| 2026-10-26 | **Akses settings hanya lewat `Team::setting()` / `setSetting()`**, bukan JSON mentah                                                     | Satu tempat untuk urutan resolusi (nilai tersimpan → default pemanggil → default config), jadi tenant tanpa preferensi dan tenant yang menyimpan nilai default tidak bisa dibedakan perilakunya |
+| 2026-10-26 | **2.6.1: namespace cache ditegakkan lewat `App\Support\TenantCache`**, bukan konvensi penamaan string                                  | Konvensi bisa dilupakan; helper mengambil id dari `TenantContext` sehingga mustahil mem-prefix dengan tenant yang salah, dan gagal keras tanpa tenant aktif                                    |
+| 2026-10-26 | **2.6.3: `team_id` dipasang di `TenantContext::set()/forget()`**, bukan middleware                                                     | Request, console command, job, dan seeder semuanya lewat jalur itu; `runFor()` juga memulihkan konteks lewat `set()`/`forget()` supaya `team_id` tenant dalam tidak tertinggal                       |
 
 ---
 
@@ -433,6 +438,16 @@ Rencana lengkap: [cleanup-personal-team.md](cleanup-personal-team.md).
 - **Factory (PT-4).** `UserFactory` tidak lagi membuat tim — fixture tenant dibuat eksplisit lewat `Tests\TestCase::createTeamFor()`. `TeamFactory::personal()` dihapus.
 - **Test.** 24 test terdampak diperbaiki tanpa mengubah ekspektasi yang tidak terkait (dua di antaranya diganti maknanya: "owning a personal team…" → "user tanpa tenant bisa menerima undangan", dan test fallback anggota dikeluarkan kini menguji dua kasus: punya tenant lain vs tidak punya). Test baru: `tests/Feature/Tenancy/NoPersonalTeamTest.php` (kolom tidak ada, factory tidak membuat tim, payload platform tanpa `isPersonal`).
 - **Hasil.** `migrate:fresh --seed` menyisakan satu tenant (`alfatech`) dengan 6 anggota, tidak ada user dengan lebih dari satu tim.
+
+**2026-10-26 — tugas 2.5 (settings tenant) + 2.6.1, 2.6.3, 2.6.5 (cache & log sadar tenant).**
+
+- **2.5.1 skema.** Migrasi `2026_10_26_000001_add_settings_to_teams_table.php` menambah `teams.settings` (JSON, nullable, `after('suspended_at')`). Aditif: tenant lama tetap memakai default, tidak ada backfill. Rollback diuji bolak-balik di SQLite lokal.
+- **2.5.2 API.** `Team::setting(string $key, mixed $default = null)` membungkus seluruh akses baca; `Team::setSetting()` untuk sisi tulis. Urutan resolusi: nilai tersimpan → default pemanggil → `config('tenancy.defaults.{key}')`. `settings` di-cast `array` dan masuk `#[Fillable]` (mengikuti preseden `is_platform_admin`/`team_id`: factory & seeder butuh, tapi tidak ada form request yang memvalidasinya sehingga payload HTTP tidak bisa menyentuhnya).
+- **2.5.3 default.** `config/tenancy.php` mendapat blok `defaults`: `locale` = `id`, `timezone` = `Asia/Jakarta`, `currency` = `IDR`. Ketiganya sengaja berbeda dari `config/app.php` (`en`/`UTC`) supaya default produk tidak bergantung pada default framework.
+- **2.6.1 cache.** `App\Support\TenantCache` (`key/get/put/remember/forget`) mem-prefix setiap kunci dengan `tenant:{id}:` dan mengambil id dari `TenantContext`; tanpa tenant aktif ia melempar `MissingTenantContext::forCache()`. Tidak ada pemakaian cache produksi baru — ini seam, seperti `TenantStorage`.
+- **2.6.3 log.** `TenantContext::set()` menambahkan `Log::withContext(['team_id' => …])`, `forget()` membersihkannya dengan `Log::withoutContext(['team_id'])`. Pemulihan di `runFor()` kini lewat `set()`/`forget()`, bukan menulis properti langsung — kalau tidak, `team_id` tenant dalam akan tertinggal. Efeknya: `ResetTenantContext` (per request) dan listener `JobProcessing` (per job) otomatis membersihkan konteks log juga.
+- **2.6.5 bukti.** Tiga test baru: `TenantSettingsTest` (7), `TenantCacheTest` (9), `TenantLogContextTest` (6). Konteks log dibaca dari event `MessageLogged`, bukan dari berkas log, karena hanya itu yang benar-benar sampai ke handler. Termasuk dua test kebocoran: nilai cache tenant A tidak terbaca tenant B, dan job baru tidak mewarisi `team_id` job sebelumnya.
+- **Belum dikerjakan (di luar 26 Okt).** 2.6.2 (pola job tenant-aware) dan 2.6.4 (tinjauan scheduler) menyusul 27 Okt bersama Gate Fase 2. Settings belum dibaca fitur mana pun — belum ada fitur yang membutuhkannya.
 
 ---
 
