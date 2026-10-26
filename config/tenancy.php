@@ -28,4 +28,24 @@ return [
 
     'subdomain_enabled' => env('TENANCY_SUBDOMAIN_ENABLED'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tenant Preference Defaults
+    |--------------------------------------------------------------------------
+    |
+    | Values used when a tenant has not stored its own preference yet. Read them
+    | through `$team->setting('locale')` — never straight from this array — so a
+    | tenant override and the default behave the same way for callers.
+    |
+    | Only preferences something actually reads belong here. Branding, logo and
+    | similar product features are not defaults; they are features.
+    |
+    */
+
+    'defaults' => [
+        'locale' => 'id',
+        'timezone' => 'Asia/Jakarta',
+        'currency' => 'IDR',
+    ],
+
 ];

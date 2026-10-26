@@ -328,6 +328,24 @@ Helper mengambil tenant aktif dari `App\Support\TenantContext`. Tanpa konteks te
 
 ---
 
+## Cache, Log, dan Preferensi Tenant
+
+Tiga jalur yang harus tetap sadar tenant di luar database:
+
+- **Cache** wajib lewat `App\Support\TenantCache`. Setiap kunci diawali `tenant:{team_id}:` (misalnya `tenant:7:dashboard.stats`) dan id-nya diambil dari konteks tenant, sehingga tidak ada cara "lupa prefix". Tanpa tenant aktif helper melempar `MissingTenantContext`.
+
+  ```php
+  $cache = app(TenantCache::class);
+
+  $cache->remember('dashboard.stats', 300, fn () => $stats);
+  $cache->forget('dashboard.stats');
+  ```
+
+- **Log** otomatis membawa `team_id` selama tenant aktif. `TenantContext::forget()` — dipanggil middleware per request dan listener per job — membersihkannya lagi, jadi baris log job berikutnya tidak salah tenant.
+- **Preferensi tenant** dibaca lewat `$team->setting('timezone')`, bukan dari JSON mentah. Urutan nilainya: nilai tersimpan → default yang dikirim pemanggil → `config('tenancy.defaults.*')` (`locale` `id`, `timezone` `Asia/Jakarta`, `currency` `IDR`). Menulis memakai `$team->setSetting('locale', 'en')`.
+
+---
+
 ## Perintah Penting
 
 ### Pengembangan

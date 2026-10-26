@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string $slug
  * @property bool $public_page_enabled
  * @property Carbon|null $suspended_at
+ * @property array<string, mixed>|null $settings
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -36,7 +37,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, PortfolioItem> $portfolioItems
  * @property-read Collection<int, ActivityLog> $activityLogs
  */
-#[Fillable(['name', 'slug', 'public_page_enabled', 'suspended_at'])]
+#[Fillable(['name', 'slug', 'public_page_enabled', 'suspended_at', 'settings'])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
@@ -197,6 +198,34 @@ class Team extends Model
     }
 
     /**
+     * Read one of the tenant's preferences.
+     *
+     * Callers never touch the raw `settings` JSON, so a tenant without any stored
+     * preference looks the same as one that stored the default value. Resolution
+     * order: the stored value, then the given default, then
+     * `config('tenancy.defaults.{key}')`.
+     *
+     * @see \docs\implementation\phase-02-tenant-context.md tugas 2.5.2, 2.5.3
+     */
+    public function setting(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->settings, $key) ?? $default ?? config("tenancy.defaults.{$key}");
+    }
+
+    /**
+     * Store one preference and persist it immediately.
+     *
+     * The write side of {@see setting()}, for the same reason: no caller should
+     * have to know that preferences happen to live in one JSON column.
+     */
+    public function setSetting(string $key, mixed $value): void
+    {
+        $this->settings = [...($this->settings ?? []), $key => $value];
+
+        $this->save();
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -206,6 +235,7 @@ class Team extends Model
         return [
             'public_page_enabled' => 'boolean',
             'suspended_at' => 'datetime',
+            'settings' => 'array',
         ];
     }
 

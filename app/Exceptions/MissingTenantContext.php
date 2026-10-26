@@ -46,4 +46,18 @@ final class MissingTenantContext extends RuntimeException
             .'Wrap the work in TenantContext::runFor().',
         );
     }
+
+    /**
+     * Build the exception for tenant cache access.
+     *
+     * Without an active tenant there is no `tenant:{id}:` prefix, so the key would
+     * either collide with another tenant's entry or with global application data.
+     */
+    public static function forCache(): self
+    {
+        return new self(
+            'Refusing to access the tenant cache without an active tenant. '
+            .'Wrap the work in TenantContext::runFor().',
+        );
+    }
 }

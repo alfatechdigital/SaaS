@@ -6,6 +6,7 @@ use App\Enums\TenantContextOrigin;
 use App\Http\Middleware\ResetTenantContext;
 use App\Models\Team;
 use Closure;
+use Illuminate\Support\Facades\Log;
 
 /**
  * The single source of truth for "which tenant is this work running for".
@@ -40,11 +41,18 @@ final class TenantContext
      *
      * Called by {@see CurrentTeam::from()} for inbound requests, and explicitly by
      * console/job code that steps outside a single tenant.
+     *
+     * Also publishes `team_id` to the log context (tugas 2.6.3), so every log line
+     * written while the tenant is active says which tenant it belongs to. Keeping
+     * it here rather than in a middleware means console commands, jobs and seeders
+     * get it too, and it can never drift from the active tenant.
      */
     public function set(Team $team, TenantContextOrigin $origin = TenantContextOrigin::Path): void
     {
         $this->team = $team;
         $this->origin = $origin;
+
+        Log::withContext(['team_id' => (int) $team->getKey()]);
     }
 
     /**
@@ -76,12 +84,15 @@ final class TenantContext
      *
      * Must run before every request and every queued job, otherwise a long-lived
      * process (queue worker, Octane) would carry the previous tenant into work
-     * that never asked for it.
+     * that never asked for it. The log context is cleared for the same reason: a
+     * `team_id` left behind would mislabel the next job's log lines.
      */
     public function forget(): void
     {
         $this->team = null;
         $this->origin = null;
+
+        Log::withoutContext(['team_id']);
     }
 
     /**
@@ -89,7 +100,8 @@ final class TenantContext
      *
      * This is the only supported way for jobs, commands and seeders to act on a
      * tenant. Restoring (rather than merely forgetting) keeps nesting safe: an
-     * inner `runFor()` cannot silently widen the outer one.
+     * inner `runFor()` cannot silently widen the outer one. Restoring goes back
+     * through {@see set()} / {@see forget()} so the log context follows too.
      *
      * @param  Closure(Team): mixed  $callback
      */
@@ -106,8 +118,11 @@ final class TenantContext
         try {
             return $callback($team);
         } finally {
-            $this->team = $previousTeam;
-            $this->origin = $previousOrigin;
+            if ($previousTeam === null) {
+                $this->forget();
+            } else {
+                $this->set($previousTeam, $previousOrigin ?? TenantContextOrigin::Console);
+            }
         }
     }
 }
