@@ -334,15 +334,31 @@ Tiga jalur yang harus tetap sadar tenant di luar database:
 
 - **Cache** wajib lewat `App\Support\TenantCache`. Setiap kunci diawali `tenant:{team_id}:` (misalnya `tenant:7:dashboard.stats`) dan id-nya diambil dari konteks tenant, sehingga tidak ada cara "lupa prefix". Tanpa tenant aktif helper melempar `MissingTenantContext`.
 
-  ```php
-  $cache = app(TenantCache::class);
+    ```php
+    $cache = app(TenantCache::class);
 
-  $cache->remember('dashboard.stats', 300, fn () => $stats);
-  $cache->forget('dashboard.stats');
-  ```
+    $cache->remember('dashboard.stats', 300, fn () => $stats);
+    $cache->forget('dashboard.stats');
+    ```
 
 - **Log** otomatis membawa `team_id` selama tenant aktif. `TenantContext::forget()` — dipanggil middleware per request dan listener per job — membersihkannya lagi, jadi baris log job berikutnya tidak salah tenant.
 - **Preferensi tenant** dibaca lewat `$team->setting('timezone')`, bukan dari JSON mentah. Urutan nilainya: nilai tersimpan → default yang dikirim pemanggil → `config('tenancy.defaults.*')` (`locale` `id`, `timezone` `Asia/Jakarta`, `currency` `IDR`). Menulis memakai `$team->setSetting('locale', 'en')`.
+
+**Job latar belakang** harus `extends App\Jobs\TenantJob`, bukan `implements ShouldQueue` langsung. Job seperti itu membawa `team_id` di payload dan `handle()`-nya (sudah `final`) memasang konteks tenant sebelum pekerjaan dimulai, jadi query ber-scope, `TenantCache`, dan `TenantStorage` bekerja seperti di dalam request:
+
+```php
+final class PruneTenantFiles extends TenantJob
+{
+    protected function handleForTenant(Team $team): void
+    {
+        // query tenant-scoped, cache, dan storage aman di sini
+    }
+}
+
+PruneTenantFiles::dispatch($team->id);
+```
+
+Job untuk tenant yang sudah dihapus dilewati dengan satu baris log, bukan digagalkan. Tugas terjadwal yang menyentuh model tenant-scoped wajib iterasi tenant dengan `TenantContext::runFor()` — atau dispatch `TenantJob`.
 
 ---
 
