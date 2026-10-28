@@ -25,14 +25,12 @@ class PublicCompanyProfileController extends Controller
      */
     public function __invoke(Team $team): Response
     {
-        // Moderation (PDR-12): a deactivated page must be gone, not merely
-        // hidden. 404 rather than 403 so it does not confirm that the page
-        // exists at all.
-        abort_unless($team->public_page_enabled, 404);
-
-        // Suspension (Fase 2, tugas 2.3.5) hides the public page for the same
-        // reason: a suspended tenant must look like it does not exist.
-        abort_if($team->isSuspended(), 404);
+        // Moderation (PDR-12) and suspension (Fase 2, tugas 2.3.5) both hide the
+        // page: it must be gone rather than merely hidden, so 404 instead of 403 —
+        // that avoids confirming the page exists at all. `X-Robots-Tag` makes the
+        // "not indexable" part explicit for crawlers that already know the URL
+        // (tugas 3.5.9).
+        abort_unless($team->isPublicPageVisible(), 404, '', ['X-Robots-Tag' => 'noindex']);
 
         // The page is reachable without a `{current_team}` segment, so this is
         // the only place that can tell the team global scope which tenant the

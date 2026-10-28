@@ -10,6 +10,8 @@ use App\Http\Controllers\PortfolioItemController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PublicCompanyProfileController;
 use App\Http\Controllers\PublicLeadController;
+use App\Http\Controllers\PublicRobotsController;
+use App\Http\Controllers\PublicSitemapController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\Teams\TeamInvitationController;
@@ -24,6 +26,13 @@ Route::inertia('/', 'Welcome')->name('home');
 // Public, unauthenticated company profile. Rate limited because the consultation
 // form writes a lead. See docs/IMPLEMENTATION_PLAN.md §6 Fase 4.3.
 Route::get('p/{team}', PublicCompanyProfileController::class)->name('public.company-profile');
+
+// Per-tenant SEO files (Fase 3, tugas 3.5.7 & 3.5.8). Registered on the tenant
+// path because tenancy is path-based; a crawler only reads `/robots.txt` at the
+// host root, so these become the authoritative files once domains exist.
+Route::get('p/{team}/robots.txt', PublicRobotsController::class)->name('public.robots');
+Route::get('p/{team}/sitemap.xml', PublicSitemapController::class)->name('public.sitemap');
+
 Route::post('p/{team}/consultation', [PublicLeadController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('public.consultation.store');

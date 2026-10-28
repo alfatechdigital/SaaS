@@ -379,6 +379,17 @@ Halaman publik `p/{slug}` membawa meta yang seluruhnya berasal dari profil tenan
 
 Saat domain primer tersedia (gelombang 2), satu-satunya tempat yang perlu berubah adalah `PublicPageSeo::canonical()` — canonical, `og:url`, JSON-LD, dan sitemap membaca dari situ.
 
+**Berkas SEO per tenant** (tugas 3.5.7–3.5.9):
+
+| URL                    | Isi                                                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `p/{slug}/robots.txt`  | `Allow: /` + baris `Sitemap:` untuk tenant yang tampil; `Disallow: /` bila halaman dimoderasi atau tenant disuspend                  |
+| `p/{slug}/sitemap.xml` | Satu `<url>` (canonical tenant) + `<lastmod>` dari perubahan terbaru profil atau portofolio terbit; **404** untuk tenant tersembunyi |
+
+Halaman publik, robots, dan sitemap memakai satu predicate yang sama — `Team::isPublicPageVisible()` — sehingga moderasi dan suspensi tidak bisa berbeda jawaban antar-jalur. Halaman yang tersembunyi menjawab **404** dengan header `X-Robots-Tag: noindex`.
+
+> **Catatan path-based tenancy:** crawler hanya membaca `/robots.txt` di root host, jadi `p/{slug}/robots.txt` belum diambil otomatis; berkas itu menjadi otoritatif setelah domain tenant aktif (gelombang 2). Root `public/robots.txt` dibiarkan allow-all.
+
 ---
 
 ## Perintah Penting

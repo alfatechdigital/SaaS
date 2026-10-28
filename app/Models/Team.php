@@ -198,6 +198,19 @@ class Team extends Model
     }
 
     /**
+     * Whether the tenant's public page may be served — and therefore indexed.
+     *
+     * Two different mechanisms hide a tenant's public page: platform moderation
+     * (`public_page_enabled`) and suspension (tugas 2.3). Search engines must see
+     * the same answer for both, so the page, its `robots.txt` and its
+     * `sitemap.xml` all ask this one question instead of re-deriving it.
+     */
+    public function isPublicPageVisible(): bool
+    {
+        return $this->public_page_enabled && ! $this->isSuspended();
+    }
+
+    /**
      * Read one of the tenant's preferences.
      *
      * Callers never touch the raw `settings` JSON, so a tenant without any stored
