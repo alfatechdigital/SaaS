@@ -31,7 +31,7 @@ import {
 } from 'lucide-vue-next';
 import { useAppearance } from '@/composables/useAppearance';
 import { store as consultationStore } from '@/routes/public/consultation';
-import type { CompanyProfile, PortfolioItem } from '@/types';
+import type { CompanyProfile, PortfolioItem, PublicPageMeta } from '@/types';
 
 /**
  * Public marketing page for a team's company profile.
@@ -48,7 +48,9 @@ const props = defineProps<{
     team: { name: string; slug: string };
     profile: CompanyProfile | null;
     portfolio: PortfolioItem[];
-    meta: { title: string; description: string };
+    meta: PublicPageMeta;
+    /** JSON-LD script, injected by the server through Inertia's `serverHead`. */
+    seoHead: string[];
 }>();
 
 const { updateAppearance } = useAppearance();
@@ -226,6 +228,53 @@ function toggleTheme(): void {
             head-key="description"
             name="description"
             :content="meta.description"
+        />
+        <link head-key="canonical" rel="canonical" :href="meta.canonical" />
+
+        <meta head-key="og:type" property="og:type" :content="meta.og.type" />
+        <meta
+            head-key="og:site_name"
+            property="og:site_name"
+            :content="meta.og.siteName"
+        />
+        <meta
+            head-key="og:title"
+            property="og:title"
+            :content="meta.og.title"
+        />
+        <meta
+            head-key="og:description"
+            property="og:description"
+            :content="meta.og.description"
+        />
+        <meta head-key="og:url" property="og:url" :content="meta.og.url" />
+        <meta
+            v-if="meta.og.image"
+            head-key="og:image"
+            property="og:image"
+            :content="meta.og.image"
+        />
+
+        <meta
+            head-key="twitter:card"
+            name="twitter:card"
+            :content="meta.twitter.card"
+        />
+        <meta
+            head-key="twitter:title"
+            name="twitter:title"
+            :content="meta.twitter.title"
+        />
+        <meta
+            head-key="twitter:description"
+            name="twitter:description"
+            :content="meta.twitter.description"
+        />
+        <meta
+            v-if="meta.twitter.image"
+            head-key="twitter:image"
+            name="twitter:image"
+            :content="meta.twitter.image"
         />
     </Head>
 

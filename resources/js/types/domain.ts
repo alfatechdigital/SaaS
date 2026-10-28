@@ -164,7 +164,6 @@ export type CompanyProfile = {
 };
 
 /* ------------------------------------------------------------- Portfolio */
-
 export type PortfolioItem = {
     id: number;
     title: string;
@@ -179,6 +178,34 @@ export type PortfolioItem = {
     published: boolean;
     createdAt: string | null;
     updatedAt: string | null;
+};
+
+/* --------------------------------------------------------- Public SEO */
+
+/**
+ * Head metadata for a tenant's public page, built by
+ * `App\Support\PublicPageSeo`. Kept camelCase like the rest of the frontend
+ * contract (ADR-05).
+ */
+export type PublicPageMeta = {
+    title: string;
+    description: string;
+    canonical: string;
+    og: {
+        type: string;
+        title: string;
+        description: string;
+        url: string;
+        siteName: string;
+        image: string | null;
+    };
+    twitter: {
+        card: 'summary' | 'summary_large_image';
+        title: string;
+        description: string;
+        image: string | null;
+    };
+    jsonLd: Record<string, unknown>;
 };
 
 /* --------------------------------------------------------------- Content */

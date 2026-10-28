@@ -6,6 +6,11 @@ import { createInertiaApp } from '@inertiajs/vue3';
 void createInertiaApp({
     title: pageTitle,
     layout: resolveLayout,
+    // Raw `<head>` markup supplied by the server (the JSON-LD block). A Vue
+    // template cannot contain a `<script>` — the compiler rejects it — so the
+    // controller sends finished HTML and Inertia merges it with the `<Head>`
+    // output of the page. See `App\Support\PublicPageSeo::head()`.
+    serverHead: 'seoHead',
     progress: {
         color: '#4B5563',
     },

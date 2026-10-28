@@ -21,6 +21,9 @@ createServer((page) =>
         render: renderToString,
         title: pageTitle,
         layout: resolveLayout,
+        // Same server-supplied head markup as `app.ts`, so the SSR HTML and the
+        // hydrated page carry the same head.
+        serverHead: 'seoHead',
         resolve: (name) =>
             resolvePageComponent<DefineComponent>(
                 `./pages/${name}.vue`,

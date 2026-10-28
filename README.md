@@ -362,6 +362,25 @@ Job untuk tenant yang sudah dihapus dilewati dengan satu baris log, bukan digaga
 
 ---
 
+## SEO Halaman Publik
+
+Halaman publik `p/{slug}` membawa meta yang seluruhnya berasal dari profil tenant (nama, deskripsi, telepon, email, alamat) — tidak ada copy marketing bersama. Semuanya dibangun di `App\Support\PublicPageSeo`, bukan di controller, supaya sitemap nanti memakai URL kanonik yang sama:
+
+| Tag                                            | Sumber                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `<title>`, `og:title`                          | `company_profiles.company_name` → nama tim                                           |
+| `meta[name=description]`, `og:description`     | `description` → `about` (teks polos, 160 karakter) → kalimat netral bernama tenant   |
+| `link[rel=canonical]`, `og:url`, JSON-LD `url` | `route('public.company-profile')` tenant itu                                         |
+| `og:image`, `twitter:image`                    | Portofolio **terbit** pertama yang URL-nya absolut `http(s)`                         |
+| `twitter:card`                                 | `summary_large_image` bila ada gambar, `summary` bila tidak                          |
+| JSON-LD `LocalBusiness`                        | Nama, deskripsi, URL, telepon, email, alamat (`PostalAddress.streetAddress`), gambar |
+
+**JSON-LD bukan bagian dari `<Head>` Vue.** Template Vue menolak `<script>` ("tags with side effect are ignored"), jadi controller mengirim HTML jadi di prop `seoHead` dan Inertia memasukkannya lewat opsi `serverHead` (lihat `resources/js/app.ts` dan `resources/js/ssr.ts`). JSON di-encode dengan `JSON_HEX_TAG`, sehingga nama perusahaan berisi `</script>` tidak bisa keluar dari blok tersebut.
+
+Saat domain primer tersedia (gelombang 2), satu-satunya tempat yang perlu berubah adalah `PublicPageSeo::canonical()` — canonical, `og:url`, JSON-LD, dan sitemap membaca dari situ.
+
+---
+
 ## Perintah Penting
 
 ### Pengembangan
