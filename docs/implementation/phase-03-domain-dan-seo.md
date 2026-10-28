@@ -1,6 +1,6 @@
 # Fase 3 — Domain & SEO
 
-> **Status:** RENCANA — belum dimulai. **Dipangkas (2026-09-30):** gelombang 1 hanya mengerjakan **SEO (3.5)**; tugas domain 3.1–3.4 pindah ke **gelombang 2**.
+> **Status:** 🚧 **BERJALAN** — gelombang 1 hanya **SEO (3.5)**; tugas domain 3.1–3.4 pindah ke **gelombang 2**. Per 2026-10-28 tugas 3.5.2–3.5.6 selesai; 3.5.1 (verifikasi ulang) dan 3.5.7–3.5.10 (robots/sitemap + Gate Fase 3) menyusul 29 Oktober.
 > **Ketergantungan:** Fase 2 selesai (`TenantContext` + isolasi tenant terjamin).
 > **Menambah fitur produk?** ❌ Tidak untuk bagian persiapan; bagian SEO publik adalah penyempurnaan halaman yang **sudah ada**.
 > **Dokumen induk:** [`../IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md)
@@ -151,6 +151,8 @@ Setelah Fase 1 & 2:
 | 3.5.9  | Hormati moderasi: tenant `public_page_enabled = false` → tidak masuk sitemap & `noindex` | Test                                                               |
 | 3.5.10 | Test: meta/OG/canonical/sitemap/robots benar untuk ≥2 tenant berbeda                     | —                                                                  |
 
+> **Selesai 2026-10-28 — 3.5.2 s/d 3.5.6.** Semua nilai dibangun di `App\Support\PublicPageSeo` dari profil tenant; tidak ada kolom SEO baru (data yang ada sudah cukup). JSON-LD dikirim sebagai HTML jadi lewat `serverHead` Inertia karena template Vue menolak `<script>`. Belum: 3.5.1 (verifikasi ulang SSR), 3.5.7–3.5.9 (robots/sitemap/moderasi), 3.5.10 (matriks ≥2 tenant penuh — versi ringkasnya sudah ada di `PublicPageSeoTest`).
+
 > **Jangan** mengerjakan: skor SEO, saran SEO otomatis, audit on-page, integrasi Search Console. Itu Fase 5 / DEFERRED. Pengecualian: **otomasi meta/schema + ping sitemap** (B-8 dasar) masuk **gelombang 1**.
 
 ---
@@ -169,27 +171,29 @@ Setelah Fase 1 & 2:
 
 ## Backend Changes
 
-| Area                                                  | Perubahan                                                       |
-| ----------------------------------------------------- | --------------------------------------------------------------- |
-| `App\Support\TenantResolver` (interface)              | **Baru**                                                        |
-| `App\Support\Resolvers\PathTenantResolver`            | **Baru**                                                        |
-| `App\Support\TenantContext`                           | Memakai resolver                                                |
-| `app/Providers/AppServiceProvider.php`                | Bind resolver                                                   |
-| `config/tenancy.php`                                  | Lengkapi kunci                                                  |
-| `App\Http\Controllers\PublicCompanyProfileController` | Tambah data SEO ke props                                        |
-| Route sitemap/robots                                  | **Baru** (mis. `/p/{team}/sitemap.xml`, `/p/{team}/robots.txt`) |
-| `App\Support\Seo\*` (opsional)                        | Helper pembangun meta bila mulai kompleks                       |
-| Setiap controller domain                              | **Tidak** diubah                                                |
+| Area                                                  | Perubahan                                                                                                  |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `App\Support\TenantResolver` (interface)              | **Baru**                                                                                                   |
+| `App\Support\Resolvers\PathTenantResolver`            | **Baru**                                                                                                   |
+| `App\Support\TenantContext`                           | Memakai resolver                                                                                           |
+| `app/Providers/AppServiceProvider.php`                | Bind resolver                                                                                              |
+| `config/tenancy.php`                                  | Lengkapi kunci                                                                                             |
+| `App\Http\Controllers\PublicCompanyProfileController` | Tambah data SEO ke props                                                                                   |
+| `App\Support\PublicPageSeo`                           | **Baru** — semua meta publik (title, description, canonical, OG, Twitter, JSON-LD) dibangun di satu tempat |
+| Route sitemap/robots                                  | **Baru** (mis. `/p/{team}/sitemap.xml`, `/p/{team}/robots.txt`)                                            |
+| `App\Support\Seo\*` (opsional)                        | Helper pembangun meta bila mulai kompleks                                                                  |
+| Setiap controller domain                              | **Tidak** diubah                                                                                           |
 
 ---
 
 ## Frontend Changes
 
-| Area                                            | Perubahan                                           |
-| ----------------------------------------------- | --------------------------------------------------- |
-| `resources/js/pages/public/company-profile.vue` | Terima & render meta/OG via head management Inertia |
-| `resources/js/types/domain.ts`                  | Tambah tipe data SEO publik                         |
-| Halaman internal                                | **Tidak** diubah                                    |
+| Area                                            | Perubahan                                                 |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| `resources/js/pages/public/company-profile.vue` | Terima & render meta/OG via head management Inertia       |
+| `resources/js/types/domain.ts`                  | Tambah tipe data SEO publik (`PublicPageMeta`)            |
+| `resources/js/app.ts`, `resources/js/ssr.ts`    | `serverHead: 'seoHead'` — jalur masuk JSON-LD dari server |
+| Halaman internal                                | **Tidak** diubah                                          |
 
 **Catatan SSR:** semua nilai yang bergantung pada `window`/DOM harus SSR-safe (pola yang sudah dipakai proyek ini). Meta **wajib** dirender di server agar crawler melihatnya.
 
@@ -254,9 +258,11 @@ Perintah: `composer test` dan `npm run types:check`. Sertakan `npm run build` se
 
 **Berlaku untuk gelombang 1 (SEO):**
 
+> **Status 2026-10-28.** Kriteria **1, 2, 4, 5, 6** terpenuhi dan diverifikasi hari ini (yang ke-4 lewat `curl` ke HTML SSR). Kriteria **3** (`robots.txt` + `sitemap.xml`) belum — itu tugas 3.5.7–3.5.9 pada 29 Oktober.
+
 1. ✅ Halaman publik punya meta title/description/OG/canonical dari data tenant.
 2. ✅ Structured data `LocalBusiness` valid.
-3. ✅ `robots.txt` dan `sitemap.xml` per tenant berfungsi dan menghormati `public_page_enabled`.
+3. ⬜ `robots.txt` dan `sitemap.xml` per tenant berfungsi dan menghormati `public_page_enabled`.
 4. ✅ Output SSR benar-benar mengandung meta tersebut (diverifikasi dari HTML, bukan dari DOM).
 5. ✅ `composer test` dan `npm run types:check` hijau.
 6. ✅ Tidak ada fitur produk baru.
@@ -310,11 +316,11 @@ Perintah: `composer test` dan `npm run types:check`. Sertakan `npm run build` se
 
 > **Diisi oleh agen/developer saat pengerjaan.**
 
-_Belum ada entri._
-
-| Tanggal | Temuan | Dampak | Tindakan |
-| ------- | ------ | ------ | -------- |
-| —       | —      | —      | —        |
+| Tanggal    | Temuan                                                                                                                                                                                                                                                              | Dampak                                                               | Tindakan                                                                                                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-28 | **`<script>` tidak bisa ditulis di template Vue.** Compiler DOM menolak tag berefek samping (`Tags with side effect (<script> and <style>) are ignored in client component templates`), jadi JSON-LD tidak bisa menjadi anak `<Head>` seperti tag `<meta>` lainnya. | Structured data akan diam-diam tidak ada bila dipaksa lewat template | Dipakai opsi `serverHead` milik Inertia v3: server mengirim HTML jadi di prop `seoHead`, Inertia menggabungkannya dengan output `<Head>` (dan menggantinya saat navigasi). Terbukti ada di HTML SSR. |
+| 2026-10-28 | **`resolveServerHead` menyisipkan `data-inertia="server-head-{index}"` ke tag pertama.** Menambahkan atribut itu sendiri menghasilkan atribut ganda pada satu tag.                                                                                                  | Markup tidak valid bila atribut diisi manual                         | Atribut tidak diisi manual; string hanya berisi `<script type="application/ld+json">…</script>`.                                                                                                     |
+| 2026-10-28 | **`json_encode` tanpa `JSON_HEX_TAG` bisa ditembus `</script>`.** Nama perusahaan adalah input pengguna; `PT </script><script>alert(1)</script>` akan menutup tag JSON-LD dan menjalankan sisanya sebagai markup.                                                   | XSS tersimpan di halaman publik                                      | Encoding memakai `JSON_HEX_TAG \| JSON_HEX_AMP \| JSON_HEX_APOS \| JSON_HEX_QUOT \| JSON_UNESCAPED_SLASHES \| JSON_UNESCAPED_UNICODE`; dikunci `PublicPageSeoTest`.                                  |
 
 ---
 
@@ -322,11 +328,14 @@ _Belum ada entri._
 
 > **Diisi saat pengerjaan.**
 
-_Belum ada entri._
-
-| Tanggal | Keputusan | Alasan |
-| ------- | --------- | ------ |
-| —       | —         | —      |
+| Tanggal    | Keputusan                                                                              | Alasan                                                                                                                                                        |
+| ---------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-28 | **Tidak menambah kolom SEO di `company_profiles`** (tidak ada `meta_title`/`og_image`) | Data yang ada (nama, deskripsi, telepon, email, alamat) sudah cukup untuk 3.5.2–3.5.6; kolom override baru berguna setelah ada tenant yang minta wording lain |
+| 2026-10-28 | **Semua meta dibangun di `App\Support\PublicPageSeo`**, bukan di controller            | Sitemap (3.5.8) butuh canonical yang sama; satu sumber mencegah URL/title berbeda antar-jalur                                                                 |
+| 2026-10-28 | **`og:image` diambil dari portofolio terbit pertama** yang URL-nya absolut `http(s)`   | Belum ada kolom logo; path relatif tidak berguna untuk crawler, jadi diabaikan                                                                                |
+| 2026-10-28 | **`twitter:card` mengikuti ada/tidaknya gambar** (`summary` vs `summary_large_image`)  | Kartu besar tanpa gambar tampil sebagai banner kosong                                                                                                         |
+| 2026-10-28 | **JSON-LD dikirim lewat `serverHead`, bukan ditempel di Blade**                        | Blade tidak ikut berubah saat navigasi Inertia; `serverHead` diganti per halaman oleh Inertia sendiri                                                         |
+| 2026-10-28 | **`address` dipetakan ke `PostalAddress.streetAddress`** apa adanya                    | Profil menyimpan alamat sebagai satu baris bebas; memecahnya menjadi komponen berarti menebak                                                                 |
 
 ---
 
@@ -365,7 +374,18 @@ _Belum ada entri._
 
 > **Diisi setelah fase selesai dieksekusi.**
 
-_Belum ada entri._
+**2026-10-28 — tugas 3.5.2 s/d 3.5.6 (meta, Open Graph, Twitter card, canonical, JSON-LD).**
+
+- **Satu tempat untuk semua meta.** `App\Support\PublicPageSeo::for($team, $profile, $portfolio)` membangun `title`, `description`, `canonical`, `og`, `twitter`, dan `jsonLd`. Controller hanya meneruskannya sebagai prop `meta`; sitemap (3.5.8, besok) akan memakai `canonical()` yang sama sehingga URL tidak pernah berbeda antar-jalur. Tenant **dipass eksplisit**, bukan dibaca dari konteks, supaya kelas ini bisa dipakai untuk tenant yang tidak sedang aktif.
+- **3.5.2 meta dinamis.** `title` = `company_profiles.company_name` (fallback nama tim); `description` = `description` → `about` yang di-`strip_tags` → kalimat netral bernama tenant, dipotong 160 karakter. Tidak ada copy marketing bersama.
+- **3.5.3 Open Graph.** `og:type` `website`, `og:site_name` nama tim, `og:title`/`og:description`/`og:url` dari nilai yang sama dengan meta, `og:image` dari portofolio terbit pertama yang URL-nya absolut `http(s)` (tanpa itu tag tidak dirender).
+- **3.5.4 Twitter card.** `summary_large_image` bila ada gambar, `summary` bila tidak; ikut mengirim `twitter:title`/`twitter:description`/`twitter:image`.
+- **3.5.5 canonical.** `route('public.company-profile', ['team' => $team->slug])` — absolut dan sadar tenant. Method `canonical()` adalah satu-satunya tempat yang berubah saat domain primer masuk (TD3-2 tetap terbuka untuk itu).
+- **3.5.6 JSON-LD `LocalBusiness`.** `@context`/`@type`, `name`, `description`, `url`, `telephone`, `email`, `image`, `address` (`PostalAddress.streetAddress`); kunci kosong dibuang, bukan dikirim sebagai `null`. Dikirim lewat `serverHead` Inertia karena template Vue menolak `<script>` (lihat [Discovered](#discovered-during-implementation)).
+- **Escaping.** `JSON_HEX_TAG`/`JSON_HEX_AMP`/`JSON_HEX_APOS`/`JSON_HEX_QUOT` dipakai agar nama perusahaan berisi `</script>` tidak bisa keluar dari blok JSON-LD. Diuji dengan nama yang memang berisi payload.
+- **Bukti (3.5.1 + 3.5.10 versi ringkas).** `node bootstrap/ssr/ssr.js` + `php artisan serve`, lalu `GET /p/alfatech` **HTML mentah** memuat: `<title data-inertia="">PT Alfatech Digital Solutions - Laravel</title>`, `meta[name=description]`, `link[rel=canonical]`, `og:type`/`og:site_name`/`og:title`/`og:description`/`og:url`/`og:image`, `twitter:card` = `summary_large_image` + `twitter:*`, dan `<script data-inertia="server-head-0" type="application/ld+json">` berisi `LocalBusiness` lengkap (telepon, email, alamat, gambar). `GET /login` tetap bersih: tanpa `seoHead` dan tanpa JSON-LD, jadi `serverHead` tidak bocor ke halaman lain.
+- **Test.** `tests/Feature/Seo/PublicPageSeoTest.php` (10 test): canonical absolut & spesifik tenant, OG mencerminkan meta, gambar dari portofolio terbit, gambar draf/path relatif diabaikan, `LocalBusiness` lengkap, field kosong dibuang, bentuk payload `seoHead`, escaping `</script>`, dan dua tenant bernama hampir sama tetap menampilkan identitasnya sendiri.
+- **Belum dikerjakan (memang tugas 29 Oktober).** 3.5.7 `robots.txt`, 3.5.8 `sitemap.xml`, 3.5.9 `noindex` untuk tenant yang dimatikan, dan matriks 3.5.10 penuh.
 
 ---
 
