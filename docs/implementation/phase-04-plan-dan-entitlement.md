@@ -49,13 +49,22 @@ Fase ini juga menyiapkan **desain** langganan, tanpa mengimplementasikan billing
 
 ## Prerequisites
 
-| Prasyarat                                                            | Status                                                  |
-| -------------------------------------------------------------------- | ------------------------------------------------------- |
-| Fase 2 selesai                                                       | ❌                                                      |
-| **D-06** (definisi plan: config vs tabel) diputuskan                 | ❌ **Wajib**                                            |
-| **ADR-06** & **ADR-14** disetujui                                    | ❌ **Wajib**                                            |
-| **PDR-01** (isi tiap paket) minimal punya daftar _draft_ fitur       | ❌ Disarankan — tanpa ini, enum fitur bisa salah bentuk |
-| **D-05** (provider pembayaran) — **tidak** diperlukan untuk fase ini | ✅ Tidak menghalangi                                    |
+| Prasyarat                                                            | Status                                                                                                                        |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Fase 2 selesai                                                       | ✅ Selesai 2026-10-27 (Gate Fase 2)                                                                                           |
+| **D-06** (definisi plan: config vs tabel) diputuskan                 | ✅ 2026-10-26 — config dulu                                                                                                   |
+| **ADR-06** & **ADR-14** disetujui                                    | ✅ 2026-09-30                                                                                                                 |
+| **PDR-01** (isi tiap paket) minimal punya daftar _draft_ fitur       | ✅ 2026-10-28 — daftar final di [Lampiran B.4](../IMPLEMENTATION_PLAN.md#b4-paket-langganan--pdr-01-pdr-05-pdr-06-2026-10-28) |
+| **D-05** (provider pembayaran) — **tidak** diperlukan untuk fase ini | ✅ Tidak menghalangi                                                                                                          |
+
+> **Pembaruan 2026-10-28.** PDR-01 sudah berisi daftar final, termasuk enam fitur yang belum punya kode sama sekali (template, Google Analytics, Google Sheet sync, form builder, email automation, kuota admin). Konsekuensinya untuk fase ini: enum `Feature` **tidak** boleh langsung berisi keenam fitur itu — cukup fitur yang sudah ada atau yang pasti akan dibangun di gelombang 1. Menambah case enum adalah perubahan kecil; case yang salah bentuk dan sudah dipakai di banyak tempat tidak.
+
+> **Pembaruan 2026-10-28 (sesi keputusan paket).** Hal-hal yang mengubah rencana fase ini:
+>
+> - **Enum harus punya baris tingkat modul**, bukan hanya fitur publik: `lead_management` (**Plus** sejak 2026-10-28), `project_management`, `task_management`, `content_planner`, `finance` (Pro + add-on), plus fitur publik (`custom_domain`, `whatsapp_bot`, `payment_gateway`, `form_builder`, `email_automation`, `google_sheet_sync`, `google_analytics`, `file_upload`, `contact_form`, `seo_basic`, `seo_advanced`, `content_ai`).
+> - **Kuota ikut masuk entitlement**: user 1/3/10 dan AI 50 generate/bulan → `usage_counters` naik dari "defer" ke **perlu**.
+> - **Add-on membuat resolusi entitlement dua sumber**: fitur paket ∪ add-on aktif. Rancang method-nya sekarang, walau add-on baru dibangun bersama billing.
+> - **Panel platform perlu mengelola paket & fitur per tenant** — scope baru (bukan di fase ini), dicatat di [B.4.4](../IMPLEMENTATION_PLAN.md#b44-dampak-ke-pekerjaan-yang-sudah-dijadwalkan).
 
 > Bila PDR-01 benar-benar belum ada, fase ini tetap dapat dikerjakan hingga tahap "enum + service + config" menggunakan fitur yang **sudah ada** (mis. `company_profile`, `content_management`). Fitur yang tidak mungkin ada sebelum dirilis tidak perlu dimasukkan enum sekarang.
 
@@ -278,13 +287,13 @@ Perintah: `composer test` dan `npm run types:check`.
 
 ## Open Questions
 
-| ID      | Pertanyaan                                                                                                                                                           |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OQ-F4-1 | Apakah fitur yang sudah ada (proyek, lead, keuangan) akan dibagi ke paket, atau tetap gratis untuk semua? Ini menentukan apakah entitlement punya "gigi" sejak awal. |
-| OQ-F4-2 | Apakah warisan fitur berjenjang (Plus ⊇ Basic) atau tiap paket mendaftar ulang?                                                                                      |
-| OQ-F4-3 | Apakah tenant bisa menurunkan paket kapan saja? (berdampak pada validasi data saat downgrade)                                                                        |
-| OQ-F4-4 | Apakah fitur dasar wajib selalu ada di plan default, agar tenant baru tidak kosong melompong?                                                                        |
-| OQ-F4-5 | Apakah kuota perlu ditampilkan ke tenant (mis. "37/100 konten")? Bila ya, kapan?                                                                                     |
+| ID      | Pertanyaan                                                                                                                                                                                                                                                                       |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OQ-F4-1 | Apakah fitur yang sudah ada (proyek, lead, keuangan) akan dibagi ke paket, atau tetap gratis untuk semua? Ini menentukan apakah entitlement punya "gigi" sejak awal. **✅ Terjawab 2026-10-28:** modul internal masuk **Pro** dan boleh dibeli sebagai **add-on**; bukan gratis. |
+| OQ-F4-2 | Apakah warisan fitur berjenjang (Plus ⊇ Basic) atau tiap paket mendaftar ulang? **✅ Terjawab 2026-10-28:** **daftar ulang** — tiap paket menyebut fiturnya sendiri di config.                                                                                                   |
+| OQ-F4-3 | Apakah tenant bisa menurunkan paket kapan saja? (berdampak pada validasi data saat downgrade) **✅ Terjawab 2026-10-28:** boleh diminta kapan saja, **berlaku akhir periode**, dengan validasi data.                                                                             |
+| OQ-F4-4 | Apakah fitur dasar wajib selalu ada di plan default, agar tenant baru tidak kosong melompong? **✅ Terjawab 2026-10-28:** tenant baru mendapat **trial Basic 30 hari**; Basic sudah berisi CMS + template + SEO + GA + upload.                                                   |
+| OQ-F4-5 | Apakah kuota perlu ditampilkan ke tenant (mis. "37/100 konten")? Bila ya, kapan? **❓ Masih terbuka** — kuota yang disetujui (user 1/3/10, AI 50/bulan) tetap perlu tampilan; dijadwalkan bersama UI billing.                                                                    |
 
 ---
 
