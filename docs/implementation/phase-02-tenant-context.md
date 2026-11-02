@@ -55,7 +55,7 @@ Singkatnya: _"Tidak mungkin lagi lupa memfilter `team_id`."_
 > Diperbarui 2026-10-26. Sebelumnya bagian ini menggambarkan kondisi sebelum 2.1–2.2.1 dikerjakan.
 
 - Isolasi tenant kini **dijamin arsitektural**: `App\Scopes\TeamScope` memfilter setiap query model tenant-scoped, dan query tanpa tenant aktif **gagal keras** (`App\Exceptions\MissingTenantContext`).
-- `App\Support\TenantContext` adalah satu sumber tenant aktif per request/job. `CurrentTeam::from()`/`activate()` menulisnya; `ResetTenantContext` (per request) dan listener `JobProcessing` (per job) membersihkannya.
+- `App\Support\TenantContext` adalah satu sumber tenant aktif per request/job. `CurrentTeam::from()`/`activate()` menulisnya; `ResetTenantContext` (per request) dan listener `JobProcessing` (per job) membersihkannya. Sejak 2026-11-02 listener melewati koneksi berdriver `sync`, karena job seperti itu berjalan inline di proses pemanggil dan konteks request-nya harus bertahan (lihat [Post-Implementation Notes](#post-implementation-notes)).
 - Seluruh model tenant-scoped sudah memakai scope: `company_profiles`, `projects`, `tasks`, `leads`, `content_items`, `transactions`, `portfolio_items`, `activity_logs`.
 - **Tidak ada lagi `->forTeam()` di kode produksi** (2.2.6, 2026-10-13). Scope adalah otoritasnya; `forTeam()` hanya menyempitkan, bukan mengamankan. Pemakaian yang tersisa hanya di test.
 - Escape hatch `withoutTeamScope()` **nol pemakaian di kode produksi**; tiga pemakaian yang ada semuanya di `tests/Feature/Tenancy/TeamGlobalScopeTest.php` dan masing-masing berkomentar alasan (2.2.4).
@@ -485,6 +485,12 @@ Rencana lengkap: [cleanup-personal-team.md](cleanup-personal-team.md).
 - **2.6.4 tinjauan scheduler.** Dua tugas terjadwal ditinjau satu per satu: hapus undangan kedaluwarsa dan `db:backup`. Keduanya **tidak** butuh iterasi tenant — yang pertama karena `team_invitations` sengaja tidak tenant-scoped (undangan dibaca sebelum user punya tenant), yang kedua karena backup bekerja di level database. Kesimpulan + aturan untuk tugas berikutnya ditulis di `routes/console.php` dan di [Tinjauan Scheduler](#tinjauan-scheduler--tugas-264). Test tambahan: `test_the_scheduled_cleanup_reaches_every_tenant_at_once` (dua tenant, satu `schedule:run`, dua undangan terhapus, tanpa tenant aktif).
 - **Gate Fase 2 — lolos di mesin lokal.** `composer test` hijau: pint bersih, phpstan level 7 nol error, **345 test / 1320 assertion**. `npm run types:check` dan `npm run check` hijau. Seluruh 10 acceptance criteria terverifikasi (lihat [Acceptance Criteria](#acceptance-criteria)); tidak ada ekspektasi test lama yang diubah untuk membuatnya hijau.
 - **Tidak ada job produksi.** Yang ada hanya pola + test. Job pertama yang nyata (mis. pembersihan berkas tenant saat tenant dihapus) tinggal `extends TenantJob` dan mengisi `handleForTenant()`.
+
+**2026-11-02 — job tenant pertama (`PingSitemapJob`) dan koreksi listener `JobProcessing`.**
+
+- **Job pertama yang nyata.** `App\Jobs\PingSitemapJob` (B-8, SEO automation) adalah subclass `TenantJob` pertama yang dipakai produksi. Polanya bekerja apa adanya: payload membawa `team_id`, `handleForTenant()` menerima tenant aktif, dan tidak ada satu pun query tanpa konteks.
+- **Temuan: koneksi `sync` menghapus konteks request.** Listener `JobProcessing` membersihkan tenant sebelum tiap job, termasuk job yang berjalan **inline** di koneksi `sync`. Saat observer memicu ping dari dalam request (atau dari test dengan `QUEUE_CONNECTION=sync`), konteks request ikut hilang dan setiap query tenant-scoped setelah `dispatch()` gagal dengan `MissingTenantContext`. Perbaikan: listener melewati koneksi yang drivernya `sync` (`AppServiceProvider::connectionRunsInline()`), dengan alasan tertulis di method itu. Worker nyata (`redis`/`database`) tetap dibersihkan sebelum tiap job, jadi isolasi antar-job tidak berubah.
+- **Bukti.** `TenantContextTest::test_a_sync_job_keeps_the_tenant_of_the_caller` (baru) memaku perilaku itu, di samping test lama `test_a_queued_job_starting_forgets_the_active_tenant` yang tetap mengharapkan pembersihan pada koneksi `database`. Suite penuh: **385 test / 1583 assertion**, hijau.
 
 ---
 

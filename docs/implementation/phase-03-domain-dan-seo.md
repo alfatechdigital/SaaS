@@ -157,6 +157,19 @@ Setelah Fase 1 & 2:
 
 > **Jangan** mengerjakan: skor SEO, saran SEO otomatis, audit on-page, integrasi Search Console. Itu Fase 5 / DEFERRED. Pengecualian: **otomasi meta/schema + ping sitemap** (B-8 dasar) masuk **gelombang 1**.
 
+### 3.6 Otomasi SEO — B-8 (gelombang 1) — ✅ **SELESAI 2026-11-02**
+
+| #     | Tugas                                                                          | Catatan                                                        |
+| ----- | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| B8.1  | Satu pembangun sitemap dipakai endpoint HTTP **dan** job ping                  | `App\Support\PublicSitemap`                                    |
+| B8.2  | Schema mengikuti data tenant tanpa kolom baru (`sameAs` dari `social_links`)    | Hanya URL absolut `http(s)`                                    |
+| B8.3  | Ping sitemap otomatis saat halaman publik berubah, dengan deduplikasi per tenant | `PingSitemapJob` + `TenantCache`                              |
+| B8.4  | Tenant tersembunyi/di-suspend **tidak pernah** di-ping                         | Satu predicate: `Team::isPublicPageVisible()`                  |
+| B8.5  | Endpoint ping = konfigurasi deployment, bukan kode                             | `config/seo.php` (`SEO_SITEMAP_PING_*`)                        |
+
+> **Selesai 2026-11-02.** Rincian dan alasannya ada di [Post-Implementation Notes](#post-implementation-notes) di bawah.
+
+
 ---
 
 ## Database Changes
@@ -182,6 +195,10 @@ Setelah Fase 1 & 2:
 | `config/tenancy.php`                                  | Lengkapi kunci                                                                                             |
 | `App\Http\Controllers\PublicCompanyProfileController` | Tambah data SEO ke props                                                                                   |
 | `App\Support\PublicPageSeo`                           | **Baru** — semua meta publik (title, description, canonical, OG, Twitter, JSON-LD) dibangun di satu tempat |
+| `App\Support\PublicSitemap`                           | **Baru** — pembangun `sitemap.xml` + digest, dipakai controller dan job ping (B-8)                          |
+| `App\Jobs\PingSitemapJob`                             | **Baru** — ping sitemap per tenant, deduplikasi lewat `TenantCache` (B-8)                                   |
+| `App\Observers\PublicSeoObserver`                     | **Baru** — memicu ping saat profil/portofolio/tenant berubah (B-8)                                          |
+| `config/seo.php`                                      | **Baru** — endpoint ping, timeout, saklar (B-8)                                                             |
 | `App\Http\Controllers\PublicRobotsController`         | **Baru** — `p/{slug}/robots.txt` (tugas 3.5.7)                                                             |
 | `App\Http\Controllers\PublicSitemapController`        | **Baru** — `p/{slug}/sitemap.xml` (tugas 3.5.8)                                                            |
 | `resources/views/seo/sitemap.blade.php`               | **Baru** — template XML (escaping via Blade)                                                               |
@@ -409,6 +426,19 @@ Perintah: `composer test` dan `npm run types:check`. Sertakan `npm run build` se
 - **3.5.10 bukti dua tenant.** `tests/Feature/Seo/PublicSeoAcrossTenantsTest.php` (4 test) memakai dua tenant berdata berbeda dan memastikan setiap artefak hanya menyebut tenant-nya sendiri: title/OG/canonical/JSON-LD, baris `Sitemap` di robots, `loc` di sitemap; ditambah satu test bahwa menyembunyikan tenant A tidak mengubah status tenant B.
 - **Bukti dari berkas mentah (Gate Fase 3).** Dengan `node bootstrap/ssr/ssr.js` + `php artisan serve`, tenant sementara `uji-seo` dibuat di DB dev dan hasilnya: `p/alfatech` & `p/uji-seo` masing-masing memiliki `<title>`, canonical, `og:url`, `og:title`, `twitter:card`, dan `<script type="application/ld+json">` miliknya sendiri; kedua `robots.txt` menunjuk sitemap tenant masing-masing; kedua `sitemap.xml` valid dan hanya memuat URL tenant sendiri. Setelah `public_page_enabled = false` pada tenant sementara: halaman **404 + `X-Robots-Tag: noindex`**, robots `Disallow: /`, sitemap **404**, sementara `p/alfatech` tetap 200. Tenant sementara lalu dihapus permanen (`teams=1`, `profiles=1`).
 - **Gate Fase 3 — lolos di mesin lokal.** `composer test` hijau: pint bersih, phpstan level 7 nol error, **369 test / 1543 assertion**. `npm run types:check` dan `npm run check` hijau. Kriteria domain (7–10) tetap ditunda ke gelombang 2 sesuai keputusan 2026-09-30.
+
+**2026-11-02 — B-8 otomasi SEO (gelombang 1, dijadwalkan terpisah dari Fase 3).**
+
+- **Satu sitemap, dua pemakai.** Isi `sitemap.xml` dipindah dari controller ke `App\Support\PublicSitemap`. Controller dan `PingSitemapJob` sekarang membaca dokumen yang sama; digest (`sha256` atas XML) dihitung dari keluaran, bukan dari baris tabel, sehingga perubahan yang tidak mengubah apa pun yang dibaca crawler (mis. edit draf) tidak memicu ping.
+- **Ping otomatis, bukan manual.** `App\Observers\PublicSeoObserver` mengamati `CompanyProfile`, `PortfolioItem`, dan `Team` — model yang benar-benar membentuk halaman publik. `Task`/`Project`/`Lead`/`Transaction` sengaja tidak diamati, supaya pekerjaan internal tidak pernah menjadi ping keluar. Item portofolio yang belum terbit difilter sebelum dispatch; transisi terbit → draf tetap memicu, karena `lastmod` sitemap harus bergerak saat karya ditarik.
+- **Deduplikasi per tenant.** `PingSitemapJob` menyimpan digest terakhir di `TenantCache` (`tenant:{id}:seo.sitemap.pinged`) dan melewati endpoint bila tidak berubah. Digest **hanya** disimpan kalau ada endpoint yang menerima ping: gangguan jaringan sesaat tidak boleh membungkam perubahan berikutnya.
+- **Tenant tersembunyi tidak pernah di-ping.** Satu predicate yang sama dengan halaman/robots/sitemap (`Team::isPublicPageVisible()`) dipakai sebelum HTTP apa pun, sehingga moderasi dan suspensi tidak bisa "mengumumkan" halaman yang menjawab 404.
+- **Schema ikut otomatis.** `LocalBusiness.sameAs` diisi dari `company_profiles.social_links` — hanya nilai absolut `http(s)`, kunci platform tidak dikirim. Menambah platform baru tidak butuh migrasi, dan handle mentah/path relatif tidak pernah diklaim sebagai identitas.
+- **Endpoint = konfigurasi deployment.** `config/seo.php` (`SEO_SITEMAP_PING_ENABLED`, `SEO_SITEMAP_PING_URLS`, `SEO_SITEMAP_PING_TIMEOUT`). Daftar URL **kosong secara default**: Google dan Bing menghentikan ping sitemap anonim pada 2023 (endpoint lama menjawab 404), dan kanal yang masih hidup (Search Console, IndexNow) butuh kredensial milik deployment, bukan milik repo. Placeholder `{sitemap}` diganti URL sitemap tenant yang sudah URL-encoded.
+- **Kegagalan ping tidak menggagalkan simpanan.** `404`/timeout dicatat sebagai warning; simpanan pengguna tidak boleh gagal karena mesin pencari.
+- **Temuan: job sync menghapus konteks tenant pemanggil.** Listener `JobProcessing` di `AppServiceProvider` membersihkan tenant sebelum **setiap** job. Dengan koneksi `sync`, job berjalan inline di request yang sama, sehingga konteks request ikut hilang dan query tenant-scoped setelah `dispatch()` gagal keras. Listener kini melewati koneksi berdriver `sync`; worker nyata (`redis`/`database`) tetap dibersihkan. Diuji di `TenantContextTest`.
+- **Test.** `tests/Feature/Seo/SitemapPingTest.php` (13 test): ping dikirim ke URL sitemap tenant sendiri, tidak dua kali untuk dokumen yang sama, tidak untuk tenant termoderasi/tersuspend, tidak untuk draf, tidak saat fitur dimatikan atau endpoint kosong, tidak bocor antar-tenant, dan `404`/koneksi gagal tidak menggagalkan simpanan. Ditambah 2 test `sameAs` di `PublicPageSeoTest`.
+- **Gate.** `composer test` hijau: pint bersih, phpstan level 7 nol error, **385 test / 1583 assertion**.
 
 ---
 

@@ -176,9 +176,9 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 
 | Aspek                   | Keterangan                                                                                                                                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1 hanya **otomasi dasar** (otomasi meta/schema, ping sitemap). Skor SEO, audit on-page, Search Console, hreflang, dan redirect manager tetap gelombang 2. |
-| **Fondasi siap**        | ✅ Meta/OG/canonical/sitemap/robots/structured data per tenant                                                                                                                                    |
-| **Sisa pekerjaan**      | Skor SEO konten, audit on-page, saran internal linking, integrasi Search Console, hreflang, redirect manager                                                                                      |
+| **Status**              | ✅ **Gelombang 1 versi dasar SELESAI 2026-11-02** — otomasi meta/schema (`sameAs` dari `social_links`, satu pembangun sitemap) + ping sitemap otomatis dengan deduplikasi per tenant. Skor SEO, audit on-page, Search Console, hreflang, dan redirect manager tetap gelombang 2. |
+| **Fondasi siap**        | ✅ Meta/OG/canonical/sitemap/robots/structured data per tenant, dan kini ping otomatis saat halaman publik berubah (lihat [phase-03 §3.6](phase-03-domain-dan-seo.md#36-otomasi-seo--b-8-gelombang-1--selesai-2026-11-02)) |
+| **Sisa pekerjaan**      | Skor SEO konten, audit on-page, saran internal linking, integrasi Search Console, hreflang, redirect manager; pemilihan endpoint ping produksi (Search Console/IndexNow) adalah keputusan deployment, bukan kode |
 | **Risiko utama**        | Sedang — bermanfaat tetapi bukan kebutuhan mendasar                                                                                                                                               |
 | **Prasyarat keputusan** | Persetujuan produk                                                                                                                                                                                |
 
