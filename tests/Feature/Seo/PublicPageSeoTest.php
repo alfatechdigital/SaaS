@@ -130,6 +130,37 @@ class PublicPageSeoTest extends DomainTestCase
         $this->assertArrayNotHasKey('image', $jsonLd);
     }
 
+    public function test_the_structured_data_lists_the_tenants_own_public_profiles(): void
+    {
+        CompanyProfile::factory()->create([
+            'team_id' => $this->team->id,
+            'social_links' => [
+                'instagram' => 'https://instagram.com/contoh',
+                'linkedin' => 'https://www.linkedin.com/company/contoh',
+                'website' => 'contoh.co.id',
+            ],
+        ]);
+
+        $jsonLd = $this->metaFor($this->team)['jsonLd'];
+
+        // The key the link was stored under is not published; a bare host is not a
+        // `sameAs` claim. Whatever survives is an absolute URL.
+        $this->assertSame([
+            'https://instagram.com/contoh',
+            'https://www.linkedin.com/company/contoh',
+        ], $jsonLd['sameAs']);
+    }
+
+    public function test_a_profile_without_usable_links_has_no_same_as(): void
+    {
+        CompanyProfile::factory()->create([
+            'team_id' => $this->team->id,
+            'social_links' => ['instagram' => '@contoh'],
+        ]);
+
+        $this->assertArrayNotHasKey('sameAs', $this->metaFor($this->team)['jsonLd']);
+    }
+
     public function test_the_head_payload_contains_one_json_ld_script(): void
     {
         CompanyProfile::factory()->create([

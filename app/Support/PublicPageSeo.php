@@ -177,6 +177,7 @@ final class PublicPageSeo
     public function jsonLd(): array
     {
         $address = trim((string) $this->profile?->address);
+        $sameAs = $this->sameAs();
 
         $data = [
             '@context' => 'https://schema.org',
@@ -193,12 +194,44 @@ final class PublicPageSeo
                 '@type' => 'PostalAddress',
                 'streetAddress' => $address,
             ],
+            'sameAs' => $sameAs === [] ? null : $sameAs,
         ];
 
         return array_filter(
             $data,
             static fn (mixed $value): bool => $value !== null && $value !== '',
         );
+    }
+
+    /**
+     * Profiles the tenant publishes elsewhere, as schema.org `sameAs`.
+     *
+     * The links were already editable in `company_profiles.social_links` but never
+     * reached the structured data, so a tenant's own social presence had to be
+     * discovered by the engine on its own. Only absolute `http(s)` values are
+     * kept: a relative path or a bare handle would be an invalid `sameAs` claim,
+     * and the key a link is stored under is not sent — the engine cares about the
+     * URL, and dropping keys means adding a new platform needs no migration.
+     *
+     * @return list<string>
+     */
+    public function sameAs(): array
+    {
+        $links = $this->profile?->social_links;
+
+        if ($links === null) {
+            return [];
+        }
+
+        $urls = [];
+
+        foreach ($links as $url) {
+            if (Str::startsWith($url, ['http://', 'https://'])) {
+                $urls[] = $url;
+            }
+        }
+
+        return array_values(array_unique($urls));
     }
 
     /**

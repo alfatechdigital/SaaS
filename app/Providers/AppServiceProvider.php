@@ -8,8 +8,10 @@ use App\Models\Lead;
 use App\Models\PortfolioItem;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Team;
 use App\Models\Transaction;
 use App\Observers\ActivityObserver;
+use App\Observers\PublicSeoObserver;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -50,13 +52,35 @@ class AppServiceProvider extends ServiceProvider
      * N. Jobs that work for a tenant must opt in explicitly with
      * {@see TenantContext::runFor()}.
      *
+     * The `sync` driver is exempt: it does not run in a worker but inline, inside
+     * the request or command that dispatched the job — the same process that set
+     * the tenant on purpose. Clearing it there would not protect anything, and
+     * would break the rest of that request (every tenant-scoped query after the
+     * dispatch would fail loudly).
+     *
      * @see \docs\implementation\phase-02-tenant-context.md tugas 2.1.4
      */
     protected function configureTenantContext(): void
     {
-        Event::listen(JobProcessing::class, function (): void {
+        Event::listen(JobProcessing::class, function (JobProcessing $event): void {
+            if ($this->connectionRunsInline($event->connectionName)) {
+                return;
+            }
+
             app(TenantContext::class)->forget();
         });
+    }
+
+    /**
+     * Whether the named queue connection executes jobs in the current process.
+     */
+    protected function connectionRunsInline(?string $connectionName): bool
+    {
+        if ($connectionName === null) {
+            return false;
+        }
+
+        return config("queue.connections.{$connectionName}.driver") === 'sync';
     }
 
     /**
@@ -92,6 +116,21 @@ class AppServiceProvider extends ServiceProvider
 
         foreach ($models as $model) {
             $model::observe(ActivityObserver::class);
+        }
+
+        // Sitemap pings follow public changes only (B-8) — the profile and the
+        // portfolio feed the page and its sitemap; projects, tasks, leads, content,
+        // and transactions do not. The tenant itself is observed too, because a
+        // rename moves the canonical URL and a moderation/suspension decision
+        // changes whether the page may be indexed at all.
+        $publicModels = [
+            CompanyProfile::class,
+            PortfolioItem::class,
+            Team::class,
+        ];
+
+        foreach ($publicModels as $model) {
+            $model::observe(PublicSeoObserver::class);
         }
     }
 

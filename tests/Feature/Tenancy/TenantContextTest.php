@@ -143,6 +143,24 @@ class TenantContextTest extends TestCase
         $this->assertNull($this->context->team());
     }
 
+    /**
+     * The `sync` connection runs the job inline, in the request that dispatched
+     * it, so the tenant the request resolved is still the right answer afterwards.
+     * Forgetting it there would break every tenant-scoped query later in the same
+     * request.
+     */
+    public function test_a_sync_job_keeps_the_tenant_of_the_caller(): void
+    {
+        $team = Team::factory()->create();
+
+        $this->context->set($team, TenantContextOrigin::Path);
+
+        Event::dispatch(new JobProcessing('sync', $this->createMock(QueueJob::class)));
+
+        $this->assertSame($team->id, $this->context->team()?->id);
+        $this->assertSame(TenantContextOrigin::Path, $this->context->origin());
+    }
+
     public function test_resolving_a_team_route_activates_that_tenant(): void
     {
         [$team, $owner] = $this->teamWithOwner();
