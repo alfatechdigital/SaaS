@@ -199,6 +199,40 @@ WHATSAPP_VERIFY_TOKEN=      # bebas, harus sama dengan yang diisi di dashboard M
 3. Salin **App Secret** ke `WHATSAPP_APP_SECRET`, lalu `php artisan config:clear`.
 4. Uji: kirim pesan WhatsApp ke nomor tenant → baris baru di `whatsapp_messages`.
 
+#### B-3.3 Bot dua arah — ✅ Selesai 2026-11-10 (tugas 10 Nov)
+
+Bot deterministik (tanpa AI): sapa → nama → perusahaan → kebutuhan → lead. Setiap langkah ada karena langkah berikutnya butuh data yang hanya bisa diberikan pelanggan.
+
+| State                       | Yang dilakukan                                                                                     |
+| --------------------------- | -------------------------------------------------------------------------------------------------- |
+| `new`                       | Balas sapaan + tanya nama → `awaiting_name`                                                        |
+| `awaiting_name`             | Simpan `contact_name`, tanya perusahaan → `awaiting_company`                                        |
+| `awaiting_company`          | Simpan `company_name`, tanya kebutuhan → `awaiting_message`                                         |
+| `awaiting_message`          | Simpan kebutuhan, buat lead (bila berhak), → `completed`                                             |
+| `completed` / `handed_over` | **Diam.** Lead sudah ada, atau manusia sudah mengambil alih                                          |
+
+| Berkas                                         | Isi                                                                                                                       |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Migrasi `create_whatsapp_conversations`        | `whatsapp_conversations`: `team_id`+`contact_number` unik, `state`, `contact_name`, `company_name`, `lead_id`, dua timestamp aktivitas |
+| Migrasi `add_processed_at_to_whatsapp_messages`| `processed_at` — penanda pesan sudah dijawab bot, membuat retry job aman                                                     |
+| `App\Enums\WhatsAppConversationState`          | Enam state + `answersAutomatically()` (satu-satunya penentu "bot boleh jawab?")                                              |
+| `App\Support\WhatsApp\WhatsAppBot`             | Alur percakapan, pembuatan lead, pencatatan balasan keluar                                                                   |
+| `App\Jobs\ReplyToWhatsAppMessageJob`           | Turunan `TenantJob`; dijalankan dari antrian, bukan di dalam webhook                                                          |
+| `App\Support\WhatsApp\WhatsAppWebhookProcessor`| Menjadwalkan job balasan setiap pesan masuk baru                                                                             |
+
+Keputusan yang perlu diingat:
+
+- **Balasan dikirim dulu, state disimpan kemudian.** Kalau pengiriman gagal, percakapan tidak maju — retry menanyakan hal yang sama, bukan melewati pertanyaan yang tak pernah dibaca pelanggan.
+- **`processed_at` mencegah balasan ganda** saat job di-retry; ditandai setelah bot selesai, bukan sebelum.
+- **Webhook tetap cepat**: Meta menuntut respons dalam hitungan detik, sedangkan balasan adalah panggilan keluar yang bisa lambat — karena itu pekerjaan balasan ada di antrian (`WHATSAPP_QUEUE`).
+- **Lead hanya dibuat bila plan punya `lead_management`.** Tenant yang membeli `whatsapp_bot` sebagai add-on tanpa CRM tetap dapat percakapan, tanpa layar lead yang tidak bisa dibuka.
+- **Lead dari WhatsApp** memakai `source = 'whatsapp'`, `phone` = nomor pengirim, `status = new`, dan `next_follow_up = 'Besok'` (nilai yang sama dengan saran form lead).
+- **Pesan non-teks** (gambar/audio/dokumen) dijawab "hanya bisa membaca pesan teks" dan **tidak** memajukan state.
+- **Tenant disuspend** → tidak ada balasan otomatis sama sekali.
+- Pesan keluar ikut disimpan (`direction = outbound`) sehingga percakapan terbaca utuh; status `sent` bila provider memberi id, `logged` bila memakai driver `log`.
+
+Test: `tests/Feature/WhatsAppBotTest.php` (9 kasus) — sapaan pertama, alur penuh sampai lead (nama, perusahaan, kebutuhan, `next_follow_up`), percakapan `completed` tidak dibalas lagi, `handed_over` diam, tenant disuspend diam, pesan non-teks tidak memajukan state, plan tanpa `lead_management` tidak membuat lead, retry tidak membalas dua kali, dan webhook nyata memulai percakapan.
+
 ### Item B-4 — Katalog / Pesanan / Keranjang
 
 | Aspek                   | Keterangan                                                                                            |
