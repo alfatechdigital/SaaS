@@ -2,7 +2,7 @@
 
 > **Versi:** 2.1.0 — revisi 2026-10-28 akibat keputusan paket (lihat [Riwayat Perubahan](#riwayat-perubahan)).
 > **Status:** 🚧 **BERJALAN** — Fase 1, 2, dan 3 (SEO) + SEO automation selesai dengan gate lolos lokal (2026-10-21, 2026-10-27, 2026-10-29, 2026-11-02).
-> ⚠️ **Drift per 2026-11-10:** 3 hari kerja terlewat (5–10 Nov); 03–04 Nov sudah dikejar (§4.1–§4.3 + desain tabel). Lihat [§5.0 Progress Tracker](#50-progress-tracker).
+> ⚠️ **Drift per 2026-11-10:** 2 hari kerja terlewat (9–10 Nov); 03–05 Nov sudah dikejar. Lihat [§5.0 Progress Tracker](#50-progress-tracker).
 > **Periode:** 1 Oktober 2026 → 31 Desember 2026; coding berhenti **17 Des**, **launching 1 Januari 2027**.
 > **Pola kerja:** 4 hari/minggu, **Senin–Kamis** — tersedia **53 hari kerja**.
 > **Asumsi kecepatan:** pengerjaan memakai **AI agent**, ±**2,4×** kecepatan manual.
@@ -165,7 +165,7 @@ gantt
 ### 5.0 Progress Tracker
 
 > Centang tugas yang **sudah selesai & ter-commit**. Sumber kebenaran status tetap commit di `main`.
-> **Status per 10 Nov 2026:** ✅ selesai sampai **04 Nov 2026**; ⚠️ **terlewat 05–10 Nov 2026** (3 hari kerja).
+> **Status per 10 Nov 2026:** ✅ selesai sampai **05 Nov 2026**; ⚠️ **terlewat 09–10 Nov 2026** (2 hari kerja).
 
 **Oktober 2026 — Fondasi & Prioritas Urgent**
 
@@ -192,7 +192,7 @@ gantt
 - [x] **02 Nov** — SEO automation (B-8)
 - [x] **03 Nov** — Fase 4 `Feature` enum + `config/plans.php`
 - [x] **04 Nov** — Fase 4 entitlement + desain tabel
-- [ ] **05 Nov** ⚠️ — WhatsApp (1) pengiriman dasar
+- [x] **05 Nov** — WhatsApp (1) pengiriman dasar
 - [ ] **09 Nov** ⚠️ — WhatsApp (2) webhook masuk
 - [ ] **10 Nov** ⚠️ — WhatsApp (3) bot dua arah
 - [ ] **11 Nov** — WhatsApp (4) template, log & kuota

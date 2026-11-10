@@ -119,11 +119,44 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | Aspek                   | Keterangan                                                                                                          |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1 sebagai **bot dua arah** (pengiriman + webhook masuk + balasan otomatis). |
-| **Fondasi siap**        | ⚠️ Sebagian: entitlement ✅, pola job konteks tenant ✅ (Fase 2)                                                    |
-| **Sisa pekerjaan**      | Integrasi penyedia (mis. WhatsApp Business API), template pesan, antrian pengiriman, log pengiriman, kuota          |
+| **Fondasi siap**        | ✅ Pengiriman dasar (05 Nov) + entitlement `whatsapp_bot` + pola job konteks tenant                                        |
+| **Sisa pekerjaan**      | Template pesan, log pengiriman, kuota (11 Nov); webhook masuk & routing (9 Nov); balasan otomatis (10 Nov)          |
 | **Risiko utama**        | Biaya per pesan, aturan kebijakan penyedia, penyalahgunaan (spam) oleh tenant                                       |
-| **Prasyarat keputusan** | Persetujuan produk + keputusan penyedia                                                                             |
+| **Prasyarat keputusan** | ✅ Dijawab 2026-11-10 — **Meta WhatsApp Cloud API langsung**, kredensial **per tenant**                             |
 | **Estimasi besar**      | Sedang–Tinggi                                                                                                       |
+
+#### B-3.1 Pengiriman dasar — ✅ Selesai 2026-11-10 (tugas 05 Nov)
+
+Keputusan pemilik produk 2026-11-10, menggantikan "BSP vs Meta" yang masih terbuka:
+
+- **Driver default = Meta WhatsApp Cloud API langsung**, bukan BSP perantara. Satu vendor lebih sedikit, tetapi verifikasi bisnis tetap wajib.
+- **Kredensial per tenant**, bukan satu nomor milik Alfatech: setiap tenant menghubungkan nomor WhatsApp Business-nya sendiri.
+
+Yang dibangun:
+
+| Berkas                                          | Isi                                                                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `config/whatsapp.php` + `.env.example`          | `driver` (`log` default, `meta` untuk produksi), `graph.base_url`, `graph.version` (dipin, tidak mengambang), `timeout`, `queue`      |
+| Migrasi `add_whatsapp_credentials_to_teams`     | `whatsapp_phone_number_id`, `whatsapp_business_account_id`, `whatsapp_access_token`, `whatsapp_connected_at`                          |
+| `App\Models\Team`                               | `connectWhatsApp()`, `disconnectWhatsApp()`, `isWhatsAppConnected()`, `whatsappCredentials()`; token di-cast `encrypted`             |
+| `App\Contracts\WhatsAppDriver`                  | Antarmuka `send(WhatsAppCredentials, WhatsAppMessage): ?string`                                                                       |
+| `App\Support\WhatsApp\MetaCloudDriver`          | `POST {graph}/{version}/{phone_number_id}/messages`, Bearer token tenant, `type=text`                                                 |
+| `App\Support\WhatsApp\LogDriver`                | Tidak mengirim apa pun; default agar clone baru/CI tak pernah membangunkan orang sungguhan                                            |
+| `App\Support\WhatsApp\WhatsAppSender`           | Gerbang tunggal: cek entitlement `whatsapp_bot` → kredensial terhubung → kirim. Menolak tanpa melempar (job basi bukan bug)           |
+| `App\Jobs\SendWhatsAppMessageJob`               | Turunan `TenantJob` (konteks tenant dari payload), `tries = 3`, backoff 10/60/300 detik, antrian dari config                          |
+| `App\Exceptions\WhatsAppDeliveryFailed`         | `retryable`: 429/5xx/timeout boleh diulang; 400/401/403 langsung gagal permanen                                                       |
+
+Kenapa token tidak di `teams.settings`: kolom itu ditulis lewat `setSetting()` dan dibaca sebagai preferensi biasa, jadi satu `dd()` cukup untuk membocorkan token. Kolom sendiri + cast `encrypted` membuat nilai di database tidak terbaca tanpa `APP_KEY`, dan `disconnectWhatsApp()` menghapusnya, bukan hanya menandainya.
+
+Test: `tests/Feature/WhatsAppDeliveryTest.php` (12 kasus, semua HTTP di-fake) — bentuk request & normalisasi nomor (`08…` → `628…`), konteks tenant aktif saat mengirim, 401 gagal permanen, 503 boleh diulang, tenant tanpa fitur/kredensial tidak mengirim, token terenkripsi di database, driver `log` tidak menyentuh jaringan.
+
+**Pekerjaan platform (pemilik produk, paralel — bukan kode):**
+
+1. Buat akun **Meta Business** → verifikasi bisnis (KYC, 1–7 hari kerja).
+2. Tambahkan **nomor WhatsApp Business** dan ambil `phone_number_id` + **permanent token** (System User, bukan token sementara 24 jam).
+3. Ajukan **template pesan** yang akan dipakai untuk pesan keluar di luar jendela 24 jam (dibutuhkan 11 Nov).
+4. Simpan kredensial per tenant lewat `Team::connectWhatsApp()` (UI pengaturan tenant belum ada; sementara via Tinker/seeder).
+5. Setelah token ada: set `WHATSAPP_DRIVER=meta`, lalu kirim satu pesan nyata ke nomor sendiri sebagai uji akhir.
 
 ### Item B-4 — Katalog / Pesanan / Keranjang
 
