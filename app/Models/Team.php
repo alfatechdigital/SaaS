@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Concerns\GeneratesUniqueTeamSlugs;
+use App\Enums\Feature;
 use App\Enums\TeamRole;
+use App\Support\Entitlements;
 use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
@@ -184,6 +186,35 @@ class Team extends Model
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class);
+    }
+
+    /**
+     * Whether this tenant may use the given feature.
+     *
+     * The single entry point for entitlement checks (Fase 4, tugas 4.3.2). It
+     * asks {@see Entitlements}, which unions the plan with active add-ons — never
+     * compare plan names at a callsite, because moving a feature between plans
+     * must not require a code change.
+     *
+     * Entitlement is a *capability* question, not a *permission* one: "does this
+     * plan include lead management?" vs "may this member manage leads?" (the
+     * latter is {@see User::hasTeamPermission()}). Backend callsites need both.
+     */
+    public function can(Feature $feature): bool
+    {
+        return app(Entitlements::class)->can($this, $feature);
+    }
+
+    /**
+     * Every feature this tenant may use, as enum values (`lead_management`, …).
+     *
+     * Shape is ready for the Inertia `features` prop (Fase 4, tugas 4.4.1).
+     *
+     * @return array<int, string>
+     */
+    public function features(): array
+    {
+        return app(Entitlements::class)->features($this);
     }
 
     /**

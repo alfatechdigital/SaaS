@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\TeamEntitlementSource;
 use App\Models\CompanyProfile;
 use App\Models\ContentItem;
 use App\Models\Lead;
@@ -12,6 +13,8 @@ use App\Models\Team;
 use App\Models\Transaction;
 use App\Observers\ActivityObserver;
 use App\Observers\PublicSeoObserver;
+use App\Support\Entitlements;
+use App\Support\NoSubscriptionSource;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -31,6 +34,12 @@ class AppServiceProvider extends ServiceProvider
     {
         // One active tenant per request/job, shared by every collaborator.
         $this->app->singleton(TenantContext::class);
+
+        // Entitlements read purchased plans/add-ons through a source. Nobody
+        // subscribes yet, so nothing is purchased and every tenant runs on the
+        // default plan; the billing workstream swaps this binding.
+        $this->app->singleton(TeamEntitlementSource::class, NoSubscriptionSource::class);
+        $this->app->singleton(Entitlements::class);
     }
 
     /**
