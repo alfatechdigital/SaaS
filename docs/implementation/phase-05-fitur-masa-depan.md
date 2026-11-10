@@ -158,6 +158,47 @@ Test: `tests/Feature/WhatsAppDeliveryTest.php` (12 kasus, semua HTTP di-fake) �
 4. Simpan kredensial per tenant lewat `Team::connectWhatsApp()` (UI pengaturan tenant belum ada; sementara via Tinker/seeder).
 5. Setelah token ada: set `WHATSAPP_DRIVER=meta`, lalu kirim satu pesan nyata ke nomor sendiri sebagai uji akhir.
 
+#### B-3.2 Webhook masuk — ✅ Selesai 2026-11-10 (tugas 09 Nov)
+
+Keputusan 2026-11-10: **satu Meta App milik Alfatech**, semua tenant menghubungkan nomornya ke app itu (Embedded Signup). Konsekuensinya `app secret` dan `verify token` bersifat **deployment-level**, bukan per tenant — berbeda dari kredensial nomor yang tetap per tenant.
+
+| Berkas                                            | Isi                                                                                                                                                            |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `routes/webhooks.php`                             | `GET /webhooks/whatsapp` (handshake) dan `POST /webhooks/whatsapp` (notifikasi), terdaftar **di luar grup `web`** — tanpa session, CSRF, atau prop Inertia        |
+| `bootstrap/app.php`                               | Grup `webhooks` didaftarkan lewat `withRouting(then:)`; komentar menjelaskan kenapa tidak boleh ada `auth` di sana                                                |
+| `App\Http\Middleware\VerifyWhatsAppSignature`     | HMAC-SHA256 atas **raw body** dibandingkan dengan `hash_equals`; header `X-Hub-Signature-256`                                                                   |
+| `App\Http\Controllers\Webhooks\WhatsAppWebhookController` | `verify()` mengembalikan `hub.challenge` apa adanya (plain text); `receive()` menjawab 200 untuk payload valid, 400 hanya bila body bukan JSON                 |
+| `App\Support\WhatsApp\WhatsAppWebhookProcessor`   | Routing ke tenant lewat `metadata.phone_number_id`; verifikasi WABA id bila tenant menyimpannya; dedupe `wamid`; penulisan di dalam `TenantContext::runFor()`     |
+| Migrasi `create_whatsapp_messages`                | `whatsapp_messages`: `team_id`, `direction`, `wamid` (unique), `from_number`, `to_number`, `type`, `body`, `status`, `provider_payload`, `received_at`            |
+| `App\Models\WhatsAppMessage`                      | Model tenant-scoped (`BelongsToTeam`); tabel ditulis eksplisit karena Eloquent akan menghasilkan `whats_app_messages`                                            |
+| `App\Enums\WhatsAppMessageDirection`              | `inbound`/`outbound`                                                                                                                                            |
+| `App\Enums\TenantContextOrigin`                   | Kasus baru `Webhook` — jejak konteks menjelaskan tenant diresolusi dari metadata provider, bukan dari request pengguna                                           |
+
+Keputusan desain yang perlu diingat:
+
+- **Signature dihitung atas byte mentah.** Menandatangani ulang `$request->all()` setelah decode JSON akan selalu gagal, karena urutan/normalisasi byte tidak sama.
+- **Tanpa `app secret` = tolak semua** (403), bukan "lewati verifikasi". Salah konfigurasi tidak boleh berubah menjadi pintu terbuka.
+- **Nomor tak dikenal → 200 tanpa simpan.** Membalas selain 200 membuat Meta mengulang selamanya, padahal payload itu tidak akan pernah bisa disimpan.
+- **Retry Meta tidak menggandakan pesan**: `wamid` dicek sebelum insert dan unik di database.
+- **Callback status (`delivered`/`read`) dicatat di log, belum disimpan** — log pengiriman adalah tugas 11 Nov.
+- **Suspensi tenant tidak memblokir penyimpanan pesan masuk** (data tetap utuh); balasan otomatis yang nanti harus memeriksa `isSuspended()` (tugas 10 Nov).
+
+Test: `tests/Feature/WhatsAppWebhookTest.php` (15 kasus) — handshake benar/salah/tanpa token, pesan tersimpan ke tenant yang benar, isolasi antar-tenant, tanpa signature/ signature palsu/ secret salah/ tanpa `app secret` ditolak tanpa menyimpan, retry disimpan sekali, batch 2 pesan, nomor tak dikenal, WABA tidak cocok, callback status, body bukan JSON.
+
+**Kunci `.env` yang dibutuhkan (deployment, bukan rahasia per tenant):**
+
+```env
+WHATSAPP_APP_SECRET=        # App Secret dari Meta App → Settings → Basic
+WHATSAPP_VERIFY_TOKEN=      # bebas, harus sama dengan yang diisi di dashboard Meta
+```
+
+**Langkah platform (pemilik produk):**
+
+1. Di Meta App → **WhatsApp → Configuration**, isi Callback URL `https://<domain>/webhooks/whatsapp` dan Verify Token yang sama dengan `WHATSAPP_VERIFY_TOKEN`.
+2. **Subscribe ke field `messages`** (tanpa ini, Meta tidak mengirim apa pun).
+3. Salin **App Secret** ke `WHATSAPP_APP_SECRET`, lalu `php artisan config:clear`.
+4. Uji: kirim pesan WhatsApp ke nomor tenant → baris baru di `whatsapp_messages`.
+
 ### Item B-4 — Katalog / Pesanan / Keranjang
 
 | Aspek                   | Keterangan                                                                                            |
