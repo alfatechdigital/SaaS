@@ -45,6 +45,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, PortfolioItem> $portfolioItems
  * @property-read Collection<int, ActivityLog> $activityLogs
  * @property-read Collection<int, WhatsAppMessage> $whatsappMessages
+ * @property-read Collection<int, WhatsAppConversation> $whatsappConversations
  */
 #[Fillable(['name', 'slug', 'public_page_enabled', 'suspended_at', 'settings'])]
 class Team extends Model
@@ -295,6 +296,16 @@ class Team extends Model
     public function whatsappMessages(): HasMany
     {
         return $this->hasMany(WhatsAppMessage::class);
+    }
+
+    /**
+     * Get all WhatsApp conversations of this team.
+     *
+     * @return HasMany<WhatsAppConversation, $this>
+     */
+    public function whatsappConversations(): HasMany
+    {
+        return $this->hasMany(WhatsAppConversation::class);
     }
 
     /**

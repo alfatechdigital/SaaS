@@ -3,6 +3,7 @@
 namespace App\Support\WhatsApp;
 
 use App\Enums\TenantContextOrigin;
+use App\Jobs\ReplyToWhatsAppMessageJob;
 use App\Models\Team;
 use App\Models\WhatsAppMessage;
 use App\Support\TenantContext;
@@ -153,7 +154,7 @@ final class WhatsAppWebhookProcessor
 
             // Created through the relation so the owning tenant is set without
             // making `team_id` mass-assignable.
-            $team->whatsappMessages()->create([
+            $created = $team->whatsappMessages()->create([
                 'direction' => 'inbound',
                 'wamid' => $wamid,
                 'from_number' => $this->digits($from),
@@ -163,6 +164,10 @@ final class WhatsAppWebhookProcessor
                 'provider_payload' => $message,
                 'received_at' => $this->receivedAt($message),
             ]);
+
+            // The bot answers out of band: Meta wants this response in seconds,
+            // and the reply is an outbound call that may fail and be retried.
+            ReplyToWhatsAppMessageJob::dispatch((int) $team->getKey(), (int) $created->getKey());
 
             $stored++;
         }

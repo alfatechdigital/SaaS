@@ -4,9 +4,9 @@ namespace App\Models;
 
 use App\Concerns\BelongsToTeam;
 use App\Enums\WhatsAppMessageDirection;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
 /**
  * One WhatsApp message, inbound or outbound (B-3, gelombang 1).
@@ -25,9 +25,10 @@ use Illuminate\Support\Carbon;
  * @property string|null $body
  * @property string|null $status
  * @property array<string, mixed>|null $provider_payload
- * @property Carbon|null $received_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable|null $received_at
+ * @property CarbonImmutable|null $processed_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
     'direction',
@@ -39,6 +40,7 @@ use Illuminate\Support\Carbon;
     'status',
     'provider_payload',
     'received_at',
+    'processed_at',
 ])]
 class WhatsAppMessage extends Model
 {
@@ -62,6 +64,7 @@ class WhatsAppMessage extends Model
             'direction' => WhatsAppMessageDirection::class,
             'provider_payload' => 'array',
             'received_at' => 'datetime',
+            'processed_at' => 'datetime',
         ];
     }
 }
