@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\TeamEntitlementSource;
+use App\Contracts\WhatsAppDriver;
 use App\Models\CompanyProfile;
 use App\Models\ContentItem;
 use App\Models\Lead;
@@ -16,6 +17,8 @@ use App\Observers\PublicSeoObserver;
 use App\Support\Entitlements;
 use App\Support\NoSubscriptionSource;
 use App\Support\TenantContext;
+use App\Support\WhatsApp\LogDriver;
+use App\Support\WhatsApp\MetaCloudDriver;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Queue\Events\JobProcessing;
@@ -24,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use InvalidArgumentException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,6 +44,20 @@ class AppServiceProvider extends ServiceProvider
         // default plan; the billing workstream swaps this binding.
         $this->app->singleton(TeamEntitlementSource::class, NoSubscriptionSource::class);
         $this->app->singleton(Entitlements::class);
+
+        // One WhatsApp transport per deployment. `log` by default, so nothing can
+        // reach a real number unless WHATSAPP_DRIVER says so.
+        $this->app->singleton(WhatsAppDriver::class, function (): WhatsAppDriver {
+            $driver = (string) config('whatsapp.driver', 'log');
+
+            return match ($driver) {
+                'meta' => new MetaCloudDriver,
+                'log' => new LogDriver,
+                default => throw new InvalidArgumentException(
+                    sprintf('Unsupported WhatsApp driver [%s]. Use "meta" or "log".', $driver),
+                ),
+            };
+        });
     }
 
     /**

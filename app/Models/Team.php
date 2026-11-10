@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Concerns\GeneratesUniqueTeamSlugs;
+use App\Data\WhatsAppCredentials;
 use App\Enums\Feature;
 use App\Enums\TeamRole;
 use App\Support\Entitlements;
+use Carbon\CarbonImmutable;
 use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,6 +26,10 @@ use Illuminate\Support\Carbon;
  * @property bool $public_page_enabled
  * @property Carbon|null $suspended_at
  * @property array<string, mixed>|null $settings
+ * @property string|null $whatsapp_phone_number_id
+ * @property string|null $whatsapp_business_account_id
+ * @property string|null $whatsapp_access_token
+ * @property CarbonImmutable|null $whatsapp_connected_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -218,6 +224,69 @@ class Team extends Model
     }
 
     /**
+     * Store the credentials of the tenant's own WhatsApp Business number.
+     *
+     * Deliberately a method rather than mass assignment: the columns are not
+     * fillable, so no request payload can point a tenant at someone else's number
+     * or token. The token is encrypted by the model cast.
+     */
+    public function connectWhatsApp(string $phoneNumberId, string $accessToken, ?string $businessAccountId = null): void
+    {
+        $this->whatsapp_phone_number_id = $phoneNumberId;
+        $this->whatsapp_access_token = $accessToken;
+        $this->whatsapp_business_account_id = $businessAccountId;
+        $this->whatsapp_connected_at = now();
+
+        $this->save();
+    }
+
+    /**
+     * Forget the tenant's WhatsApp credentials.
+     *
+     * The token is wiped, not merely flagged unused: leaving a live secret in the
+     * row after a tenant disconnects would be a leak waiting for a backup.
+     */
+    public function disconnectWhatsApp(): void
+    {
+        $this->whatsapp_phone_number_id = null;
+        $this->whatsapp_access_token = null;
+        $this->whatsapp_business_account_id = null;
+        $this->whatsapp_connected_at = null;
+
+        $this->save();
+    }
+
+    /**
+     * Whether this tenant may send messages through its own WhatsApp number.
+     */
+    public function isWhatsAppConnected(): bool
+    {
+        return $this->whatsappCredentials() !== null;
+    }
+
+    /**
+     * The credentials to send with, or `null` when no number is connected.
+     *
+     * Never hand the raw columns to a driver: this is the one place that decides
+     * what "connected" means.
+     */
+    public function whatsappCredentials(): ?WhatsAppCredentials
+    {
+        $phoneNumberId = $this->whatsapp_phone_number_id;
+        $accessToken = $this->whatsapp_access_token;
+
+        if ($phoneNumberId === null || $phoneNumberId === '' || $accessToken === null || $accessToken === '') {
+            return null;
+        }
+
+        return new WhatsAppCredentials(
+            phoneNumberId: $phoneNumberId,
+            accessToken: $accessToken,
+            businessAccountId: $this->whatsapp_business_account_id,
+        );
+    }
+
+    /**
      * Whether the platform operator has suspended this tenant.
      *
      * Suspension blocks the tenant shell and the public page, but deletes
@@ -280,6 +349,8 @@ class Team extends Model
             'public_page_enabled' => 'boolean',
             'suspended_at' => 'datetime',
             'settings' => 'array',
+            'whatsapp_access_token' => 'encrypted',
+            'whatsapp_connected_at' => 'datetime',
         ];
     }
 
