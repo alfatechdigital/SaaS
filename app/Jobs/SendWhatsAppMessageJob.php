@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Data\WhatsAppMessage;
+use App\Data\OutgoingWhatsAppMessage;
 use App\Exceptions\WhatsAppDeliveryFailed;
 use App\Models\Team;
 use App\Support\WhatsApp\WhatsAppSender;
@@ -31,7 +31,7 @@ final class SendWhatsAppMessageJob extends TenantJob
     public int $tries = 3;
 
     /**
-     * @param  string  $to  Recipient phone number, normalised by {@see WhatsAppMessage::text()}.
+     * @param  string  $to  Recipient phone number, normalised by {@see OutgoingWhatsAppMessage::text()}.
      * @param  string  $body  Message text.
      */
     public function __construct(int $teamId, public string $to, public string $body)
@@ -54,7 +54,7 @@ final class SendWhatsAppMessageJob extends TenantJob
     protected function handleForTenant(Team $team): void
     {
         try {
-            app(WhatsAppSender::class)->sendFor($team, WhatsAppMessage::text($this->to, $this->body));
+            app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text($this->to, $this->body));
         } catch (WhatsAppDeliveryFailed $exception) {
             if ($exception->retryable) {
                 throw $exception;

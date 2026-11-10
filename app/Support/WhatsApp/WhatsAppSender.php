@@ -3,7 +3,7 @@
 namespace App\Support\WhatsApp;
 
 use App\Contracts\WhatsAppDriver;
-use App\Data\WhatsAppMessage;
+use App\Data\OutgoingWhatsAppMessage;
 use App\Enums\Feature;
 use App\Exceptions\WhatsAppDeliveryFailed;
 use App\Models\Team;
@@ -33,7 +33,7 @@ final class WhatsAppSender
      *
      * @throws WhatsAppDeliveryFailed when the provider refuses or is unreachable
      */
-    public function sendFor(Team $team, WhatsAppMessage $message): ?string
+    public function sendFor(Team $team, OutgoingWhatsAppMessage $message): ?string
     {
         if (! $team->can(Feature::WhatsAppBot)) {
             Log::info('Skipping a WhatsApp message because the tenant plan does not include the bot.', [

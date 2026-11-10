@@ -15,7 +15,7 @@ use InvalidArgumentException;
  * Text only for now (§B.4.1 wave 1). Template messages are part of the 11 Nov
  * task, which is the point where Meta's 24-hour session window starts to matter.
  */
-final readonly class WhatsAppMessage
+final readonly class OutgoingWhatsAppMessage
 {
     public function __construct(
         public string $to,

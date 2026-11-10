@@ -47,4 +47,25 @@ return [
 
     'timeout' => (int) env('WHATSAPP_TIMEOUT', 10),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Webhook
+    |--------------------------------------------------------------------------
+    |
+    | `verify_token` is echoed back during Meta's subscription handshake; it is a
+    | shared secret for a one-time URL ownership check, not a password.
+    |
+    | `app_secret` signs the body of every notification (X-Hub-Signature-256). Both
+    | belong to the single Meta app that all tenants connect their numbers to, so
+    | they are deployment configuration — unlike the per-tenant credentials stored
+    | on `teams`. Leave them empty and the webhook refuses every request rather
+    | than accepting unsigned traffic.
+    |
+    */
+
+    'webhook' => [
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+    ],
+
 ];

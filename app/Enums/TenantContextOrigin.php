@@ -28,4 +28,7 @@ enum TenantContextOrigin: string
 
     /** Platform layer: an operator acting across tenants. */
     case Platform = 'platform';
+
+    /** Inbound third-party callback: the tenant was resolved from provider metadata. */
+    case Webhook = 'webhook';
 }

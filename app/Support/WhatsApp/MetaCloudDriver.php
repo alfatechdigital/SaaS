@@ -3,8 +3,8 @@
 namespace App\Support\WhatsApp;
 
 use App\Contracts\WhatsAppDriver;
+use App\Data\OutgoingWhatsAppMessage;
 use App\Data\WhatsAppCredentials;
-use App\Data\WhatsAppMessage;
 use App\Exceptions\WhatsAppDeliveryFailed;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Http;
  */
 final class MetaCloudDriver implements WhatsAppDriver
 {
-    public function send(WhatsAppCredentials $credentials, WhatsAppMessage $message): ?string
+    public function send(WhatsAppCredentials $credentials, OutgoingWhatsAppMessage $message): ?string
     {
         try {
             $response = Http::withToken($credentials->accessToken)

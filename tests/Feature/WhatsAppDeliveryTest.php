@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Contracts\TeamEntitlementSource;
 use App\Contracts\WhatsAppDriver;
-use App\Data\WhatsAppMessage;
+use App\Data\OutgoingWhatsAppMessage;
 use App\Exceptions\WhatsAppDeliveryFailed;
 use App\Jobs\SendWhatsAppMessageJob;
 use App\Models\Team;
@@ -62,7 +62,7 @@ class WhatsAppDeliveryTest extends TestCase
 
         $team = $this->connectedTenant();
 
-        $messageId = app(WhatsAppSender::class)->sendFor($team, WhatsAppMessage::text('0812-3456-7890', 'Halo, ini uji coba.'));
+        $messageId = app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('0812-3456-7890', 'Halo, ini uji coba.'));
 
         $this->assertSame('wamid.ABC', $messageId);
 
@@ -99,7 +99,7 @@ class WhatsAppDeliveryTest extends TestCase
         $team = $this->connectedTenant();
 
         try {
-            app(WhatsAppSender::class)->sendFor($team, WhatsAppMessage::text('08123456789', 'Halo.'));
+            app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'));
             $this->fail('A 401 should have raised a delivery failure.');
         } catch (WhatsAppDeliveryFailed $exception) {
             $this->assertFalse($exception->retryable);
@@ -115,7 +115,7 @@ class WhatsAppDeliveryTest extends TestCase
         $team = $this->connectedTenant();
 
         try {
-            app(WhatsAppSender::class)->sendFor($team, WhatsAppMessage::text('08123456789', 'Halo.'));
+            app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'));
             $this->fail('A 503 should have raised a delivery failure.');
         } catch (WhatsAppDeliveryFailed $exception) {
             $this->assertTrue($exception->retryable);
@@ -130,7 +130,7 @@ class WhatsAppDeliveryTest extends TestCase
         $this->plans->planCode = 'basic';
         $this->app->forgetInstance(Entitlements::class);
 
-        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, WhatsAppMessage::text('08123456789', 'Halo.')));
+        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
 
         Http::assertNothingSent();
     }
@@ -142,7 +142,7 @@ class WhatsAppDeliveryTest extends TestCase
         $team = Team::factory()->create();
 
         $this->assertFalse($team->isWhatsAppConnected());
-        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, WhatsAppMessage::text('08123456789', 'Halo.')));
+        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
 
         Http::assertNothingSent();
     }
@@ -177,15 +177,15 @@ class WhatsAppDeliveryTest extends TestCase
 
         $team = $this->connectedTenant();
 
-        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, WhatsAppMessage::text('08123456789', 'Halo.')));
+        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
 
         Http::assertNothingSent();
     }
 
     public function test_recipient_numbers_are_normalised_to_international_digits(): void
     {
-        $this->assertSame('6281234567890', WhatsAppMessage::text('+62 812-3456-7890', 'Halo.')->to);
-        $this->assertSame('6281234567890', WhatsAppMessage::text('0812 3456 7890', 'Halo.')->to);
+        $this->assertSame('6281234567890', OutgoingWhatsAppMessage::text('+62 812-3456-7890', 'Halo.')->to);
+        $this->assertSame('6281234567890', OutgoingWhatsAppMessage::text('0812 3456 7890', 'Halo.')->to);
     }
 
     public function test_an_impossible_recipient_is_rejected_before_sending(): void
@@ -194,13 +194,13 @@ class WhatsAppDeliveryTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
 
-        WhatsAppMessage::text('123', 'Halo.');
+        OutgoingWhatsAppMessage::text('123', 'Halo.');
     }
 
     public function test_an_empty_message_is_rejected_before_sending(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
-        WhatsAppMessage::text('08123456789', '   ');
+        OutgoingWhatsAppMessage::text('08123456789', '   ');
     }
 }

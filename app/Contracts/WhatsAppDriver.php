@@ -2,8 +2,8 @@
 
 namespace App\Contracts;
 
+use App\Data\OutgoingWhatsAppMessage;
 use App\Data\WhatsAppCredentials;
-use App\Data\WhatsAppMessage;
 use App\Exceptions\WhatsAppDeliveryFailed;
 use App\Support\WhatsApp\LogDriver;
 use App\Support\WhatsApp\MetaCloudDriver;
@@ -25,5 +25,5 @@ interface WhatsAppDriver
      *
      * @throws WhatsAppDeliveryFailed when the provider refuses the message or is unreachable
      */
-    public function send(WhatsAppCredentials $credentials, WhatsAppMessage $message): ?string;
+    public function send(WhatsAppCredentials $credentials, OutgoingWhatsAppMessage $message): ?string;
 }
