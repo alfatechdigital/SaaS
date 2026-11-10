@@ -1,6 +1,6 @@
 # Fase 4 — Plan & Feature Entitlement
 
-> **Status:** 🚧 **BERJALAN** — §4.1 (`Feature` enum) dan §4.2 (`config/plans.php` + test) selesai 2026-11-10. Berikutnya §4.3 (entitlement service) sesuai jadwal 04 Nov.
+> **Status:** 🚧 **BERJALAN** — §4.1 (`Feature` enum), §4.2 (`config/plans.php` + test), §4.3 (entitlement service) dan §4.5 (desain tabel langganan) selesai 2026-11-10. Berikutnya: §4.4 (prop frontend) dipindah ke 26 Nov bersama UI billing.
 > **Ketergantungan:** Fase 2 selesai (tenant context & isolasi). Bisa paralel dengan Fase 3.
 > **Menambah fitur produk?** ❌ Tidak. Fase ini membangun **mekanisme**, bukan fitur.
 > **Dokumen induk:** [`../IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md)
@@ -121,7 +121,7 @@ Setelah Fase 1–3:
 
 Harga dan metadata billing **sengaja tidak** dimasukkan: itu milik workstream billing (B-2).
 
-### 4.3 Service Entitlement (ADR-06)
+### 4.3 Service Entitlement (ADR-06) — ✅ Selesai 2026-11-10
 
 | #     | Tugas                                                                             | Catatan                                          |
 | ----- | --------------------------------------------------------------------------------- | ------------------------------------------------ |
@@ -133,6 +133,24 @@ Harga dan metadata billing **sengaja tidak** dimasukkan: itu milik workstream bi
 | 4.3.6 | Test: tenant pada plan A tidak dapat mengakses fitur eksklusif plan B             |                                                  |
 | 4.3.7 | Test: plan default terpakai bila tenant belum punya langganan                     |                                                  |
 
+**Hasil 2026-11-10.** Implementasi memakai satu service + satu *seam* sumber data, supaya workstream billing tinggal mengganti binding tanpa menyentuh pemanggil:
+
+| Berkas                                   | Isi                                                                                                                                                                                                                                 |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `App\Contracts\TeamEntitlementSource`    | **Baru.** `planCodeFor(Team): ?string` + `addonFeaturesFor(Team): array<Feature>`. Inilah tempat `subscriptions`/`tenant_addons` dibaca nanti.                                                                                       |
+| `App\Support\NoSubscriptionSource`       | **Baru.** Bindings hari ini: tidak ada langganan & tidak ada add-on → `null` + `[]`, sehingga semua tenant memakai `default_plan`.                                                                                                   |
+| `App\Support\Entitlements`               | **Baru.** `planCode()`, `plan()`, `features()`, `can()`, `limit()`. Fitur efektif = fitur plan ∪ add-on aktif, dideduplikasi. Plan tak dikenal → `App\Exceptions\UnknownPlan` (gagal keras, bukan diam-diam jatuh ke default).          |
+| `App\Models\Team`                        | `can(Feature): bool` (tugas 4.3.2) dan `features(): array<int, string>` (tugas 4.3.3) — keduanya mendelegasikan ke `Entitlements`.                                                                                                 |
+| `App\Concerns\AuthorizesTeamModule`      | Method baru `authorizeFeature(Team, Feature)` → `abort_unless($team->can($feature), 403)` (tugas 4.3.4).                                                                                                                            |
+| `tests/Unit/PlanNameBranchGuardTest`     | **Baru.** Memindai `app/`, `routes/`, `resources/js/` dan gagal bila ada `->plan` atau perbandingan nama plan (tugas 4.3.5). Baris komentar dilewati agar dokumentasi boleh menyebut pola yang dilarang.                             |
+
+Keputusan turunan:
+
+- **Tidak ada `isPro()`/`isBasic()`.** Pertanyaan selalu berbentuk fitur, karena itu satu-satunya bentuk yang selamat saat isi paket berubah.
+- **Tidak ada cache entitlement.** Sumber datanya config (sudah di-cache Laravel) + satu query saat billing hadir; cache akan menambah risiko basi saat plan berubah (RF4-4) tanpa manfaat terukur sekarang.
+- **`limit()` hanya membaca** angka kuota, belum menegakkan apa pun — penegakan butuh `usage_counters` (workstream billing).
+- `HandleInertiaRequests` **belum** menyentuh `features`: sesuai jadwal ia pindah ke 26 Nov bersama UI billing.
+
 ### 4.4 Integrasi ke Frontend
 
 | #     | Tugas                                                                                                   | Catatan                               |
@@ -143,7 +161,7 @@ Harga dan metadata billing **sengaja tidak** dimasukkan: itu milik workstream bi
 | 4.4.4 | Pastikan prop lama `teamPermissions` **tidak** dihapus                                                  | Menghindari regresi besar             |
 | 4.4.5 | Dokumentasikan perbedaan `can('canManageLeads')` (permission) vs `can('lead_management')` (entitlement) | Ini sumber kebingungan paling mungkin |
 
-### 4.5 Desain Subscription (dokumen di fase ini — implementasi menyusul di gelombang 1)
+### 4.5 Desain Subscription (dokumen di fase ini — implementasi menyusul di gelombang 1) — ✅ Desain selesai 2026-11-10
 
 | #     | Tugas                                                                                                            | Catatan                                                                                                                                                                                   |
 | ----- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -154,6 +172,47 @@ Harga dan metadata billing **sengaja tidak** dimasukkan: itu milik workstream bi
 | 4.5.5 | Tetapkan desain quota/usage                                                                                      | `usage_counters`: `team_id`, `metric`, `period`, `used`, `limit`                                                                                                                          |
 | 4.5.6 | Tetapkan desain add-on                                                                                           | Tabel `tenant_addons`: `team_id`, `feature`, `starts_at`, `ends_at`, `status`                                                                                                             |
 | 4.5.7 | **Jangan** membuat migrasi/tabel di dalam fase ini — implementasinya adalah workstream gelombang 1 yang terpisah | Batas scope Fase 4 = abstraksi akses                                                                                                                                                      |
+
+**Desain 2026-11-10** — ini **rancangan**, bukan skema yang sudah ada. Tidak ada migrasi yang ditulis di fase ini.
+
+Bentuk tabel (kolom wajib; nama kolom mengikuti konvensi proyek, uang dalam rupiah bulat):
+
+| Tabel            | Kolom                                                                                                                                                                                                                     | Constraint & catatan                                                                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plans`          | `id`, `code` (unique), `name`, `description` (nullable), `price_monthly`, `price_yearly` (nullable), `is_active`                                                                                                           | Hanya dibuat bila config dipromosikan ke tabel (TD4-1). Config tetap sumber awal; seeder menyalin isinya. `code` = kunci yang sama dengan `config('plans.plans')`                                                                       |
+| `subscriptions`  | `id`, `team_id`, `plan_code`, `status`, `trial_ends_at` (nullable), `current_period_start`, `current_period_end`, `canceled_at` (nullable), `provider`, `provider_reference` (nullable), `ended_at` (nullable), timestamps    | **Maksimal satu langganan berjalan per tenant.** MySQL tidak punya *partial index*, jadi pakai kolom ter-GENERATE `current_team_id` = `IF(ended_at IS NULL, team_id, NULL)` + `UNIQUE(current_team_id)`; Postgres memakai partial unique index biasa |
+| `usage_counters` | `id`, `team_id`, `metric`, `period` (mis. `2027-01`), `used`, `limit`, timestamps                                                                                                                                          | `UNIQUE(team_id, metric, period)`. `metric` = `users`, `ai_generations`                                                             |
+| `tenant_addons`  | `id`, `team_id`, `feature`, `starts_at`, `ends_at` (nullable), `status`, `provider_reference` (nullable), timestamps                                                                                                       | `feature` menyimpan nilai `App\Enums\Feature`. **Satu add-on aktif per (tenant, fitur)** — jamin juga di service saat memperpanjang, bukan hanya di index                                                                                |
+
+Mesin status `subscriptions` (tugas 4.5.3):
+
+```text
+trialing ──bayar──▶ active ──gagal bayar──▶ past_due ──(+7 hari)──▶ expired ──(30 hari)──▶ dihapus
+    │                  │                       │
+    └──batal──▶ canceled ◀──minta downgrade/batal (berlaku di current_period_end)──┘
+```
+
+- `suspended` dipakai untuk tenant yang dinonaktifkan platform (mekanisme Fase 2 sudah ada di `teams.suspended_at`) — bukan status langganan, supaya dua sebab tidak tercampur.
+- Transisi `past_due → expired` dijalankan **job harian** (`subscriptions:check-period`), bukan webhook: provider Indonesia hanya memberi tahu hasil satu transaksi.
+
+Implikasi provider (tugas 4.5.4, D-05 = Midtrans):
+
+- Midtrans **bukan** subscription engine: tidak ada objek langganan, tidak ada retry otomatis, tidak ada *proration*. Karena itu `subscriptions` adalah **sumber kebenaran**, dan provider hanya menagih per periode.
+- Webhook = notifikasi status **transaksi**, bukan status langganan → handler harus idempoten, memverifikasi signature, dan memetakan transaksi → invoice → `subscriptions`.
+- Perpanjangan, dunning (3 pengingat), dan suspend otomatis **wajib** dijadwalkan sendiri (`schedule:run`), bukan diandalkan pada provider.
+
+Kuota (tugas 4.5.5):
+
+- `usage_counters.limit` **disalin** dari `config('plans.plans.{code}.limits')` saat periode dimulai — nilai dihitung ulang bila plan berubah, tapi angka historis tetap terbaca.
+- `users` dihitung dari `team_members`, tidak di-increment manual (menghindari drift saat undangan dibatalkan).
+- `ai_generations` di-increment per pemakaian; `0` berarti fitur tidak tersedia untuk plan tersebut.
+
+Add-on (tugas 4.5.6):
+
+- `tenant_addons` **tidak** mengubah `subscriptions.plan_code` — label paket tenant tetap Basic/Plus/Pro (§B.4.2).
+- Entitlement membaca add-on lewat `TeamEntitlementSource::addonFeaturesFor()` yang sudah ada; implementasi billing cukup mengembalikan fitur dengan `status = active` dan `ends_at` null/`> now()`.
+
+> **Tidak ada migrasi di fase ini** (tugas 4.5.7). Empat tabel di atas baru dibuat bersama B-2 (SaaS billing, mulai 17 Nov).
 
 ### 4.6 Aturan Akses pada Fitur yang Sudah Ada
 
@@ -188,14 +247,16 @@ Harga dan metadata billing **sengaja tidak** dimasukkan: itu milik workstream bi
 
 | Area                                                          | Perubahan                                                                              |
 | ------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `App\Enums\Feature`                                           | **Baru**                                                                               |
-| `config/plans.php`                                            | **Baru**                                                                               |
-| `App\Support\Entitlements` (atau `App\Services\Entitlements`) | **Baru**                                                                               |
-| `App\Models\Team`                                             | Tambah `can()`, `features()`                                                           |
-| `App\Http\Middleware\HandleInertiaRequests`                   | Bagikan `features`                                                                     |
-| Helper otorisasi                                              | **Baru** (mis. `App\Concerns\AuthorizesFeature` atau perluasan `AuthorizesTeamModule`) |
-| Controller domain                                             | **Tidak** diubah (belum ada pembatasan)                                                |
-| Test                                                          | Suite entitlement                                                                      |
+| `App\Enums\Feature`                                           | ✅ **Baru 2026-11-10**                                                                  |
+| `config/plans.php`                                            | ✅ **Baru 2026-11-10**                                                                  |
+| `App\Support\Entitlements`                                   | ✅ **Baru 2026-11-10** — resolusi fitur efektif (plan ∪ add-on), `can()`, `limit()`     |
+| `App\Contracts\TeamEntitlementSource`                        | ✅ **Baru 2026-11-10** — seam sumber langganan; billing mengganti bindingnya             |
+| `App\Support\NoSubscriptionSource`                           | ✅ **Baru 2026-11-10** — binding hari ini: tanpa langganan, tanpa add-on                 |
+| `App\Models\Team`                                            | ✅ Tambah `can()`, `features()`                                                         |
+| `App\Http\Middleware\HandleInertiaRequests`                   | ⏳ **Pindah ke 26 Nov** (bersama UI billing) — bagikan `features`                       |
+| Helper otorisasi                                              | ✅ `AuthorizesTeamModule::authorizeFeature()` 2026-11-10                                |
+| Controller domain                                             | **Tidak** diubah (belum ada pembatasan — tugas 4.6.1)                                  |
+| Test                                                          | ✅ `tests/Feature/EntitlementTest.php`, `tests/Unit/PlanNameBranchGuardTest.php`         |
 
 ---
 
@@ -235,15 +296,15 @@ Fase ini murni kode aplikasi (enum, config, service, composable). Tidak ada damp
 
 ## Testing Requirements
 
-| Test                 | Cakupan                                                         |
-| -------------------- | --------------------------------------------------------------- |
-| Resolusi entitlement | Plan dasar → hanya fitur dasarnya                               |
-| Warisan plan         | Plus mencakup fitur Basic (bila memakai resolusi berjenjang)    |
-| Default plan         | Tenant tanpa langganan memakai plan default                     |
-| Penolakan akses      | Endpoint ber-entitlement menolak tenant yang tidak berhak (403) |
-| Validasi config      | Semua nama fitur di `config/plans.php` ada di enum `Feature`    |
-| Frontend prop        | `features` terbagikan & bertipe benar                           |
-| Regresi              | `teamPermissions` masih bekerja seperti sebelumnya              |
+| Test                 | Cakupan                                                         | Status |
+| -------------------- | --------------------------------------------------------------- | ------ |
+| Resolusi entitlement | Plan dasar → hanya fitur dasarnya                               | ✅     |
+| Warisan plan         | Plus mencakup fitur Basic (bila memakai resolusi berjenjang)    | ✅ (duplikasi eksplisit — diuji `PlansConfigTest`) |
+| Default plan         | Tenant tanpa langganan memakai plan default                     | ✅     |
+| Penolakan akses      | Endpoint ber-entitlement menolak tenant yang tidak berhak (403) | ✅ (`authorizeFeature`) |
+| Validasi config      | Semua nama fitur di `config/plans.php` ada di enum `Feature`    | ✅     |
+| Frontend prop        | `features` terbagikan & bertipe benar                           | ⏳ 26 Nov |
+| Regresi              | `teamPermissions` masih bekerja seperti sebelumnya              | ✅ (suite lama hijau) |
 
 Perintah: `composer test` dan `npm run types:check`.
 
@@ -318,6 +379,7 @@ Perintah: `composer test` dan `npm run types:check`.
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
 | 2026-11-10 | Dokumen fase ini memuat dua instruksi bertentangan soal isi enum: larangan memasukkan fitur yang belum ada kodenya (§Prerequisites) vs daftar fitur B.4.1 yang harus tercermin penuh di plan (§Pembaruan 2026-10-28) | Cakupan enum & isi plan   | Diputuskan pemilik produk: ikuti B.4.1 penuh — lihat tabel keputusan di bawah              |
 | 2026-11-10 | `array_merge(...array_map(...))` pada array ber-key (`config('plans.plans')`) melempar "unknown named parameters" di PHP 8.5                                                                                  | Test config gagal         | Bungkus dengan `array_values()` sebelum spread                                              |
+| 2026-11-10 | `php.ini` Laragon yang aktif sempat tidak memuat `pdo_sqlite`, sehingga `composer test` gagal "could not find driver" — bukan disebabkan perubahan kode. `php -m` sekarang memuat `pdo_sqlite`/`sqlite3` (PHP 8.3.2 aktif) | Verifikasi suite terhambat | Dicek ulang; suite dijalankan penuh dan hijau. Tidak ada perubahan `php.ini` dari sesi ini |
 
 ---
 
@@ -333,6 +395,10 @@ Perintah: `composer test` dan `npm run types:check`.
 | 2026-11-10 | Fitur di config disimpan sebagai string nilai enum, bukan objek `Feature`                                                                                       | Config tetap data murni dan aman di-cache; `PlansConfigTest` yang menjaga validitas terhadap enum                                                               |
 | 2026-11-10 | Kuota user disimpan di `plans.<code>.limits.users`; kuota AI di `limits.ai_generations_per_month` (0 untuk Basic/Plus)                                          | Kuota adalah bagian entitlement (B.4.1); penegakannya menyusul di §4.3 dan billing                                                                              |
 | 2026-11-10 | Harga, trial, dan metadata billing tidak dimasukkan ke `config/plans.php`                                                                                       | Milik workstream billing (B-2, mulai 17 Nov); bentuknya belum diputuskan dan tidak boleh diramalkan di sini                                                     |
+| 2026-11-10 | Sumber langganan diabstraksi jadi `App\Contracts\TeamEntitlementSource` dengan binding `NoSubscriptionSource`                                                   | Billing tinggal mengganti satu binding; pemanggil `Team::can()` tidak berubah. Sekaligus mewadahi union plan ∪ add-on di satu tempat (PDR-06)                     |
+| 2026-11-10 | Plan tak dikenal melempar `UnknownPlan`, tidak jatuh ke default                                                                                                 | Plan salah berarti bug data/config; menurunkannya diam-diam ke Basic akan menyalahkan tenant yang sudah bayar untuk paket lebih tinggi                          |
+| 2026-11-10 | `Entitlements` tidak menyimpan cache hasil resolusi                                                                                                             | Sumber datanya config (sudah di-cache) + satu query nanti; cache menambah risiko basi (RF4-4) tanpa manfaat terukur                                             |
+| 2026-11-10 | Larangan branch plan ditegakkan sebagai test (`PlanNameBranchGuardTest`), bukan sekadar catatan review                                                          | DoD #4 meminta verifikasi; test membuat regresi tertangkap di CI, bukan saat review manual                                                                       |
 
 ---
 
