@@ -1,6 +1,6 @@
 # Fase 4 — Plan & Feature Entitlement
 
-> **Status:** RENCANA — belum dimulai.
+> **Status:** 🚧 **BERJALAN** — §4.1 (`Feature` enum) dan §4.2 (`config/plans.php` + test) selesai 2026-11-10. Berikutnya §4.3 (entitlement service) sesuai jadwal 04 Nov.
 > **Ketergantungan:** Fase 2 selesai (tenant context & isolasi). Bisa paralel dengan Fase 3.
 > **Menambah fitur produk?** ❌ Tidak. Fase ini membangun **mekanisme**, bukan fitur.
 > **Dokumen induk:** [`../IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md)
@@ -86,7 +86,7 @@ Setelah Fase 1–3:
 
 ## Tasks
 
-### 4.1 `Feature` Enum
+### 4.1 `Feature` Enum — ✅ Selesai 2026-11-10
 
 | #     | Tugas                                                                     | Catatan                                                            |
 | ----- | ------------------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -95,21 +95,19 @@ Setelah Fase 1–3:
 | 4.1.3 | Beri label/metode bantu seperlunya (`label()`)                            | Konsisten dengan enum proyek ini                                   |
 | 4.1.4 | Dokumentasikan bahwa penambahan kasus ke enum ≠ fitur sudah boleh dirilis | Mencegah kesalahpahaman                                            |
 
-**Usulan isi awal (perlu konfirmasi PDR-01):**
+**Isi enum final (diputuskan 2026-11-10) — 22 kasus mengikuti [B.4.1](../IMPLEMENTATION_PLAN.md#b41-matriks-fitur):**
 
-| Fitur                                                                                      | Alasan ada di enum sekarang                                                               |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `CompanyProfile`                                                                           | Sudah ada di aplikasi                                                                     |
-| `ContentManagement`                                                                        | Sudah ada (kalender konten)                                                               |
-| `LeadManagement`                                                                           | Sudah ada (CRM)                                                                           |
-| `ProjectManagement`                                                                        | Sudah ada                                                                                 |
-| `FinanceOverview`                                                                          | Sudah ada                                                                                 |
-| `CustomDomain`                                                                             | Ide tier (belum disetujui) — daftarkan **hanya** bila PDR-04 sudah mengarah ke "akan ada" |
-| `WhatsAppIntegration`, `Catalog`, `PaymentGateway`, `AdvancedSeo`, `AiAssist`, `Analytics` | Ide tier — daftarkan **hanya** bila sudah ada arah jelas                                  |
+| Kelompok                  | Fitur                                                                                                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Semua paket (Basic ke atas) | `company_profile`, `template_selection`, `subdomain`, `seo_basic`, `google_analytics`, `file_upload`, `contact_form`                                                                        |
+| Plus ke atas              | `custom_domain`, `whatsapp_bot`, `payment_gateway`, `form_builder`, `email_automation`, `google_sheet_sync`, `lead_management`                                                               |
+| Pro saja (bisa add-on)    | `project_management`, `task_management`, `content_planner`, `finance`, `seo_advanced`, `content_ai`, `advanced_automation`, `role_management`                                                |
 
-> **Rekomendasi:** untuk ide yang belum disetujui, **jangan** masukkan ke enum. Cukup catat di dokumen. Enum yang berisi fitur hantu akan membingungkan developer dan menciptakan ekspektasi palsu.
+`ssl` dan `prioritas support` **tidak** dijadikan kasus enum: keduanya komitmen layanan, bukan kapabilitas aplikasi yang bisa digerbangi kode.
 
-### 4.2 Definisi Plan (Config — ADR-14)
+> **Keputusan 2026-11-10 — menggantikan rekomendasi lama di atas.** Pemilik produk memilih enum mengikuti **seluruh baris fungsional B.4.1**, termasuk fitur yang belum dibangun (`form_builder`, `email_automation`, `google_sheet_sync`, `content_ai`, `seo_advanced`, `advanced_automation`, `custom_domain`). Alasannya: `config/plans.php` harus 1:1 dengan matriks komersial, dan menambah kasus enum jauh lebih murah daripada plan yang isinya tidak lengkap. Kasus enum **tetap bukan** klaim rilis — docblock `App\Enums\Feature` menyatakannya eksplisit.
+
+### 4.2 Definisi Plan (Config — ADR-14) — ✅ Selesai 2026-11-10
 
 | #     | Tugas                                                                           | Catatan                                                                                                                                                 |
 | ----- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -118,6 +116,10 @@ Setelah Fase 1–3:
 | 4.2.3 | Tambahkan kunci `default_plan`                                                  | Tenant tanpa langganan → default                                                                                                                        |
 | 4.2.4 | Sertakan duplikasi fitur tingkat bawah ke atas (atau sediakan resolusi warisan) | Pilih satu pola: duplikasi eksplisit atau resolusi berjenjang. **Rekomendasi:** resolusi berjenjang agar tidak ada daftar ganda yang bisa tidak sinkron |
 | 4.2.5 | Test: config valid, tidak ada nama fitur yang salah ketik                       | Validasi enum                                                                                                                                           |
+
+**Hasil 2026-11-10.** `config/plans.php` berisi `default_plan => 'basic'` dan tiga paket dengan daftar fitur **ditulis ulang** per paket (duplikasi eksplisit sesuai OQ-F4-2, bukan warisan berjenjang), plus `limits.users` 1/3/10 dan `limits.ai_generations_per_month` 0/0/50. Fitur disimpan sebagai **string nilai enum** agar config tetap data murni dan aman di-cache; validitasnya dijaga `tests/Unit/PlansConfigTest.php` (nama fitur terhadap enum, tidak ada duplikat, tidak ada fitur yatim, kuota sesuai matriks, Plus ⊇ Basic, Pro ⊇ Plus, modul tidak bocor ke Basic/Plus).
+
+Harga dan metadata billing **sengaja tidak** dimasukkan: itu milik workstream billing (B-2).
 
 ### 4.3 Service Entitlement (ADR-06)
 
@@ -312,11 +314,10 @@ Perintah: `composer test` dan `npm run types:check`.
 
 > **Diisi oleh agen/developer saat pengerjaan.**
 
-_Belum ada entri._
-
-| Tanggal | Temuan | Dampak | Tindakan |
-| ------- | ------ | ------ | -------- |
-| —       | —      | —      | —        |
+| Tanggal    | Temuan                                                                                                                                                                                                        | Dampak                    | Tindakan                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
+| 2026-11-10 | Dokumen fase ini memuat dua instruksi bertentangan soal isi enum: larangan memasukkan fitur yang belum ada kodenya (§Prerequisites) vs daftar fitur B.4.1 yang harus tercermin penuh di plan (§Pembaruan 2026-10-28) | Cakupan enum & isi plan   | Diputuskan pemilik produk: ikuti B.4.1 penuh — lihat tabel keputusan di bawah              |
+| 2026-11-10 | `array_merge(...array_map(...))` pada array ber-key (`config('plans.plans')`) melempar "unknown named parameters" di PHP 8.5                                                                                  | Test config gagal         | Bungkus dengan `array_values()` sebelum spread                                              |
 
 ---
 
@@ -324,11 +325,14 @@ _Belum ada entri._
 
 > **Diisi saat pengerjaan.**
 
-_Belum ada entri._
-
-| Tanggal | Keputusan | Alasan |
-| ------- | --------- | ------ |
-| —       | —         | —      |
+| Tanggal    | Keputusan                                                                                                                                                     | Alasan                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-10 | Cakupan enum = seluruh baris fungsional B.4.1 (22 kasus), bukan hanya fitur yang sudah dibangun                                                                | Plan di `config/plans.php` harus 1:1 dengan matriks komersial; menambah kasus enum murah, plan yang tidak lengkap menyesatkan                                    |
+| 2026-11-10 | `ssl` dan `prioritas support` tidak dijadikan kasus enum                                                                                                       | Komitmen layanan/infrastruktur, bukan kapabilitas aplikasi yang bisa digerbangi kode                                                                            |
+| 2026-11-10 | Daftar fitur tiap plan ditulis ulang (duplikasi eksplisit), bukan warisan berjenjang                                                                            | OQ-F4-2 (2026-10-28); satu plan dibaca sekali, tidak ada promosi fitur diam-diam saat harga berubah                                                             |
+| 2026-11-10 | Fitur di config disimpan sebagai string nilai enum, bukan objek `Feature`                                                                                       | Config tetap data murni dan aman di-cache; `PlansConfigTest` yang menjaga validitas terhadap enum                                                               |
+| 2026-11-10 | Kuota user disimpan di `plans.<code>.limits.users`; kuota AI di `limits.ai_generations_per_month` (0 untuk Basic/Plus)                                          | Kuota adalah bagian entitlement (B.4.1); penegakannya menyusul di §4.3 dan billing                                                                              |
+| 2026-11-10 | Harga, trial, dan metadata billing tidak dimasukkan ke `config/plans.php`                                                                                       | Milik workstream billing (B-2, mulai 17 Nov); bentuknya belum diputuskan dan tidak boleh diramalkan di sini                                                     |
 
 ---
 

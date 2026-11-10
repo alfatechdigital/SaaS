@@ -1,7 +1,8 @@
 # Jadwal Implementasi — Alfatech Office (SaaS Multi-Tenant)
 
 > **Versi:** 2.1.0 — revisi 2026-10-28 akibat keputusan paket (lihat [Riwayat Perubahan](#riwayat-perubahan)).
-> **Status:** 🚧 **BERJALAN** — Fase 1, 2, dan 3 (SEO) selesai dengan gate lolos lokal (2026-10-21, 2026-10-27, 2026-10-29); Fase 4 mulai 3 November.
+> **Status:** 🚧 **BERJALAN** — Fase 1, 2, dan 3 (SEO) + SEO automation selesai dengan gate lolos lokal (2026-10-21, 2026-10-27, 2026-10-29, 2026-11-02).
+> ⚠️ **Drift per 2026-11-10:** 5 hari kerja terlewat (3–10 Nov); baru **03 Nov** yang dikejar (§4.1–§4.2 selesai 10 Nov). Lihat [§5.0 Progress Tracker](#50-progress-tracker).
 > **Periode:** 1 Oktober 2026 → 31 Desember 2026; coding berhenti **17 Des**, **launching 1 Januari 2027**.
 > **Pola kerja:** 4 hari/minggu, **Senin–Kamis** — tersedia **53 hari kerja**.
 > **Asumsi kecepatan:** pengerjaan memakai **AI agent**, ±**2,4×** kecepatan manual.
@@ -160,6 +161,77 @@ gantt
 ## 5. Jadwal Rinci
 
 > Legenda: 🟥 = **jangan digeser** (jaring pengaman produk) · 🚦 = checkpoint · 🧊 = code freeze
+
+### 5.0 Progress Tracker
+
+> Centang tugas yang **sudah selesai & ter-commit**. Sumber kebenaran status tetap commit di `main`.
+> **Status per 10 Nov 2026:** ✅ selesai sampai **03 Nov 2026**; ⚠️ **terlewat 04–10 Nov 2026** (4 hari kerja).
+
+**Oktober 2026 — Fondasi & Prioritas Urgent**
+
+- [x] **01 Okt** — P-0 Version control + mulai pengajuan akun provider
+- [x] **05 Okt** — P-1 Helper dua tenant + test `index` 8 modul
+- [x] **06 Okt** — P-1 Batas kepemilikan + bukti suite gagal + CI
+- [x] **07 Okt** — P-2 `TenantContext`
+- [x] **08 Okt** — P-2 Global scope (1)
+- [x] **12 Okt** — P-2 Global scope (2)
+- [x] **13 Okt** — P-2 Jalur khusus + audit `withoutTeamScope()`
+- [x] **14 Okt** — P-3 CI cross-engine + Redis
+- [x] **15 Okt** — P-4 Glosarium + P-5 Audit & backup
+- [x] **19 Okt** — Fase 1 dokumentasi + storage seam
+- [x] **20 Okt** — Fase 1 config + SSR
+- [x] **21 Okt** — Fase 1 meta dasar + audit keamanan + **Gate Fase 1**
+- [x] **22 Okt** — Fase 2 siklus hidup tenant
+- [x] **26 Okt** — Fase 2 settings + cache & log
+- [x] **27 Okt** — Fase 2 job pattern + **Gate Fase 2**
+- [x] **28 Okt** — Fase 3 SEO meta & structured data
+- [x] **29 Okt** — Fase 3 SEO robots & sitemap + **Gate Fase 3**
+
+**November 2026 — Fase 4 + Integrasi**
+
+- [x] **02 Nov** — SEO automation (B-8)
+- [x] **03 Nov** — Fase 4 `Feature` enum + `config/plans.php`
+- [ ] **04 Nov** ⚠️ — Fase 4 entitlement + desain tabel
+- [ ] **05 Nov** ⚠️ — WhatsApp (1) pengiriman dasar
+- [ ] **09 Nov** ⚠️ — WhatsApp (2) webhook masuk
+- [ ] **10 Nov** ⚠️ — WhatsApp (3) bot dua arah
+- [ ] **11 Nov** — WhatsApp (4) template, log & kuota
+- [ ] **12 Nov** 🚦 — WhatsApp (5) test + hardening — **CHECKPOINT-1**
+- [ ] **16 Nov** — Basic readiness (F-7)
+- [ ] **17 Nov** — SaaS billing (1) tabel + state machine
+- [ ] **18 Nov** — SaaS billing (2) subscription service
+- [ ] **19 Nov** — SaaS billing (3) invoice + dunning
+- [ ] **23 Nov** — SaaS billing (4) provider
+- [ ] **24 Nov** — SaaS billing (5) webhook
+- [ ] **25 Nov** — SaaS billing (6) rekonsiliasi + gating backend
+- [ ] **26 Nov** — SaaS billing (7) UI + panel platform (F-8)
+- [ ] **30 Nov** — SaaS billing (8) + onboarding self-service (F-9)
+
+**Desember 2026 — Billing, Payment Lite, Freeze**
+
+- [ ] **01 Des** — SaaS billing (9) test sandbox
+- [ ] **02 Des** — SaaS billing (10) hardening
+- [ ] **03 Des** 🚦 — SaaS billing (11) + **Gate Fase 4** — **CHECKPOINT-2**
+- [ ] **07 Des** — Payment Lite (1) invoice tenant
+- [ ] **08 Des** — Payment Lite (2) payment link
+- [ ] **09 Des** — Payment Lite (3) webhook
+- [ ] **10 Des** 🚦 — Payment Lite (4) halaman publik — **CHECKPOINT-3**
+- [ ] **14 Des** — Payment Lite (5) reminder & refund
+- [ ] **15 Des** — Payment Lite (6) test sandbox
+- [ ] **16 Des** — Payment Lite (7) hardening
+- [ ] **17 Des** 🧊 — **CODE FREEZE** + regression penuh + RC
+
+**21–31 Des 2026 — Deployment, Testing & UAT**
+
+- [ ] **21 Des** — Infrastruktur produksi
+- [ ] **22 Des** — Deployment + cutover SQLite → MySQL
+- [ ] **23 Des** — Testing (1) acceptance + isolasi tenant
+- [ ] **24 Des** — Testing (2) backup/restore + provider mode produksi
+- [ ] **28 Des** — Perbaikan temuan
+- [ ] **29 Des** — UAT / demo stakeholder
+- [ ] **30 Des** — Finalisasi + runbook
+- [ ] **31 Des** — Persiapan go-live
+- [ ] **01 Jan 2027** 🚀 — **LAUNCHING**
 
 ### 5.1 Oktober 2026 — Fondasi + Prioritas Urgent
 
