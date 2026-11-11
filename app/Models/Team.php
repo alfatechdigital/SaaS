@@ -46,6 +46,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, ActivityLog> $activityLogs
  * @property-read Collection<int, WhatsAppMessage> $whatsappMessages
  * @property-read Collection<int, WhatsAppConversation> $whatsappConversations
+ * @property-read Collection<int, UsageCounter> $usageCounters
  */
 #[Fillable(['name', 'slug', 'public_page_enabled', 'suspended_at', 'settings'])]
 class Team extends Model
@@ -306,6 +307,28 @@ class Team extends Model
     public function whatsappConversations(): HasMany
     {
         return $this->hasMany(WhatsAppConversation::class);
+    }
+
+    /**
+     * A numeric limit of this tenant's current plan, or `null` when the metric is
+     * not defined for it.
+     *
+     * For quota checks that must read the plan's number without enforcing it —
+     * see {@see Entitlements::limit()}.
+     */
+    public function planLimit(string $metric): ?int
+    {
+        return app(Entitlements::class)->limit($this, $metric);
+    }
+
+    /**
+     * The usage counters of this team, one row per metric per period.
+     *
+     * @return HasMany<UsageCounter, $this>
+     */
+    public function usageCounters(): HasMany
+    {
+        return $this->hasMany(UsageCounter::class);
     }
 
     /**

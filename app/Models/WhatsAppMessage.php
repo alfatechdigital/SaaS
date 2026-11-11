@@ -24,6 +24,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $type
  * @property string|null $body
  * @property string|null $status
+ * @property CarbonImmutable|null $delivered_at
+ * @property CarbonImmutable|null $read_at
+ * @property CarbonImmutable|null $failed_at
+ * @property string|null $failure_reason
  * @property array<string, mixed>|null $provider_payload
  * @property CarbonImmutable|null $received_at
  * @property CarbonImmutable|null $processed_at
@@ -41,6 +45,10 @@ use Illuminate\Database\Eloquent\Model;
     'provider_payload',
     'received_at',
     'processed_at',
+    'delivered_at',
+    'read_at',
+    'failed_at',
+    'failure_reason',
 ])]
 class WhatsAppMessage extends Model
 {
@@ -65,6 +73,9 @@ class WhatsAppMessage extends Model
             'provider_payload' => 'array',
             'received_at' => 'datetime',
             'processed_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'read_at' => 'datetime',
+            'failed_at' => 'datetime',
         ];
     }
 }

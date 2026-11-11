@@ -79,6 +79,11 @@ final class WhatsAppBot
             return;
         }
 
+        // Saved before replying: the customer has just written, which is exactly
+        // what opens Meta's 24-hour window. The sender reads `last_inbound_at` from
+        // this row, so leaving it unsaved would make the bot refuse its own reply.
+        $conversation->save();
+
         $reply = $this->replyFor($team, $conversation, $inbound);
 
         if ($reply === null) {

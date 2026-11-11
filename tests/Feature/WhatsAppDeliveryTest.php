@@ -56,11 +56,31 @@ class WhatsAppDeliveryTest extends TestCase
         return $team;
     }
 
+    /**
+     * A tenant the customer wrote to a moment ago.
+     *
+     * Meta's 24-hour window is open only after an inbound message, and the sender
+     * enforces it — so a free-text send without this row is a template failure, not
+     * a delivery test.
+     */
+    private function tenantInConversation(string $number = '628123456789'): Team
+    {
+        $team = $this->connectedTenant();
+
+        $team->whatsappConversations()->create([
+            'contact_number' => $number,
+            'state' => 'new',
+            'last_inbound_at' => now(),
+        ]);
+
+        return $team;
+    }
+
     public function test_a_text_message_is_posted_to_the_tenants_own_number(): void
     {
         Http::fake(['graph.example.test/*' => Http::response(['messages' => [['id' => 'wamid.ABC']]])]);
 
-        $team = $this->connectedTenant();
+        $team = $this->tenantInConversation('6281234567890');
 
         $messageId = app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('0812-3456-7890', 'Halo, ini uji coba.'));
 
@@ -78,7 +98,7 @@ class WhatsAppDeliveryTest extends TestCase
 
     public function test_sending_happens_inside_the_tenants_context(): void
     {
-        $team = $this->connectedTenant();
+        $team = $this->tenantInConversation();
         $seenTeamId = null;
 
         Http::fake(function () use (&$seenTeamId) {
@@ -96,7 +116,7 @@ class WhatsAppDeliveryTest extends TestCase
     {
         Http::fake(['graph.example.test/*' => Http::response(['error' => ['message' => 'Invalid OAuth access token']], 401)]);
 
-        $team = $this->connectedTenant();
+        $team = $this->tenantInConversation();
 
         try {
             app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'));
@@ -112,7 +132,7 @@ class WhatsAppDeliveryTest extends TestCase
     {
         Http::fake(['graph.example.test/*' => Http::response('upstream boom', 503)]);
 
-        $team = $this->connectedTenant();
+        $team = $this->tenantInConversation();
 
         try {
             app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'));
@@ -175,7 +195,7 @@ class WhatsAppDeliveryTest extends TestCase
         config(['whatsapp.driver' => 'log']);
         $this->app->forgetInstance(WhatsAppDriver::class);
 
-        $team = $this->connectedTenant();
+        $team = $this->tenantInConversation();
 
         $this->assertNull(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
 

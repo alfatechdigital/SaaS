@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\TemplateRequired;
 use App\Exceptions\WhatsAppDeliveryFailed;
+use App\Exceptions\WhatsAppRateLimited;
 use App\Models\Team;
 use App\Models\WhatsAppMessage;
 use App\Support\WhatsApp\WhatsAppBot;
@@ -57,6 +59,30 @@ final class ReplyToWhatsAppMessageJob extends TenantJob
 
         try {
             app(WhatsAppBot::class)->handle($team, $message);
+        } catch (WhatsAppRateLimited $exception) {
+            // Still too fast: put the message back rather than dropping the answer.
+            // Without a real queue (sync driver, tests) there is nothing to wait
+            // for, so the failure is recorded instead of looping.
+            if ($this->job !== null) {
+                $this->release($exception->retryAfter);
+
+                return;
+            }
+
+            Log::warning('A WhatsApp reply was rate limited with no queue to release to.', [
+                'team_id' => (int) $team->getKey(),
+                'retry_after' => $exception->retryAfter,
+            ]);
+
+            $this->fail($exception);
+
+            return;
+        } catch (TemplateRequired $exception) {
+            // The customer has not written for more than a day; only an approved
+            // template can reach them, and retrying cannot change that.
+            $this->fail($exception);
+
+            return;
         } catch (WhatsAppDeliveryFailed $exception) {
             if ($exception->retryable) {
                 throw $exception;

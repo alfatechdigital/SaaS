@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Team;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
@@ -140,7 +141,10 @@ class WhatsAppWebhookTest extends TestCase
         $this->assertSame('628111222333', $row->to_number);
         $this->assertSame('text', $row->type);
         $this->assertSame('Halo, saya mau tanya harga.', $row->body);
-        $this->assertSame('2025-11-10 10:40:00', $row->received_at);
+        $this->assertSame(
+            1762771200,
+            CarbonImmutable::parse($row->received_at, config('app.timezone'))->getTimestamp(),
+        );
     }
 
     public function test_a_message_from_another_tenant_is_never_mixed_in(): void

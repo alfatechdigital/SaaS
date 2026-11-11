@@ -68,4 +68,49 @@ return [
         'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Abuse Guards
+    |--------------------------------------------------------------------------
+    |
+    | `rate_limit.per_minute` caps how fast one tenant may send, so a broken loop
+    | or a compromised credential cannot drain a number's reputation in a minute.
+    | The monthly quota itself lives in `config/plans.php` — it is a plan feature,
+    | not a transport setting.
+    |
+    | `service_window.hours` is Meta's 24-hour rule: free text is only allowed
+    | within a day of the customer's last message. Outside it, an approved
+    | template is mandatory, and `template.language` is the default to request.
+    |
+    */
+
+    'rate_limit' => [
+        'per_minute' => (int) env('WHATSAPP_RATE_LIMIT_PER_MINUTE', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Monthly Allowance for Add-on Tenants
+    |--------------------------------------------------------------------------
+    |
+    | A plan whose feature list does not include `whatsapp_bot` reports a quota of
+    | zero, because the allowance is a plan limit. But §B.4.2 lets a tenant buy the
+    | bot as an add-on on any plan — and an add-on that grants a feature with no
+    | allowance would be a paid feature that cannot send a single message. Tenants
+    | in that position get the allowance below instead.
+    |
+    */
+
+    'quota' => [
+        'addon_allowance' => (int) env('WHATSAPP_ADDON_ALLOWANCE', 500),
+    ],
+
+    'service_window' => [
+        'hours' => (int) env('WHATSAPP_SERVICE_WINDOW_HOURS', 24),
+    ],
+
+    'template' => [
+        'language' => env('WHATSAPP_TEMPLATE_LANGUAGE', 'id'),
+    ],
+
 ];

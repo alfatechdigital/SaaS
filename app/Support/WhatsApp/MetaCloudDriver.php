@@ -30,16 +30,7 @@ final class MetaCloudDriver implements WhatsAppDriver
             $response = Http::withToken($credentials->accessToken)
                 ->acceptJson()
                 ->timeout((int) config('whatsapp.timeout', 10))
-                ->post($this->endpoint($credentials), [
-                    'messaging_product' => 'whatsapp',
-                    'recipient_type' => 'individual',
-                    'to' => $message->to,
-                    'type' => 'text',
-                    'text' => [
-                        'preview_url' => false,
-                        'body' => $message->body,
-                    ],
-                ]);
+                ->post($this->endpoint($credentials), $this->payload($message));
         } catch (ConnectionException $exception) {
             throw WhatsAppDeliveryFailed::unreachable($exception);
         }
@@ -51,6 +42,48 @@ final class MetaCloudDriver implements WhatsAppDriver
         $messageId = $response->json('messages.0.id');
 
         return is_string($messageId) ? $messageId : null;
+    }
+
+    /**
+     * Free text and templates are different `type` values, and Meta rejects a
+     * template sent as text (and vice versa) with an unhelpful 400.
+     *
+     * @return array<string, mixed>
+     */
+    private function payload(OutgoingWhatsAppMessage $message): array
+    {
+        $base = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $message->to,
+        ];
+
+        if ($message->isTemplate()) {
+            $template = [
+                'name' => (string) $message->templateName,
+                'language' => ['code' => (string) $message->templateLanguage],
+            ];
+
+            if ($message->parameters !== []) {
+                $template['components'] = [[
+                    'type' => 'body',
+                    'parameters' => array_map(
+                        fn (string $value): array => ['type' => 'text', 'text' => $value],
+                        $message->parameters,
+                    ),
+                ]];
+            }
+
+            return $base + ['type' => 'template', 'template' => $template];
+        }
+
+        return $base + [
+            'type' => 'text',
+            'text' => [
+                'preview_url' => false,
+                'body' => (string) $message->body,
+            ],
+        ];
     }
 
     private function endpoint(WhatsAppCredentials $credentials): string

@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $contact_name
  * @property string|null $company_name
  * @property int|null $lead_id
+ * @property CarbonImmutable|null $opted_out_at
  * @property CarbonImmutable|null $last_inbound_at
  * @property CarbonImmutable|null $last_outbound_at
  * @property CarbonImmutable|null $created_at
@@ -36,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'lead_id',
     'last_inbound_at',
     'last_outbound_at',
+    'opted_out_at',
 ])]
 class WhatsAppConversation extends Model
 {
@@ -69,6 +71,7 @@ class WhatsAppConversation extends Model
             'state' => WhatsAppConversationState::class,
             'last_inbound_at' => 'datetime',
             'last_outbound_at' => 'datetime',
+            'opted_out_at' => 'datetime',
         ];
     }
 }

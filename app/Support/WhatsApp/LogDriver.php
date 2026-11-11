@@ -21,7 +21,10 @@ final class LogDriver implements WhatsAppDriver
         Log::info('WhatsApp message (log driver, not sent).', [
             'phone_number_id' => $credentials->phoneNumberId,
             'to' => $message->to,
+            'type' => $message->isTemplate() ? 'template' : 'text',
             'body' => $message->body,
+            'template' => $message->templateName,
+            'parameters' => $message->parameters,
         ]);
 
         return null;

@@ -5,21 +5,29 @@ namespace App\Data;
 use InvalidArgumentException;
 
 /**
- * One outgoing WhatsApp text message.
+ * One outgoing WhatsApp message: free text or an approved template.
  *
  * Normalisation happens here so every driver sees the same shape Meta expects:
  * digits only, no `+`, no spaces, and an Indonesian `08…` number rewritten to
  * `628…`. Getting that wrong is invisible until a customer reports a message that
  * never arrived, so it is checked — not silently passed through.
  *
- * Text only for now (§B.4.1 wave 1). Template messages are part of the 11 Nov
- * task, which is the point where Meta's 24-hour session window starts to matter.
+ * Two kinds exist because Meta treats them differently. Free text is only allowed
+ * within 24 hours of the customer's last message; outside that window an approved
+ * template is mandatory. The kind is explicit on the object so the sender can
+ * enforce the rule instead of a driver guessing.
  */
 final readonly class OutgoingWhatsAppMessage
 {
-    public function __construct(
+    /**
+     * @param  array<int, string>  $parameters  Template body parameters, in order.
+     */
+    private function __construct(
         public string $to,
-        public string $body,
+        public ?string $body = null,
+        public ?string $templateName = null,
+        public ?string $templateLanguage = null,
+        public array $parameters = [],
     ) {
         //
     }
@@ -35,7 +43,36 @@ final readonly class OutgoingWhatsAppMessage
             throw new InvalidArgumentException('A WhatsApp message cannot have an empty body.');
         }
 
-        return new self(self::normaliseNumber($to), $body);
+        return new self(self::normaliseNumber($to), body: $body);
+    }
+
+    /**
+     * Build a template message, required outside the 24-hour service window.
+     *
+     * @param  array<int, string>  $parameters
+     *
+     * @throws InvalidArgumentException when the number or template name is unusable
+     */
+    public static function template(string $to, string $templateName, array $parameters = [], ?string $language = null): self
+    {
+        if (trim($templateName) === '') {
+            throw new InvalidArgumentException('A WhatsApp template message needs a template name.');
+        }
+
+        return new self(
+            to: self::normaliseNumber($to),
+            templateName: $templateName,
+            templateLanguage: $language ?? (string) config('whatsapp.template.language', 'id'),
+            parameters: array_values(array_map('strval', $parameters)),
+        );
+    }
+
+    /**
+     * Whether this message must be sent as an approved template.
+     */
+    public function isTemplate(): bool
+    {
+        return $this->templateName !== null;
     }
 
     /**

@@ -34,6 +34,7 @@ class PlansConfigTest extends TestCase
             $this->assertArrayHasKey('limits', $plan, "Plan [{$code}] has no limits.");
             $this->assertArrayHasKey('users', $plan['limits'], "Plan [{$code}] has no user quota.");
             $this->assertArrayHasKey('ai_generations_per_month', $plan['limits'], "Plan [{$code}] has no AI quota.");
+            $this->assertArrayHasKey('whatsapp_messages_per_month', $plan['limits'], "Plan [{$code}] has no WhatsApp quota.");
         }
     }
 
@@ -82,6 +83,13 @@ class PlansConfigTest extends TestCase
         $this->assertSame(1, $this->plans()['basic']['limits']['users']);
         $this->assertSame(3, $this->plans()['plus']['limits']['users']);
         $this->assertSame(10, $this->plans()['pro']['limits']['users']);
+    }
+
+    public function test_whatsapp_quota_is_zero_without_the_bot_feature(): void
+    {
+        $this->assertSame(0, $this->plans()['basic']['limits']['whatsapp_messages_per_month']);
+        $this->assertSame(1000, $this->plans()['plus']['limits']['whatsapp_messages_per_month']);
+        $this->assertSame(5000, $this->plans()['pro']['limits']['whatsapp_messages_per_month']);
     }
 
     public function test_higher_plans_include_the_lower_plan_features(): void

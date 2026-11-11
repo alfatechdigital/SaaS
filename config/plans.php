@@ -51,6 +51,7 @@ return [
             'limits' => [
                 'users' => 1,
                 'ai_generations_per_month' => 0,
+                'whatsapp_messages_per_month' => 0,
             ],
         ],
 
@@ -75,6 +76,7 @@ return [
             'limits' => [
                 'users' => 3,
                 'ai_generations_per_month' => 0,
+                'whatsapp_messages_per_month' => 1000,
             ],
         ],
 
@@ -107,6 +109,7 @@ return [
             'limits' => [
                 'users' => 10,
                 'ai_generations_per_month' => 50,
+                'whatsapp_messages_per_month' => 5000,
             ],
         ],
 

@@ -3,6 +3,7 @@
 namespace App\Support\WhatsApp;
 
 use App\Enums\TenantContextOrigin;
+use App\Enums\WhatsAppConversationState;
 use App\Jobs\ReplyToWhatsAppMessageJob;
 use App\Models\Team;
 use App\Models\WhatsAppMessage;
@@ -102,10 +103,11 @@ final class WhatsAppWebhookProcessor
         $statuses = $this->objects($value['statuses'] ?? []);
 
         if ($statuses !== []) {
-            Log::info('Received WhatsApp delivery statuses; delivery logging is the 11 Nov task.', [
-                'team_id' => (int) $team->getKey(),
-                'count' => count($statuses),
-            ]);
+            app(TenantContext::class)->runFor(
+                $team,
+                fn (): int => app(WhatsAppDeliveryLog::class)->apply($team, $statuses),
+                TenantContextOrigin::Webhook,
+            );
         }
 
         $messages = $this->objects($value['messages'] ?? []);
@@ -167,12 +169,40 @@ final class WhatsAppWebhookProcessor
 
             // The bot answers out of band: Meta wants this response in seconds,
             // and the reply is an outbound call that may fail and be retried.
-            ReplyToWhatsAppMessageJob::dispatch((int) $team->getKey(), (int) $created->getKey());
+            if (WhatsAppOptOut::matches($created->body)) {
+                $this->recordOptOut($team, $created->from_number);
+            } else {
+                ReplyToWhatsAppMessageJob::dispatch((int) $team->getKey(), (int) $created->getKey());
+            }
 
             $stored++;
         }
 
         return $stored;
+    }
+
+    /**
+     * Remember that the contact asked to stop, and stop the bot.
+     *
+     * No confirmation message is sent: the customer asked for silence, and a
+     * "you have been unsubscribed" reply is still a message they did not want. The
+     * state is recorded instead, so every later send is refused by
+     * {@see WhatsAppSender} and a human can see why in the conversation row.
+     */
+    private function recordOptOut(Team $team, string $contactNumber): void
+    {
+        $conversation = $team->whatsappConversations()->firstOrCreate(
+            ['contact_number' => $contactNumber],
+            ['state' => WhatsAppConversationState::New],
+        );
+
+        $conversation->state = WhatsAppConversationState::HandedOver;
+        $conversation->opted_out_at = now();
+        $conversation->save();
+
+        Log::info('A WhatsApp contact opted out of further messages.', [
+            'team_id' => (int) $team->getKey(),
+        ]);
     }
 
     /**

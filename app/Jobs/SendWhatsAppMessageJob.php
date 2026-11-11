@@ -3,9 +3,12 @@
 namespace App\Jobs;
 
 use App\Data\OutgoingWhatsAppMessage;
+use App\Exceptions\TemplateRequired;
 use App\Exceptions\WhatsAppDeliveryFailed;
+use App\Exceptions\WhatsAppRateLimited;
 use App\Models\Team;
 use App\Support\WhatsApp\WhatsAppSender;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 /**
@@ -55,6 +58,21 @@ final class SendWhatsAppMessageJob extends TenantJob
     {
         try {
             app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text($this->to, $this->body));
+        } catch (WhatsAppRateLimited $exception) {
+            if ($this->job !== null) {
+                $this->release($exception->retryAfter);
+
+                return;
+            }
+
+            Log::warning('A WhatsApp message was rate limited with no queue to release to.', [
+                'team_id' => (int) $team->getKey(),
+                'retry_after' => $exception->retryAfter,
+            ]);
+
+            $this->fail($exception);
+        } catch (TemplateRequired $exception) {
+            $this->fail($exception);
         } catch (WhatsAppDeliveryFailed $exception) {
             if ($exception->retryable) {
                 throw $exception;
