@@ -233,6 +233,30 @@ Keputusan yang perlu diingat:
 
 Test: `tests/Feature/WhatsAppBotTest.php` (9 kasus) — sapaan pertama, alur penuh sampai lead (nama, perusahaan, kebutuhan, `next_follow_up`), percakapan `completed` tidak dibalas lagi, `handed_over` diam, tenant disuspend diam, pesan non-teks tidak memajukan state, plan tanpa `lead_management` tidak membuat lead, retry tidak membalas dua kali, dan webhook nyata memulai percakapan.
 
+#### B-3.4 Template, log pengiriman, kuota, rate limit & opt-out — ✅ Selesai 2026-11-11 (tugas 11 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **Template pesan** | `OutgoingWhatsAppMessage::template($to, $name, $parameters, $language)`; `MetaCloudDriver` mengirim `type=template` + `components[0].parameters`; bahasa default `whatsapp.template.language` (`id`) |
+| **Jendela 24 jam** | `WhatsAppSender` menolak teks bebas bila `last_inbound_at` lebih tua dari `whatsapp.service_window.hours` (24) → `TemplateRequired` (gagal permanen, bukan retry) |
+| **Log pengiriman** | `WhatsAppDeliveryLog` menerapkan callback `sent`/`delivered`/`read`/`failed` ke baris pesan keluar: `status`, `delivered_at`, `read_at`, `failed_at`, `failure_reason` |
+| **Kuota per tenant** | `whatsapp_messages_per_month` di `config/plans.php` (Basic 0, Plus 1.000, Pro 5.000) + tabel `usage_counters` (`team_id`, `metric`, `period`, `used`, `limit`) + `WhatsAppQuota` |
+| **Rate limit** | `whatsapp.rate_limit.per_minute` (30) per tenant lewat `RateLimiter`; pelanggaran → `WhatsAppRateLimited` + job `release()` sesuai `retryAfter` |
+| **Opt-out** | `WhatsAppOptOut` (STOP, BERHENTI, UNSUBSCRIBE, STOP PROMO, BATAL) → `whatsapp_conversations.opted_out_at` + state `handed_over`; `WhatsAppSender` menolak semua kiriman ke kontak itu |
+
+Keputusan yang perlu diingat:
+
+- **Opt-out dicocokkan sebagai pesan utuh, bukan `str_contains`.** "tolong jangan stop layanan saya" mengandung `stop` tetapi artinya kebalikan; berhenti mengirim karena kalimat itu akan kehilangan pelanggan.
+- **Opt-out tidak dibalas konfirmasi.** Pelanggan minta berhenti; pesan "Anda berhenti berlangganan" tetap pesan yang tidak diminta.
+- **Kuota dihitung dari pesan keluar saja**, dan **hanya setelah provider menerima** — pesan gagal tidak memakan jatah. Pesan masuk adalah pelanggan yang bicara, bukan pemakaian tenant.
+- **Tenant add-on dapat jatah sendiri.** Plan yang tidak memuat `whatsapp_bot` melaporkan kuota 0, padahal §B.4.2 mengizinkan add-on di paket mana pun; tenant seperti itu memakai `whatsapp.quota.addon_allowance` (500) supaya fitur berbayar tidak mustahil dipakai.
+- **Rate limit dicek sebelum kuota**: yang terlalu cepat cukup menunggu, bukan diberi tahu paketnya habis.
+- **Status tidak pernah mundur.** `delivered` yang datang terlambat tidak menimpa `read`, dan `sent` yang di-retry tidak menghapus `failure_reason`.
+- **Status untuk pesan tak dikenal diabaikan**, termasuk pesan milik tenant lain — wamid unik global, tetapi pencarian tetap dibatasi tenant aktif.
+- **Bot tetap jalan di dalam jendela**: percakapan disimpan sebelum membalas, karena `last_inbound_at` itulah yang membuka jendela 24 jam.
+
+Test baru: `tests/Feature/WhatsAppGuardsTest.php` (13 kasus — kuota dari plan, konsumsi per pesan, kuota habis, pengiriman gagal tidak memakan kuota, jatah add-on, rate limit per tenant, jendela 24 jam buka/tutup, template di luar jendela) dan `tests/Feature/WhatsAppOptOutAndStatusTest.php` (11 kasus — kata kunci utuh vs kalimat, opt-out menghentikan bot, kontak opt-out tidak pernah dikirimi, callback delivered/read/failed, status tidak mundur, status lintas tenant).
+
 ### Item B-4 — Katalog / Pesanan / Keranjang
 
 | Aspek                   | Keterangan                                                                                            |
