@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Contracts\TeamEntitlementSource;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Entitlements;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\FakeTeamEntitlementSource;
 use Tests\TestCase;
 
 class SettingsOverviewTest extends TestCase
@@ -65,5 +68,48 @@ class SettingsOverviewTest extends TestCase
         $this->actingAs($outsider)
             ->get(route('settings.index', ['current_team' => $team->slug]))
             ->assertForbidden();
+    }
+
+    public function test_the_plan_features_and_limits_are_shared_with_the_frontend(): void
+    {
+        $owner = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $owner->switchTeam($team);
+
+        $props = null;
+
+        $this->actingAs($owner)
+            ->get(route('settings.index', ['current_team' => $team->slug]))
+            ->assertInertia(function (Assert $page) use (&$props): void {
+                $props = $page->toArray()['props'];
+            });
+
+        $this->assertIsArray($props);
+        $this->assertNotContains('lead_management', $props['features']);
+        $this->assertSame(1, $props['limits']['users']);
+    }
+
+    public function test_a_plus_plan_shares_the_lead_and_multi_user_entitlements(): void
+    {
+        $this->app->instance(TeamEntitlementSource::class, new FakeTeamEntitlementSource('plus'));
+        $this->app->forgetInstance(Entitlements::class);
+
+        $owner = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $owner->switchTeam($team);
+
+        $props = null;
+
+        $this->actingAs($owner)
+            ->get(route('settings.index', ['current_team' => $team->slug]))
+            ->assertInertia(function (Assert $page) use (&$props): void {
+                $props = $page->toArray()['props'];
+            });
+
+        $this->assertIsArray($props);
+        $this->assertContains('lead_management', $props['features']);
+        $this->assertSame(3, $props['limits']['users']);
     }
 }

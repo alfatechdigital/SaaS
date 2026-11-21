@@ -1,6 +1,6 @@
 # Fase 4 — Plan & Feature Entitlement
 
-> **Status:** 🚧 **BERJALAN** — §4.1 (`Feature` enum), §4.2 (`config/plans.php` + test), §4.3 (entitlement service) dan §4.5 (desain tabel langganan) selesai 2026-11-10. Berikutnya: §4.4 (prop frontend) dipindah ke 26 Nov bersama UI billing.
+> **Status:** 🚧 **BERJALAN** — §4.1 (`Feature` enum), §4.2 (`config/plans.php` + test), §4.3 (entitlement service), §4.4 (prop frontend + Basic readiness F-7) dan §4.5 (desain tabel langganan) selesai. §4.4 ditutup 2026-11-21 bersama tugas 16 Nov. Berikutnya: SaaS billing (B-2).
 > **Ketergantungan:** Fase 2 selesai (tenant context & isolasi). Bisa paralel dengan Fase 3.
 > **Menambah fitur produk?** ❌ Tidak. Fase ini membangun **mekanisme**, bukan fitur.
 > **Dokumen induk:** [`../IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md)
@@ -149,17 +149,43 @@ Keputusan turunan:
 - **Tidak ada `isPro()`/`isBasic()`.** Pertanyaan selalu berbentuk fitur, karena itu satu-satunya bentuk yang selamat saat isi paket berubah.
 - **Tidak ada cache entitlement.** Sumber datanya config (sudah di-cache Laravel) + satu query saat billing hadir; cache akan menambah risiko basi saat plan berubah (RF4-4) tanpa manfaat terukur sekarang.
 - **`limit()` hanya membaca** angka kuota, belum menegakkan apa pun — penegakan butuh `usage_counters` (workstream billing).
-- `HandleInertiaRequests` **belum** menyentuh `features`: sesuai jadwal ia pindah ke 26 Nov bersama UI billing.
+- `HandleInertiaRequests` membagikan `features` (daftar fitur efektif) dan `limits` (kuota plan) sebagai shared prop sejak 2026-11-21; UI memakainya untuk menyembunyikan menu, tetapi server tetap menolak sendiri.
 
-### 4.4 Integrasi ke Frontend
+### 4.4 Integrasi ke Frontend — ✅ Selesai 2026-11-21
 
 | #     | Tugas                                                                                                   | Catatan                               |
 | ----- | ------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| 4.4.1 | Bagikan `features` dari `HandleInertiaRequests` (pola sama dengan `teamPermissions`)                    | Server tetap otoritas                 |
-| 4.4.2 | Buat `useFeatures()` dengan `can(feature)` (pola sama dengan `usePermission()`)                         | Konsisten                             |
-| 4.4.3 | Tambahkan tipe TypeScript di `resources/js/types/`                                                      |                                       |
-| 4.4.4 | Pastikan prop lama `teamPermissions` **tidak** dihapus                                                  | Menghindari regresi besar             |
-| 4.4.5 | Dokumentasikan perbedaan `can('canManageLeads')` (permission) vs `can('lead_management')` (entitlement) | Ini sumber kebingungan paling mungkin |
+| 4.4.1 | Bagikan `features` dari `HandleInertiaRequests` (pola sama dengan `teamPermissions`)                    | ✅ `features` + `limits`, 21 Nov      |
+| 4.4.2 | Buat `useFeatures()` dengan `can(feature)` (pola sama dengan `usePermission()`)                         | ✅ `resources/js/composables/useFeatures.ts` |
+| 4.4.3 | Tambahkan tipe TypeScript di `resources/js/types/`                                                      | ✅ `global.d.ts`                       |
+| 4.4.4 | Pastikan prop lama `teamPermissions` **tidak** dihapus                                                  | ✅ tetap dipakai bersama               |
+| 4.4.5 | Dokumentasikan perbedaan `can('canManageLeads')` (permission) vs `can('lead_management')` (entitlement) | ✅ docblock `useFeatures()`            |
+
+Dua pertanyaan berbeda, dua sumber berbeda:
+
+- **Permission** (`teamPermissions.canManageLeads`) menjawab *siapa*: apakah anggota tim ini boleh mengelola lead?
+- **Entitlement** (`features` berisi `lead_management`) menjawab *apa*: apakah paket tenant memuat modul lead?
+
+Akses hanya diberikan bila keduanya terpenuhi. UI memakai keduanya untuk menyembunyikan menu; controller tetap memeriksa keduanya, karena menyembunyikan tombol tidak melindungi apa pun.
+
+#### 4.4.6 Basic readiness (F-7) — ✅ Selesai 2026-11-21 (tugas 16 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **Form kontak umum** | `p/{team}/contact` (`PublicContactController` + `PublicContactRequest`): nama, kontak, pesan. Selalu mengirim email ke owner lewat `ContactMessageReceived`; lead hanya disimpan bila plan memuat `lead_management` |
+| **Form konsultasi lama** | Dihapus dari halaman publik (`service_type`, `budget_estimate`, perusahaan). Field khas software house menjadi urusan `form_builder` (Plus), bukan form inti |
+| **Gating modul lead** | `LeadController` (index/store/update/destroy/convert) memeriksa `Feature::LeadManagement`; menu Leads, quick-nav, kartu CRM dashboard, dan tautan terkait disembunyikan saat fitur tidak ada |
+| **Batas satu pengguna** | `TenantTeamController` menolak halaman tim dan semua endpoint anggota/undangan saat `limits.users <= 1`; menu Tim, tautan “Kelola Tim” di Pengaturan, dan menu pengguna ikut disembunyikan |
+| **Prop frontend** | `features` + `limits` dibagikan lewat `HandleInertiaRequests`; `useFeatures()` menyediakan `can()` dan `limit()` |
+
+Keputusan yang perlu diingat:
+
+- **Email adalah jalur wajib, lead adalah bonus.** Basic tidak punya tempat menyimpan inquiry, jadi email ke owner tidak boleh bergantung pada entitlement. Notifikasi dikirim langsung (bukan queued) agar pesan tidak hilang saat worker mati.
+- **Satu field `contact` menyimpan dua jenis kontak.** Nilai yang valid sebagai email masuk ke `leads.email`; selain itu masuk ke `leads.phone`.
+- **Gating di server, bukan hanya UI.** Route `leads.*`, `leads.convert`, dan endpoint tim tetap 403 meskipun seseorang mengetik URL langsung.
+- **Rename tim tetap diizinkan di Basic.** Yang ditutup adalah halaman anggota/undangan; mengganti nama bukan menambah pengguna.
+
+Test: `PublicCompanyProfileTest` (kontak → email tanpa lead di Basic, lead di Plus, isolasi tenant, validasi, halaman nonaktif/suspend, prop plan tidak bocor ke publik), `LeadEntitlementTest` (Basic 403 untuk semua aksi lead, Plus boleh), `TeamPlanLimitTest` (Basic 403 halaman tim/undangan/anggota, Plus boleh), dan `SettingsOverviewTest` (prop `features`/`limits`). Total suite **497 kasus hijau**, PHPStan 0 error, Pint bersih, `vue-tsc` bersih, build + build:ssr sukses.
 
 ### 4.5 Desain Subscription (dokumen di fase ini — implementasi menyusul di gelombang 1) — ✅ Desain selesai 2026-11-10
 

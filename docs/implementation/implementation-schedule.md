@@ -2,7 +2,7 @@
 
 > **Versi:** 2.1.0 — revisi 2026-10-28 akibat keputusan paket (lihat [Riwayat Perubahan](#riwayat-perubahan)).
 > **Status:** 🚧 **BERJALAN** — Fase 1, 2, dan 3 (SEO) + SEO automation selesai dengan gate lolos lokal (2026-10-21, 2026-10-27, 2026-10-29, 2026-11-02).
-> ✅ **Drift per 2026-11-21:** tugas **12 Nov (WhatsApp 5 + CHECKPOINT-1)** selesai, meski dikerjakan 9 hari setelah tanggal jadwal; lingkup fitur tidak dikurangi. Lihat [§5.0 Progress Tracker](#50-progress-tracker).
+> ✅ **Drift per 2026-11-21:** tugas **12 Nov (WhatsApp 5 + CHECKPOINT-1)** dan **16 Nov (Basic readiness F-7)** selesai, meski dikerjakan setelah tanggal jadwal; lingkup fitur tidak dikurangi. Lihat [§5.0 Progress Tracker](#50-progress-tracker).
 > **Periode:** 1 Oktober 2026 → 31 Desember 2026; coding berhenti **17 Des**, **launching 1 Januari 2027**.
 > **Pola kerja:** 4 hari/minggu, **Senin–Kamis** — tersedia **53 hari kerja**.
 > **Asumsi kecepatan:** pengerjaan memakai **AI agent**, ±**2,4×** kecepatan manual.
@@ -165,7 +165,7 @@ gantt
 ### 5.0 Progress Tracker
 
 > Centang tugas yang **sudah selesai & ter-commit**. Sumber kebenaran status tetap commit di `main`.
-> **Status per 21 Nov 2026:** ✅ selesai sampai **12 Nov 2026** — WhatsApp dua arah + hardening **dan UI koneksi nomor tenant** selesai di working tree (**belum di-commit**), **CHECKPOINT-1 lulus** (fitur sudah dua arah, jadi tidak perlu fallback). Berikutnya **16 Nov** (Basic readiness F-7).
+> **Status per 21 Nov 2026:** ✅ selesai sampai **16 Nov 2026** — WhatsApp dua arah + hardening, UI koneksi nomor tenant (**sudah ter-commit**), dan **Basic readiness (F-7)** (**belum di-commit**). **CHECKPOINT-1 lulus**. Berikutnya **17 Nov** (SaaS billing 1: tabel + state machine).
 
 **Oktober 2026 — Fondasi & Prioritas Urgent**
 
@@ -196,8 +196,8 @@ gantt
 - [x] **09 Nov** — WhatsApp (2) webhook masuk
 - [x] **10 Nov** — WhatsApp (3) bot dua arah
 - [x] **11 Nov** — WhatsApp (4) template, log & kuota
-- [x] **12 Nov** 🚦 — WhatsApp (5) test + hardening — **CHECKPOINT-1** ✅ (selesai 21 Nov, belum di-commit)
-- [ ] **16 Nov** — Basic readiness (F-7)
+- [x] **12 Nov** 🚦 — WhatsApp (5) test + hardening — **CHECKPOINT-1** ✅ (selesai 21 Nov)
+- [x] **16 Nov** — Basic readiness (F-7) ✅ (selesai 21 Nov, belum di-commit)
 - [ ] **17 Nov** — SaaS billing (1) tabel + state machine
 - [ ] **18 Nov** — SaaS billing (2) subscription service
 - [ ] **19 Nov** — SaaS billing (3) invoice + dunning

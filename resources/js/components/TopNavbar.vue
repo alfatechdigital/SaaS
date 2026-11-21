@@ -8,6 +8,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAppearance } from '@/composables/useAppearance';
+import { useFeatures } from '@/composables/useFeatures';
 import { dashboard } from '@/routes';
 import { index as activityLogsIndex } from '@/routes/activity-logs';
 import { edit as companyProfileEdit } from '@/routes/company-profile';
@@ -36,6 +37,7 @@ const emit = defineEmits<{
 
 const page = usePage();
 const { updateAppearance } = useAppearance();
+const { can: canUseFeature, limit } = useFeatures();
 
 const searchQuery = ref('');
 
@@ -57,49 +59,63 @@ const initials = computed(() =>
  * backend endpoint this app does not have. It now navigates between the pages
  * that actually exist, which is what the box can honestly deliver.
  */
-const modules = computed(() => [
-    {
-        label: 'Dashboard',
-        href: dashboard({ current_team: teamSlug.value }).url,
-    },
-    {
-        label: 'Proyek',
-        href: projectsIndex.url({ current_team: teamSlug.value }),
-    },
-    {
-        label: 'Leads / CRM',
-        href: leadsIndex.url({ current_team: teamSlug.value }),
-    },
-    {
-        label: 'Profil Perusahaan',
-        href: companyProfileEdit.url({ current_team: teamSlug.value }),
-    },
-    {
-        label: 'Portofolio',
-        href: portfolioIndex.url({ current_team: teamSlug.value }),
-    },
-    {
-        label: 'Konten Medsos',
-        href: contentsIndex.url({ current_team: teamSlug.value }),
-    },
-    {
-        label: 'Keuangan',
-        href: transactionsIndex.url({ current_team: teamSlug.value }),
-    },
-    {
-        label: 'Log Aktivitas',
-        href: activityLogsIndex.url({ current_team: teamSlug.value }),
-    },
-    {
-        label: 'Kelola Tim',
-        href: teamIndex.url({ current_team: teamSlug.value }),
-    },
-    {
-        label: 'WhatsApp',
-        href: whatsappEdit.url({ current_team: teamSlug.value }),
-    },
-    { label: 'Profil Saya', href: profileEdit().url },
-]);
+const modules = computed(() =>
+    [
+        {
+            label: 'Dashboard',
+            href: dashboard({ current_team: teamSlug.value }).url,
+        },
+        {
+            label: 'Proyek',
+            href: projectsIndex.url({ current_team: teamSlug.value }),
+        },
+        {
+            label: 'Leads / CRM',
+            href: leadsIndex.url({ current_team: teamSlug.value }),
+        },
+        {
+            label: 'Profil Perusahaan',
+            href: companyProfileEdit.url({ current_team: teamSlug.value }),
+        },
+        {
+            label: 'Portofolio',
+            href: portfolioIndex.url({ current_team: teamSlug.value }),
+        },
+        {
+            label: 'Konten Medsos',
+            href: contentsIndex.url({ current_team: teamSlug.value }),
+        },
+        {
+            label: 'Keuangan',
+            href: transactionsIndex.url({ current_team: teamSlug.value }),
+        },
+        {
+            label: 'Log Aktivitas',
+            href: activityLogsIndex.url({ current_team: teamSlug.value }),
+        },
+        {
+            label: 'Kelola Tim',
+            href: teamIndex.url({ current_team: teamSlug.value }),
+        },
+        {
+            label: 'WhatsApp',
+            href: whatsappEdit.url({ current_team: teamSlug.value }),
+        },
+        { label: 'Profil Saya', href: profileEdit().url },
+    ].filter((module) => {
+        // Entitlement decides what the plan includes; the server still rejects a
+        // direct visit. Hidden here so quick-nav never offers a 403 (F-7).
+        if (module.label === 'Leads / CRM') {
+            return canUseFeature('lead_management');
+        }
+
+        if (module.label === 'Kelola Tim') {
+            return (limit('users') ?? 0) > 1;
+        }
+
+        return true;
+    }),
+);
 
 const searchResults = computed(() => {
     const query = searchQuery.value.trim().toLowerCase();

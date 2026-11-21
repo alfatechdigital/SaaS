@@ -30,7 +30,7 @@ import {
     Zap,
 } from 'lucide-vue-next';
 import { useAppearance } from '@/composables/useAppearance';
-import { store as consultationStore } from '@/routes/public/consultation';
+import { store as contactStore } from '@/routes/public/contact';
 import type { CompanyProfile, PortfolioItem, PublicPageMeta } from '@/types';
 
 /**
@@ -38,7 +38,8 @@ import type { CompanyProfile, PortfolioItem, PublicPageMeta } from '@/types';
  *
  * Ported from `PublicCompanyProfilePage.tsx`. Differences from the template:
  * - Data comes from Inertia props (`profile`, `portfolio`) instead of Firestore.
- * - The consultation form posts to `PublicLeadController`, which files a Lead.
+ * - The contact form posts to `PublicContactController`: the owner is emailed on
+ *   every plan, and a lead is filed only when `lead_management` is included.
  * - When a team has no services / portfolio / FAQ yet, the section shows an
  *   empty state instead of the template's hardcoded Alfatech fallback content
  *   (this app is multi-tenant, so another team's copy would be wrong).
@@ -59,16 +60,12 @@ const selectedCategory = ref('all');
 const selectedPortfolioModal = ref<PortfolioItem | null>(null);
 const openFaqIndex = ref<number | null>(0);
 const isMobileNavOpen = ref(false);
-const leadSubmittedSuccess = ref(false);
+const contactSubmitted = ref(false);
 
 const form = useForm({
-    contact_name: '',
-    company_name: '',
-    email: '',
-    phone: '',
-    service_type: 'Custom ERP & Web Platform',
-    budget_estimate: 35_000_000,
-    notes: '',
+    name: '',
+    contact: '',
+    message: '',
 });
 
 const companyName = computed(
@@ -122,7 +119,7 @@ const navLinks = [
     { href: '#keunggulan', label: 'Keunggulan' },
     { href: '#metodologi', label: 'Metodologi' },
     { href: '#faq', label: 'FAQ' },
-    { href: '#konsultasi', label: 'Kontak' },
+    { href: '#kontak', label: 'Kontak' },
 ];
 
 const advantages = [
@@ -194,24 +191,19 @@ function serviceIcon(name: string): Component {
     return serviceIcons[name] ?? Code2;
 }
 
-function submitConsultation(): void {
-    form.post(consultationStore.url({ team: props.team.slug }), {
+function submitContact(): void {
+    form.post(contactStore.url({ team: props.team.slug }), {
         preserveScroll: true,
         onSuccess: () => {
-            leadSubmittedSuccess.value = true;
+            contactSubmitted.value = true;
             form.reset();
         },
     });
 }
 
-function resetConsultationForm(): void {
-    leadSubmittedSuccess.value = false;
+function resetContactForm(): void {
+    contactSubmitted.value = false;
     form.clearErrors();
-}
-
-function useServiceForConsultation(name: string): void {
-    form.service_type = name;
-    isMobileNavOpen.value = false;
 }
 
 function toggleTheme(): void {
@@ -369,10 +361,10 @@ function toggleTheme(): void {
                     </button>
 
                     <a
-                        href="#konsultasi"
+                        href="#kontak"
                         class="hidden cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition-all hover:bg-blue-700 hover:shadow-md lg:inline-flex"
                     >
-                        <span>Konsultasi Gratis</span>
+                        <span>Kontak Kami</span>
                         <ArrowRight class="h-3.5 w-3.5" />
                     </a>
 
@@ -512,10 +504,10 @@ function toggleTheme(): void {
 
                         <div class="flex flex-wrap items-center gap-3 pt-4">
                             <a
-                                href="#konsultasi"
+                                href="#kontak"
                                 class="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-xs font-bold text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-lg sm:text-sm"
                             >
-                                <span>Mulai Konsultasi Gratis</span>
+                                <span>Kirim Pesan</span>
                                 <ArrowRight class="h-4 w-4" />
                             </a>
                             <a
@@ -713,11 +705,11 @@ function toggleTheme(): void {
                         </p>
                         <div class="pt-2">
                             <a
-                                href="#konsultasi"
+                                href="#kontak"
                                 class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                                @click="useServiceForConsultation(srv.name)"
+                                @click="isMobileNavOpen = false"
                             >
-                                <span>Konsultasikan Kebutuhan</span>
+                                <span>Hubungi Kami</span>
                                 <ArrowRight class="h-3.5 w-3.5" />
                             </a>
                         </div>
@@ -1125,9 +1117,9 @@ function toggleTheme(): void {
             </div>
         </section>
 
-        <!-- ==================== 8. FORMULIR KONSULTASI ==================== -->
+        <!-- ==================== 8. FORMULIR KONTAK ==================== -->
         <section
-            id="konsultasi"
+            id="kontak"
             class="border-b border-slate-100 bg-white py-16 sm:py-24 dark:border-slate-800 dark:bg-slate-950"
         >
             <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
@@ -1146,22 +1138,21 @@ function toggleTheme(): void {
                                 class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-blue-200"
                             >
                                 <MessageSquare class="h-3.5 w-3.5" />
-                                <span>KONSULTASI TANPA BIAYA</span>
+                                <span>KIRIM PESAN LANGSUNG</span>
                             </div>
 
                             <h2
                                 class="text-2xl leading-tight font-black text-white sm:text-4xl"
                             >
-                                Punya Rencana Proyek Digital? Mari Diskusikan!
+                                Ada Pertanyaan? Kirim Pesan kepada Kami
                             </h2>
 
                             <p
                                 class="text-xs leading-relaxed text-blue-100/90 sm:text-sm"
                             >
-                                Ceritakan ide atau tantangan operasional
-                                perusahaan Anda. Tim kami siap memberikan
-                                estimasi biaya, timeline, dan rekomendasi
-                                teknologi terbaik.
+                                Sampaikan pertanyaan atau kebutuhan Anda. Pesan
+                                akan diteruskan langsung ke pemilik bisnis dan
+                                dibalas melalui kontak yang Anda berikan.
                             </p>
 
                             <div class="space-y-3 pt-4 text-xs text-blue-100">
@@ -1214,7 +1205,7 @@ function toggleTheme(): void {
                             class="rounded-2xl bg-white p-6 text-slate-900 shadow-xl sm:p-7 lg:col-span-7 dark:bg-slate-900 dark:text-slate-100"
                         >
                             <div
-                                v-if="leadSubmittedSuccess"
+                                v-if="contactSubmitted"
                                 class="animate-in fade-in space-y-4 py-8 text-center"
                             >
                                 <div
@@ -1225,20 +1216,19 @@ function toggleTheme(): void {
                                 <h3
                                     class="text-xl font-bold text-slate-900 dark:text-slate-100"
                                 >
-                                    Terima Kasih! Formulir Berhasil Dikirim
+                                    Terima Kasih! Pesan Berhasil Dikirim
                                 </h3>
                                 <p
                                     class="mx-auto max-w-md text-xs text-slate-600 sm:text-sm dark:text-slate-300"
                                 >
-                                    Data Anda telah tersimpan di sistem CRM
-                                    kami. Konsultan IT kami akan menghubungi
-                                    Anda melalui WhatsApp / Email dalam 1x24 jam
-                                    kerja.
+                                    Pesan Anda sudah diteruskan ke pemilik
+                                    bisnis. Kami akan menghubungi Anda melalui
+                                    kontak yang diberikan.
                                 </p>
                                 <button
                                     type="button"
                                     class="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white"
-                                    @click="resetConsultationForm"
+                                    @click="resetContactForm"
                                 >
                                     Kirim Pesan Lainnya
                                 </button>
@@ -1247,164 +1237,75 @@ function toggleTheme(): void {
                             <form
                                 v-else
                                 class="space-y-4 text-left"
-                                @submit.prevent="submitConsultation"
+                                @submit.prevent="submitContact"
                             >
                                 <h3
                                     class="mb-2 text-base font-bold text-slate-900 dark:text-slate-100"
                                 >
-                                    Formulir Konsultasi Proyek
+                                    Formulir Kontak
                                 </h3>
 
-                                <div
-                                    class="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                                >
-                                    <div>
-                                        <label
-                                            class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                        >
-                                            Nama Lengkap *
-                                        </label>
-                                        <input
-                                            v-model="form.contact_name"
-                                            type="text"
-                                            required
-                                            placeholder="Misal: Hendra Setiawan"
-                                            class="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                                        />
-                                        <p
-                                            v-if="form.errors.contact_name"
-                                            class="mt-1 text-[11px] text-rose-600"
-                                        >
-                                            {{ form.errors.contact_name }}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label
-                                            class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                        >
-                                            Nama Perusahaan / Bisnis
-                                        </label>
-                                        <input
-                                            v-model="form.company_name"
-                                            type="text"
-                                            placeholder="Misal: PT Logistik Nusantara"
-                                            class="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                                >
-                                    <div>
-                                        <label
-                                            class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                        >
-                                            Nomor WhatsApp / Telepon *
-                                        </label>
-                                        <input
-                                            v-model="form.phone"
-                                            type="tel"
-                                            required
-                                            placeholder="0812-xxxx-xxxx"
-                                            class="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                                        />
-                                        <p
-                                            v-if="form.errors.phone"
-                                            class="mt-1 text-[11px] text-rose-600"
-                                        >
-                                            {{ form.errors.phone }}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label
-                                            class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                        >
-                                            Alamat Email
-                                        </label>
-                                        <input
-                                            v-model="form.email"
-                                            type="email"
-                                            placeholder="hendra@perusahaan.co.id"
-                                            class="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                                        />
-                                        <p
-                                            v-if="form.errors.email"
-                                            class="mt-1 text-[11px] text-rose-600"
-                                        >
-                                            {{ form.errors.email }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                                >
-                                    <div>
-                                        <label
-                                            class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                        >
-                                            Kebutuhan Solusi
-                                        </label>
-                                        <select
-                                            v-model="form.service_type"
-                                            class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                                        >
-                                            <option
-                                                v-for="srv in services"
-                                                :key="srv.id"
-                                                :value="srv.name"
-                                            >
-                                                {{ srv.name }}
-                                            </option>
-                                            <option
-                                                v-if="services.length === 0"
-                                                value="Konsultasi Umum"
-                                            >
-                                                Konsultasi Umum
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label
-                                            class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                        >
-                                            Alokasi Estimasi Budget
-                                        </label>
-                                        <select
-                                            v-model.number="
-                                                form.budget_estimate
-                                            "
-                                            class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                                        >
-                                            <option :value="15000000">
-                                                &lt; Rp 25 Juta
-                                            </option>
-                                            <option :value="35000000">
-                                                Rp 25 Juta - Rp 50 Juta
-                                            </option>
-                                            <option :value="75000000">
-                                                Rp 50 Juta - Rp 100 Juta
-                                            </option>
-                                            <option :value="150000000">
-                                                &gt; Rp 100 Juta (Enterprise)
-                                            </option>
-                                        </select>
-                                    </div>
+                                <div>
+                                    <label
+                                        class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                    >
+                                        Nama *
+                                    </label>
+                                    <input
+                                        v-model="form.name"
+                                        type="text"
+                                        required
+                                        placeholder="Misal: Hendra Setiawan"
+                                        class="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                                    />
+                                    <p
+                                        v-if="form.errors.name"
+                                        class="mt-1 text-[11px] text-rose-600"
+                                    >
+                                        {{ form.errors.name }}
+                                    </p>
                                 </div>
 
                                 <div>
                                     <label
                                         class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
                                     >
-                                        Catatan Singkat Kebutuhan Proyek
+                                        Kontak (WhatsApp / Email) *
+                                    </label>
+                                    <input
+                                        v-model="form.contact"
+                                        type="text"
+                                        required
+                                        placeholder="0812-xxxx-xxxx atau nama@email.com"
+                                        class="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                                    />
+                                    <p
+                                        v-if="form.errors.contact"
+                                        class="mt-1 text-[11px] text-rose-600"
+                                    >
+                                        {{ form.errors.contact }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                    >
+                                        Pesan *
                                     </label>
                                     <textarea
-                                        v-model="form.notes"
-                                        rows="3"
-                                        placeholder="Jelaskan kebutuhan fitur utama atau kendala yang ingin diselesaikan..."
+                                        v-model="form.message"
+                                        rows="4"
+                                        required
+                                        placeholder="Tuliskan pertanyaan atau kebutuhan Anda..."
                                         class="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                                     />
+                                    <p
+                                        v-if="form.errors.message"
+                                        class="mt-1 text-[11px] text-rose-600"
+                                    >
+                                        {{ form.errors.message }}
+                                    </p>
                                 </div>
 
                                 <button
@@ -1419,7 +1320,7 @@ function toggleTheme(): void {
                                     <span>{{
                                         form.processing
                                             ? 'Mengirim...'
-                                            : 'Kirim Permintaan Konsultasi'
+                                            : 'Kirim Pesan'
                                     }}</span>
                                 </button>
                             </form>

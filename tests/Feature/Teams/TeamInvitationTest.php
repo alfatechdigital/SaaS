@@ -2,18 +2,30 @@
 
 namespace Tests\Feature\Teams;
 
+use App\Contracts\TeamEntitlementSource;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Notifications\Teams\TeamInvitation as TeamInvitationNotification;
+use App\Support\Entitlements;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\FakeTeamEntitlementSource;
 use Tests\TestCase;
 
 class TeamInvitationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Inviting people requires a plan with more than one user seat (F-7).
+        $this->app->instance(TeamEntitlementSource::class, new FakeTeamEntitlementSource('plus'));
+        $this->app->forgetInstance(Entitlements::class);
+    }
 
     public function test_team_invitations_can_be_created()
     {

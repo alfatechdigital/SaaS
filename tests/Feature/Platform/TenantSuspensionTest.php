@@ -101,17 +101,14 @@ class TenantSuspensionTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_a_suspended_tenant_does_not_accept_consultation_leads(): void
+    public function test_a_suspended_tenant_does_not_accept_contact_messages(): void
     {
         $this->team->update(['suspended_at' => now()]);
 
-        $this->post(route('public.consultation.store', ['team' => $this->team->slug]), [
-            'contact_name' => 'Hendra Setiawan',
-            'company_name' => 'PT Logistik Nusantara',
-            'phone' => '0812-3456-7890',
-            'email' => 'hendra@perusahaan.co.id',
-            'service_type' => 'Custom ERP & Web Platform',
-            'budget_estimate' => 35_000_000,
+        $this->post(route('public.contact.store', ['team' => $this->team->slug]), [
+            'name' => 'Hendra Setiawan',
+            'contact' => '0812-3456-7890',
+            'message' => 'Butuh integrasi dengan sistem gudang lama.',
         ])->assertNotFound();
 
         $this->assertDatabaseCount('leads', 0);

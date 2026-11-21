@@ -12,6 +12,7 @@ use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Notifications\Teams\TeamInvitation as TeamInvitationNotification;
 use App\Support\CurrentTeam;
+use App\Support\Entitlements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -36,6 +37,8 @@ class TenantTeamController extends Controller
     {
         $team = CurrentTeam::from($request);
         $user = $request->user();
+
+        $this->ensureMultiUserPlan($team);
 
         return Inertia::render('admin/team/Index', [
             'team' => [
@@ -103,6 +106,8 @@ class TenantTeamController extends Controller
         $team = CurrentTeam::from($request);
         $user = $this->memberFromRoute($request);
 
+        $this->ensureMultiUserPlan($team);
+
         Gate::authorize('updateMember', $team);
 
         $data = $request->validated();
@@ -134,6 +139,8 @@ class TenantTeamController extends Controller
         $team = CurrentTeam::from($request);
         $user = $this->memberFromRoute($request);
 
+        $this->ensureMultiUserPlan($team);
+
         Gate::authorize('removeMember', $team);
 
         abort_if($team->owner()?->is($user), 403, __('The team owner cannot be removed.'));
@@ -162,6 +169,8 @@ class TenantTeamController extends Controller
     {
         $team = CurrentTeam::from($request);
 
+        $this->ensureMultiUserPlan($team);
+
         Gate::authorize('inviteMember', $team);
 
         $invitation = $team->invitations()->create([
@@ -187,6 +196,8 @@ class TenantTeamController extends Controller
         $team = CurrentTeam::from($request);
         $invitation = $this->invitationFromRoute($request);
 
+        $this->ensureMultiUserPlan($team);
+
         abort_unless($invitation->team_id === $team->id, 404);
 
         Gate::authorize('cancelInvitation', $team);
@@ -196,6 +207,20 @@ class TenantTeamController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation cancelled.')]);
 
         return to_route('team.index', ['current_team' => $team->slug]);
+    }
+
+    /**
+     * Refuse team management when the plan only allows a single user.
+     *
+     * Basic has a `users` limit of 1, so there is nobody to invite and nothing to
+     * manage. The page and every member/invitation endpoint answer 403 rather
+     * than relying on the hidden menu item (F-7, keputusan 2026-10-28).
+     */
+    private function ensureMultiUserPlan(Team $team): void
+    {
+        $limit = app(Entitlements::class)->limit($team, 'users');
+
+        abort_unless($limit === null || $limit > 1, 403, __('Paket ini hanya mendukung satu pengguna.'));
     }
 
     /**

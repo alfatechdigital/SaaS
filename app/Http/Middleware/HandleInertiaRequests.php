@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Team;
+use App\Support\Entitlements;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -58,6 +59,18 @@ class HandleInertiaRequests extends Middleware
             'teamPermissions' => fn () => ($team = $this->activeTeam($request)) === null
                 ? null
                 : $user?->toTeamPermissions($team),
+            // Entitlement (what the plan allows) is deliberately separate from
+            // permission (who the user is). The UI needs both to hide what the
+            // server would reject; the server remains the authority (Fase 4, 4.4).
+            //
+            // Shared only to authenticated users: a public page has no menus to
+            // hide, and a tenant's plan is not a visitor's business.
+            'features' => fn (): array => $user === null || ($team = $this->activeTeam($request)) === null
+                ? []
+                : $team->features(),
+            'limits' => fn (): array => $user === null || ($team = $this->activeTeam($request)) === null
+                ? []
+                : app(Entitlements::class)->plan($team)['limits'],
         ];
     }
 

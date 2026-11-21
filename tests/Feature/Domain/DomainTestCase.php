@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Domain;
 
+use App\Contracts\TeamEntitlementSource;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Entitlements;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\FakeTeamEntitlementSource;
 use Tests\TestCase;
 
 /**
@@ -24,6 +27,12 @@ abstract class DomainTestCase extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // The domain modules are Plus-and-above by product decision. These tests
+        // are about permissions and isolation, so the plan must not be the thing
+        // that rejects them; entitlement-specific cases live in their own tests.
+        $this->app->instance(TeamEntitlementSource::class, new FakeTeamEntitlementSource('plus'));
+        $this->app->forgetInstance(Entitlements::class);
 
         $this->team = Team::factory()->create();
 

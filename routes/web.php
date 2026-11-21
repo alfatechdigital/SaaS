@@ -9,7 +9,7 @@ use App\Http\Controllers\PlatformTenantController;
 use App\Http\Controllers\PortfolioItemController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PublicCompanyProfileController;
-use App\Http\Controllers\PublicLeadController;
+use App\Http\Controllers\PublicContactController;
 use App\Http\Controllers\PublicRobotsController;
 use App\Http\Controllers\PublicSitemapController;
 use App\Http\Controllers\SettingsController;
@@ -34,9 +34,12 @@ Route::get('p/{team}', PublicCompanyProfileController::class)->name('public.comp
 Route::get('p/{team}/robots.txt', PublicRobotsController::class)->name('public.robots');
 Route::get('p/{team}/sitemap.xml', PublicSitemapController::class)->name('public.sitemap');
 
-Route::post('p/{team}/consultation', [PublicLeadController::class, 'store'])
+// General contact form (F-7): always emails the owner, and only files a lead
+// when the tenant's plan includes `lead_management`. Rate limited because it is
+// the only unauthenticated write endpoint.
+Route::post('p/{team}/contact', [PublicContactController::class, 'store'])
     ->middleware('throttle:5,1')
-    ->name('public.consultation.store');
+    ->name('public.contact.store');
 
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])

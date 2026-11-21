@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import PendingInvitationsModal from '@/components/PendingInvitationsModal.vue';
+import { useFeatures } from '@/composables/useFeatures';
 import { index as contentsIndex } from '@/routes/contents';
 import { index as leadsIndex } from '@/routes/leads';
 import { index as projectsIndex } from '@/routes/projects';
@@ -56,6 +57,7 @@ const props = defineProps<{
 const page = usePage();
 const teamSlug = computed(() => page.props.currentTeam?.slug ?? '');
 const currentUser = computed(() => page.props.auth.user);
+const { can: canUseFeature } = useFeatures();
 
 const MONTH_NAMES = [
     'Januari',
@@ -793,6 +795,7 @@ function exportReport(): void {
 
                 <!-- CRM funnel -->
                 <div
+                    v-if="canUseFeature('lead_management')"
                     class="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div class="mb-4 flex items-center justify-between">

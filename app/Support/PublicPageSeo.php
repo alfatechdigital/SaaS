@@ -73,7 +73,7 @@ final class PublicPageSeo
 
         return $text !== ''
             ? Str::limit($text, self::DESCRIPTION_LIMIT)
-            : __('Profil :name: layanan, portofolio, dan formulir konsultasi.', ['name' => $this->team->name]);
+            : __('Profil :name: layanan, portofolio, dan formulir kontak.', ['name' => $this->team->name]);
     }
 
     /**

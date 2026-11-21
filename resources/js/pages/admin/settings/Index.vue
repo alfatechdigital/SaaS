@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { useAppearance, type Appearance } from '@/composables/useAppearance';
+import { useFeatures } from '@/composables/useFeatures';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
 import { index as teamIndex } from '@/routes/team';
@@ -39,6 +40,8 @@ const props = defineProps<{
 const page = usePage();
 const teamSlug = computed(() => page.props.currentTeam?.slug ?? '');
 const { appearance, resolvedAppearance, updateAppearance } = useAppearance();
+const { limit } = useFeatures();
+const canManageTeam = computed(() => (limit('users') ?? 0) > 1);
 
 const mounted = ref(false);
 
@@ -364,6 +367,7 @@ const systemRows = computed(() => [
                     <span>Keamanan &amp; Passkey</span>
                 </Link>
                 <Link
+                    v-if="canManageTeam"
                     :href="teamIndex.url({ current_team: teamSlug })"
                     class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5 font-semibold text-slate-700 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
                 >

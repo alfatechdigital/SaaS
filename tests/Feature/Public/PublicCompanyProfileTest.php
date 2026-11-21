@@ -2,20 +2,44 @@
 
 namespace Tests\Feature\Public;
 
+use App\Contracts\TeamEntitlementSource;
 use App\Enums\LeadStatus;
+use App\Enums\TeamRole;
 use App\Models\CompanyProfile;
 use App\Models\Lead;
 use App\Models\PortfolioItem;
 use App\Models\Team;
+use App\Models\User;
+use App\Notifications\Teams\ContactMessageReceived;
+use App\Support\Entitlements;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Domain\DomainTestCase;
+use Tests\Support\FakeTeamEntitlementSource;
 
 /**
- * Covers the public (unauthenticated) company profile page and the consultation
- * form that files a lead. See docs/IMPLEMENTATION_PLAN.md §6 Fase 4.3.
+ * Covers the public (unauthenticated) company profile page and the contact form
+ * that emails the owner and, on plans with `lead_management`, also files a lead.
+ * See docs/IMPLEMENTATION_PLAN.md §6 Fase 4.3 and F-7 (16 Nov).
  */
 class PublicCompanyProfileTest extends DomainTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Notification::fake();
+    }
+
+    /**
+     * Run the contact form on the default Basic plan.
+     */
+    private function useBasicPlan(): void
+    {
+        $this->app->instance(TeamEntitlementSource::class, new FakeTeamEntitlementSource('basic'));
+        $this->app->forgetInstance(Entitlements::class);
+    }
+
     public function test_guest_can_view_the_public_company_profile(): void
     {
         $this->get($this->publicRoute())
@@ -120,20 +144,23 @@ class PublicCompanyProfileTest extends DomainTestCase
     /**
      * P-1 / tugas 1.2.6.
      *
-     * The consultation form is the only unauthenticated write endpoint, so it is
-     * the one that must never guess the tenant: the lead is filed under the team
-     * in the URL, and under no other.
+     * The contact form is the only unauthenticated write endpoint, so it is the
+     * one that must never guess the tenant: the lead is filed under the team in
+     * the URL, and under no other.
      */
-    public function test_the_consultation_form_files_the_lead_under_the_team_in_the_url(): void
+    public function test_the_contact_form_files_the_lead_under_the_team_in_the_url(): void
     {
         $otherTeam = Team::factory()->create();
+        $otherOwner = User::factory()->create();
+        $otherTeam->members()->attach($otherOwner, ['role' => TeamRole::Owner->value]);
 
-        $this->post(route('public.consultation.store', ['team' => $otherTeam->slug]), $this->payload())
+        $this->post(route('public.contact.store', ['team' => $otherTeam->slug]), $this->payload())
             ->assertRedirect();
 
         $this->assertDatabaseCount('leads', 1);
         $this->assertDatabaseHas('leads', ['team_id' => $otherTeam->id]);
         $this->assertDatabaseMissing('leads', ['team_id' => $this->team->id]);
+        Notification::assertSentTo($otherOwner, ContactMessageReceived::class);
     }
 
     public function test_unknown_team_slug_returns_not_found(): void
@@ -142,56 +169,85 @@ class PublicCompanyProfileTest extends DomainTestCase
             ->assertNotFound();
     }
 
-    public function test_consultation_form_creates_a_new_lead_for_the_team(): void
+    public function test_the_contact_form_emails_the_owner_without_a_lead_on_the_basic_plan(): void
     {
-        $this->post(route('public.consultation.store', ['team' => $this->team->slug]), $this->payload())
+        $this->useBasicPlan();
+
+        $this->post(route('public.contact.store', ['team' => $this->team->slug]), $this->payload())
+            ->assertRedirect();
+
+        Notification::assertSentTo(
+            $this->owner,
+            ContactMessageReceived::class,
+            fn (ContactMessageReceived $notification): bool => $notification->name === 'Hendra Setiawan'
+                && $notification->contact === '0812-3456-7890'
+                && str_contains($notification->message, 'gudang'),
+        );
+
+        // Basic has no lead module, so there is nowhere to store the message.
+        $this->assertDatabaseCount('leads', 0);
+    }
+
+    public function test_the_contact_form_files_a_lead_when_the_plan_includes_lead_management(): void
+    {
+        $this->post(route('public.contact.store', ['team' => $this->team->slug]), $this->payload())
             ->assertRedirect();
 
         $lead = Lead::query()->where('team_id', $this->team->id)->firstOrFail();
 
         $this->assertSame('Hendra Setiawan', $lead->contact_name);
-        $this->assertSame('PT Logistik Nusantara', $lead->company_name);
+        $this->assertSame('Hendra Setiawan', $lead->company_name);
+        $this->assertSame('0812-3456-7890', $lead->phone);
+        $this->assertNull($lead->email);
         $this->assertSame(LeadStatus::New, $lead->status);
-        $this->assertSame(35_000_000, $lead->estimated_value);
-        $this->assertSame('Website Publik (Form Konsultasi)', $lead->source);
+        $this->assertSame('Website Publik (Form Kontak)', $lead->source);
+        $this->assertStringContainsString('gudang', (string) $lead->notes);
+        $this->assertSame(0, $lead->estimated_value);
+
+        Notification::assertSentTo($this->owner, ContactMessageReceived::class);
     }
 
-    public function test_company_name_falls_back_to_the_contact_name(): void
+    public function test_an_email_contact_is_stored_in_the_email_column(): void
     {
         $this->post(
-            route('public.consultation.store', ['team' => $this->team->slug]),
-            $this->payload(['company_name' => '']),
+            route('public.contact.store', ['team' => $this->team->slug]),
+            $this->payload(['contact' => 'hendra@perusahaan.co.id']),
         )->assertRedirect();
 
         $lead = Lead::query()->where('team_id', $this->team->id)->firstOrFail();
 
-        $this->assertSame('Hendra Setiawan', $lead->company_name);
+        $this->assertNull($lead->phone);
+        $this->assertSame('hendra@perusahaan.co.id', $lead->email);
     }
 
-    public function test_consultation_form_requires_contact_name_and_phone(): void
+    public function test_the_contact_form_requires_name_contact_and_message(): void
     {
-        $this->post(
-            route('public.consultation.store', ['team' => $this->team->slug]),
-            ['company_name' => 'PT Tanpa Kontak'],
-        )->assertSessionHasErrors(['contact_name', 'phone']);
+        $this->post(route('public.contact.store', ['team' => $this->team->slug]), [])
+            ->assertSessionHasErrors(['name', 'contact', 'message']);
 
         $this->assertDatabaseCount('leads', 0);
+        Notification::assertNothingSent();
     }
 
-    public function test_consultation_form_rejects_an_invalid_email(): void
+    public function test_whitespace_only_fields_are_rejected(): void
     {
-        $this->post(
-            route('public.consultation.store', ['team' => $this->team->slug]),
-            $this->payload(['email' => 'bukan-email']),
-        )->assertSessionHasErrors('email');
+        $this->post(route('public.contact.store', ['team' => $this->team->slug]), [
+            'name' => '   ',
+            'contact' => '  ',
+            'message' => ' ',
+        ])->assertSessionHasErrors(['name', 'contact', 'message']);
+
+        $this->assertDatabaseCount('leads', 0);
+        Notification::assertNothingSent();
     }
 
-    public function test_consultation_form_for_unknown_team_returns_not_found(): void
+    public function test_the_contact_form_for_an_unknown_team_returns_not_found(): void
     {
-        $this->post(route('public.consultation.store', ['team' => 'tim-tidak-ada']), $this->payload())
+        $this->post(route('public.contact.store', ['team' => 'tim-tidak-ada']), $this->payload())
             ->assertNotFound();
 
         $this->assertDatabaseCount('leads', 0);
+        Notification::assertNothingSent();
     }
 
     public function test_a_deactivated_public_page_is_not_available(): void
@@ -203,16 +259,17 @@ class PublicCompanyProfileTest extends DomainTestCase
         $this->get($this->publicRoute())->assertNotFound();
     }
 
-    public function test_the_consultation_form_is_rejected_when_the_public_page_is_deactivated(): void
+    public function test_the_contact_form_is_rejected_when_the_public_page_is_deactivated(): void
     {
         $this->team->update(['public_page_enabled' => false]);
 
         $this->post(
-            route('public.consultation.store', ['team' => $this->team->slug]),
+            route('public.contact.store', ['team' => $this->team->slug]),
             $this->payload(),
         )->assertNotFound();
 
         $this->assertDatabaseCount('leads', 0);
+        Notification::assertNothingSent();
     }
 
     public function test_the_public_page_works_again_after_being_reactivated(): void
@@ -246,7 +303,7 @@ class PublicCompanyProfileTest extends DomainTestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('meta.title', $this->team->name)
-                ->where('meta.description', 'Profil '.$this->team->name.': layanan, portofolio, dan formulir konsultasi.'));
+                ->where('meta.description', 'Profil '.$this->team->name.': layanan, portofolio, dan formulir kontak.'));
     }
 
     public function test_meta_description_is_plain_text_and_bounded(): void
@@ -271,6 +328,21 @@ class PublicCompanyProfileTest extends DomainTestCase
         $this->assertLessThanOrEqual(163, mb_strlen($description));
     }
 
+    public function test_the_public_page_does_not_expose_plan_entitlements(): void
+    {
+        $props = null;
+
+        $this->get($this->publicRoute())
+            ->assertOk()
+            ->assertInertia(function (Assert $page) use (&$props): void {
+                $props = $page->toArray()['props'];
+            });
+
+        $this->assertIsArray($props);
+        $this->assertSame([], $props['features']);
+        $this->assertSame([], $props['limits']);
+    }
+
     private function publicRoute(): string
     {
         return route('public.company-profile', ['team' => $this->team->slug]);
@@ -283,13 +355,9 @@ class PublicCompanyProfileTest extends DomainTestCase
     private function payload(array $overrides = []): array
     {
         return [
-            'contact_name' => 'Hendra Setiawan',
-            'company_name' => 'PT Logistik Nusantara',
-            'phone' => '0812-3456-7890',
-            'email' => 'hendra@perusahaan.co.id',
-            'service_type' => 'Custom ERP & Web Platform',
-            'budget_estimate' => 35_000_000,
-            'notes' => 'Butuh integrasi dengan sistem gudang lama.',
+            'name' => 'Hendra Setiawan',
+            'contact' => '0812-3456-7890',
+            'message' => 'Butuh integrasi dengan sistem gudang lama.',
             ...$overrides,
         ];
     }

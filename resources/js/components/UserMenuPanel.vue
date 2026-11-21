@@ -11,6 +11,7 @@ import { logout } from '@/routes';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
 import { index as teamIndex } from '@/routes/team';
+import { useFeatures } from '@/composables/useFeatures';
 import type { Team, User } from '@/types';
 
 /**
@@ -28,10 +29,14 @@ type Props = {
 
 const props = defineProps<Props>();
 
+const { limit } = useFeatures();
+
 // Link into the tenant shell's team page; only meaningful while the user has an
-// active team.
+// active team and the plan allows more than one user (F-7).
 const teamHref = computed(() =>
-    props.team ? teamIndex.url({ current_team: props.team.slug }) : null,
+    props.team && (limit('users') ?? 0) > 1
+        ? teamIndex.url({ current_team: props.team.slug })
+        : null,
 );
 
 const handleLogout = () => {

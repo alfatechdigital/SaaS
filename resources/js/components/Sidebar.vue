@@ -8,6 +8,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAppearance } from '@/composables/useAppearance';
+import { useFeatures } from '@/composables/useFeatures';
 import { usePermission, type PermissionKey } from '@/composables/usePermission';
 import { dashboard } from '@/routes';
 import { index as activityLogsIndex } from '@/routes/activity-logs';
@@ -25,6 +26,8 @@ interface NavItem {
     icon: string;
     href: string;
     permission?: PermissionKey;
+    feature?: string;
+    requiresMultiUser?: boolean;
     exact?: boolean;
 }
 
@@ -43,6 +46,7 @@ const emit = defineEmits<{
 
 const page = usePage();
 const { can } = usePermission();
+const { can: canUseFeature, limit } = useFeatures();
 const { updateAppearance } = useAppearance();
 
 const user = computed(() => page.props.auth.user);
@@ -73,6 +77,7 @@ const navItems = computed<NavItem[]>(() => [
         icon: 'group',
         href: leadsIndex.url({ current_team: teamSlug.value }),
         permission: 'canManageLeads',
+        feature: 'lead_management',
     },
     {
         label: 'Profil Perusahaan',
@@ -109,6 +114,7 @@ const navItems = computed<NavItem[]>(() => [
         icon: 'how_to_reg',
         href: teamIndex.url({ current_team: teamSlug.value }),
         permission: 'canCreateInvitation',
+        requiresMultiUser: true,
     },
     {
         label: 'Pengaturan',
@@ -118,7 +124,19 @@ const navItems = computed<NavItem[]>(() => [
 ]);
 
 function canAccess(item: NavItem): boolean {
-    return item.permission ? can(item.permission) : true;
+    if (item.permission && !can(item.permission)) {
+        return false;
+    }
+
+    if (item.feature && !canUseFeature(item.feature)) {
+        return false;
+    }
+
+    if (item.requiresMultiUser && (limit('users') ?? 0) <= 1) {
+        return false;
+    }
+
+    return true;
 }
 
 function isActive(item: NavItem): boolean {

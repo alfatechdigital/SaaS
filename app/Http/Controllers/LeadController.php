@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\AuthorizesTeamModule;
+use App\Enums\Feature;
 use App\Enums\LeadStatus;
 use App\Enums\ProjectStatus;
 use App\Enums\TeamPermission;
@@ -28,6 +29,7 @@ class LeadController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageLeads);
+        $this->authorizeFeature($team, Feature::LeadManagement);
 
         $leads = Lead::query()
             ->orderByDesc('created_at')
@@ -43,8 +45,12 @@ class LeadController extends Controller
      */
     public function store(SaveLeadRequest $request): RedirectResponse
     {
+        $team = $request->team();
+
+        $this->authorizeFeature($team, Feature::LeadManagement);
+
         Lead::create([
-            'team_id' => $request->team()->id,
+            'team_id' => $team->id,
             ...$request->validated(),
         ]);
 
@@ -61,6 +67,8 @@ class LeadController extends Controller
      */
     public function update(SaveLeadRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::LeadManagement);
+
         $model = Lead::query()
             ->findOrFail((int) $request->route('lead'));
 
@@ -82,6 +90,7 @@ class LeadController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageLeads);
+        $this->authorizeFeature($team, Feature::LeadManagement);
 
         Lead::query()
             ->findOrFail((int) $request->route('lead'))
@@ -110,6 +119,7 @@ class LeadController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageLeads);
+        $this->authorizeFeature($team, Feature::LeadManagement);
 
         $lead = Lead::query()
             ->findOrFail((int) $request->route('lead'));
