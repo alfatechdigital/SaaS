@@ -27,7 +27,9 @@ use Illuminate\Support\Str;
  *    asked for (see {@see WhatsAppConversation}).
  * 2. **The reply is only recorded after the provider accepted it.** If sending
  *    fails, the conversation does not advance and the retry re-asks the same
- *    question instead of skipping a step the customer never saw.
+ *    question instead of skipping a step the customer never saw. A deliberate
+ *    refusal (quota exhausted, contact opted out) leaves the state untouched for
+ *    the same reason.
  * 3. **The bot stops where a human belongs.** `completed` and `handed_over` are
  *    silent, and a suspended tenant gets no automated answers at all.
  *
@@ -94,15 +96,21 @@ final class WhatsAppBot
 
         // Sent first, saved second: a failure must leave the conversation where it
         // was, so the retry asks the same question again.
-        $messageId = $this->sender->sendFor(
+        $result = $this->sender->sendFor(
             $team,
             OutgoingWhatsAppMessage::text($inbound->from_number, $reply),
         );
 
+        if (! $result->sent) {
+            // A guard refused on purpose. Nothing reached the customer, so
+            // advancing the state would skip a question they never received.
+            return;
+        }
+
         $conversation->last_outbound_at = now();
         $conversation->save();
 
-        $this->recordOutbound($team, $inbound, $reply, $messageId);
+        $this->recordOutbound($team, $inbound, $reply, $result->messageId);
     }
 
     /**

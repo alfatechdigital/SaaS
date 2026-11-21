@@ -82,9 +82,10 @@ class WhatsAppDeliveryTest extends TestCase
 
         $team = $this->tenantInConversation('6281234567890');
 
-        $messageId = app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('0812-3456-7890', 'Halo, ini uji coba.'));
+        $result = app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('0812-3456-7890', 'Halo, ini uji coba.'));
 
-        $this->assertSame('wamid.ABC', $messageId);
+        $this->assertTrue($result->sent);
+        $this->assertSame('wamid.ABC', $result->messageId);
 
         Http::assertSent(function (Request $request): bool {
             return $request->url() === 'https://graph.example.test/v21.0/109999999999999/messages'
@@ -150,7 +151,7 @@ class WhatsAppDeliveryTest extends TestCase
         $this->plans->planCode = 'basic';
         $this->app->forgetInstance(Entitlements::class);
 
-        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
+        $this->assertFalse(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'))->sent);
 
         Http::assertNothingSent();
     }
@@ -162,7 +163,7 @@ class WhatsAppDeliveryTest extends TestCase
         $team = Team::factory()->create();
 
         $this->assertFalse($team->isWhatsAppConnected());
-        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
+        $this->assertFalse(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'))->sent);
 
         Http::assertNothingSent();
     }
@@ -197,7 +198,10 @@ class WhatsAppDeliveryTest extends TestCase
 
         $team = $this->tenantInConversation();
 
-        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
+        $result = app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'));
+
+        $this->assertTrue($result->sent);
+        $this->assertNull($result->messageId);
 
         Http::assertNothingSent();
     }

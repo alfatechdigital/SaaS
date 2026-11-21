@@ -16,9 +16,11 @@ use Illuminate\Support\Facades\Http;
  * one WABA can own several numbers, and a message must leave from the number the
  * tenant actually registered.
  *
- * Only text messages for now. Meta requires an approved template outside the
- * 24-hour customer-service window; that belongs to the 11 Nov task (templates,
- * log and quota), not here.
+ * Two kinds of payload exist because Meta treats them differently: free text is
+ * only allowed within 24 hours of the customer's last message, so outside that
+ * window the sender must supply an approved template. The kind is explicit on the
+ * message object, so the guard lives in {@see WhatsAppSender} instead of every
+ * driver guessing.
  *
  * @see https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
  */

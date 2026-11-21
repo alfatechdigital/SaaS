@@ -4,6 +4,7 @@ namespace App\Support\WhatsApp;
 
 use App\Contracts\WhatsAppDriver;
 use App\Data\OutgoingWhatsAppMessage;
+use App\Data\WhatsAppSendResult;
 use App\Enums\Feature;
 use App\Exceptions\TemplateRequired;
 use App\Exceptions\WhatsAppDeliveryFailed;
@@ -31,8 +32,9 @@ use Illuminate\Support\Facades\RateLimiter;
  * 6. **Service window** — free text more than 24 h after the customer last wrote
  *    is refused, and the caller must send an approved template instead.
  *
- * `null` means "nothing was sent, deliberately" and every such refusal is logged
- * with its reason. Real provider failures are not swallowed:
+ * A refusal returns {@see WhatsAppSendResult::skipped()} and is logged with its
+ * reason, so a caller can tell "nothing was sent" from "the log driver accepted
+ * it without a provider id". Real provider failures are not swallowed:
  * {@see WhatsAppDeliveryFailed} carries whether another attempt is worthwhile.
  */
 final class WhatsAppSender
@@ -43,20 +45,20 @@ final class WhatsAppSender
     ) {}
 
     /**
-     * Send one message for the tenant, or return `null` when it must not be sent.
+     * Send one message for the tenant, or report that it was skipped.
      *
      * @throws WhatsAppDeliveryFailed when the provider refuses or is unreachable
      * @throws WhatsAppRateLimited when the tenant is sending too fast to try now
      * @throws TemplateRequired when free text is no longer allowed for this contact
      */
-    public function sendFor(Team $team, OutgoingWhatsAppMessage $message): ?string
+    public function sendFor(Team $team, OutgoingWhatsAppMessage $message): WhatsAppSendResult
     {
         if (! $team->can(Feature::WhatsAppBot)) {
             Log::info('Skipping a WhatsApp message because the tenant plan does not include the bot.', [
                 'team_id' => (int) $team->getKey(),
             ]);
 
-            return null;
+            return WhatsAppSendResult::skipped();
         }
 
         $credentials = $team->whatsappCredentials();
@@ -66,7 +68,7 @@ final class WhatsAppSender
                 'team_id' => (int) $team->getKey(),
             ]);
 
-            return null;
+            return WhatsAppSendResult::skipped();
         }
 
         $conversation = $this->conversationWith($team, $message->to);
@@ -76,14 +78,18 @@ final class WhatsAppSender
                 'team_id' => (int) $team->getKey(),
             ]);
 
-            return null;
+            return WhatsAppSendResult::skipped();
         }
 
         if (! $this->hasCapacity($team)) {
-            return null;
+            return WhatsAppSendResult::skipped();
         }
 
         $this->enforceServiceWindow($conversation, $message);
+
+        // Counted only now: a message refused by a guard above never reached the
+        // provider, so it must not use up the tenant's per-minute allowance.
+        RateLimiter::hit($this->rateLimitKey($team), 60);
 
         $messageId = $this->driver->send($credentials, $message);
 
@@ -96,11 +102,11 @@ final class WhatsAppSender
             'template' => $message->templateName,
         ]);
 
-        return $messageId;
+        return WhatsAppSendResult::sent($messageId);
     }
 
     /**
-     * Reserve a slot in the per-minute rate limit, then check the monthly quota.
+     * Check the per-minute rate limit, then the monthly quota.
      *
      * The rate limit is consulted first because it is the cheaper, self-healing
      * one: a caller that is merely too fast should wait, not be told its plan is
@@ -109,7 +115,7 @@ final class WhatsAppSender
     private function hasCapacity(Team $team): bool
     {
         $perMinute = max(1, (int) config('whatsapp.rate_limit.per_minute', 30));
-        $key = 'whatsapp:send:'.(int) $team->getKey();
+        $key = $this->rateLimitKey($team);
 
         if (RateLimiter::tooManyAttempts($key, $perMinute)) {
             throw new WhatsAppRateLimited(RateLimiter::availableIn($key));
@@ -125,9 +131,12 @@ final class WhatsAppSender
             return false;
         }
 
-        RateLimiter::hit($key, 60);
-
         return true;
+    }
+
+    private function rateLimitKey(Team $team): string
+    {
+        return 'whatsapp:send:'.(int) $team->getKey();
     }
 
     /**

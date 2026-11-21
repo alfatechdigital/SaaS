@@ -30,8 +30,8 @@ use Illuminate\Support\Facades\Log;
  * 3. **Writes happen inside the tenant's context**, because
  *    {@see WhatsAppMessage} is tenant-scoped and would otherwise refuse to write.
  *
- * Status callbacks (`sent`/`delivered`/`read`) are acknowledged and logged but not
- * stored yet: the delivery log is the 11 Nov task.
+ * Status callbacks (`sent`/`delivered`/`read`/`failed`) are applied by
+ * {@see WhatsAppDeliveryLog} inside the same tenant context.
  *
  * @see \docs\implementation\phase-05-fitur-masa-depan.md B-3.2
  */

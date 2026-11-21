@@ -106,7 +106,7 @@ class WhatsAppGuardsTest extends TestCase
             'limit' => 1000,
         ]);
 
-        $this->assertNull(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
+        $this->assertFalse(app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'))->sent);
 
         Http::assertNothingSent();
         $this->assertSame(0, app(WhatsAppQuota::class)->remaining($team));
@@ -177,6 +177,29 @@ class WhatsAppGuardsTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_a_refused_free_text_does_not_use_up_the_rate_limit(): void
+    {
+        Http::fake(['graph.example.test/*' => Http::response(['messages' => [['id' => 'wamid.T']]])]);
+        config(['whatsapp.rate_limit.per_minute' => 1]);
+
+        $team = $this->tenant(lastInbound: '-30 hours');
+
+        try {
+            app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'));
+            $this->fail('Free text outside the service window should have been refused.');
+        } catch (TemplateRequired) {
+            // expected
+        }
+
+        $result = app(WhatsAppSender::class)->sendFor(
+            $team,
+            OutgoingWhatsAppMessage::template('08123456789', 'follow_up_penawaran'),
+        );
+
+        $this->assertTrue($result->sent);
+        Http::assertSentCount(1);
+    }
+
     public function test_free_text_is_refused_outside_the_service_window(): void
     {
         Http::fake();
@@ -202,7 +225,10 @@ class WhatsAppGuardsTest extends TestCase
         Http::fake(['graph.example.test/*' => Http::response(['messages' => [['id' => 'wamid.1']]])]);
         $team = $this->tenant(lastInbound: '-23 hours');
 
-        $this->assertSame('wamid.1', app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.')));
+        $result = app(WhatsAppSender::class)->sendFor($team, OutgoingWhatsAppMessage::text('08123456789', 'Halo.'));
+
+        $this->assertTrue($result->sent);
+        $this->assertSame('wamid.1', $result->messageId);
     }
 
     public function test_a_template_is_sent_outside_the_service_window(): void
@@ -210,12 +236,13 @@ class WhatsAppGuardsTest extends TestCase
         Http::fake(['graph.example.test/*' => Http::response(['messages' => [['id' => 'wamid.T']]])]);
         $team = $this->tenant(lastInbound: '-40 hours');
 
-        $messageId = app(WhatsAppSender::class)->sendFor(
+        $result = app(WhatsAppSender::class)->sendFor(
             $team,
             OutgoingWhatsAppMessage::template('08123456789', 'follow_up_penawaran', ['Budi', 'Website'], 'id'),
         );
 
-        $this->assertSame('wamid.T', $messageId);
+        $this->assertTrue($result->sent);
+        $this->assertSame('wamid.T', $result->messageId);
 
         Http::assertSent(function ($request): bool {
             return $request['type'] === 'template'

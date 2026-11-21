@@ -171,10 +171,10 @@ class WhatsAppOptOutAndStatusTest extends TestCase
             'opted_out_at' => now(),
         ]);
 
-        $this->assertNull(app(WhatsAppSender::class)->sendFor(
+        $this->assertFalse(app(WhatsAppSender::class)->sendFor(
             $team,
             OutgoingWhatsAppMessage::text(self::CONTACT, 'Promo spesial'),
-        ));
+        )->sent);
     }
 
     public function test_a_regular_message_still_gets_an_automated_reply(): void

@@ -52,10 +52,9 @@ final class WhatsAppQuota
      */
     public function record(Team $team): void
     {
-        $counter = $this->counterFor($team);
-
-        $counter->used++;
-        $counter->save();
+        // Atomic increment: two workers sending for the same tenant must not
+        // read-modify-write the same row and lose a message from the count.
+        $this->counterFor($team)->increment('used');
     }
 
     /**

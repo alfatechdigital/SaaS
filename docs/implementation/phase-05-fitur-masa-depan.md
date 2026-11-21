@@ -120,7 +120,7 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1 sebagai **bot dua arah** (pengiriman + webhook masuk + balasan otomatis). |
 | **Fondasi siap**        | ✅ Pengiriman dasar (05 Nov) + entitlement `whatsapp_bot` + pola job konteks tenant                                        |
-| **Sisa pekerjaan**      | Template pesan, log pengiriman, kuota (11 Nov); webhook masuk & routing (9 Nov); balasan otomatis (10 Nov)          |
+| **Sisa pekerjaan**      | — ditutup oleh **B-3.5** (test end-to-end + hardening, tugas 12 Nov)                                                |
 | **Risiko utama**        | Biaya per pesan, aturan kebijakan penyedia, penyalahgunaan (spam) oleh tenant                                       |
 | **Prasyarat keputusan** | ✅ Dijawab 2026-11-10 — **Meta WhatsApp Cloud API langsung**, kredensial **per tenant**                             |
 | **Estimasi besar**      | Sedang–Tinggi                                                                                                       |
@@ -256,6 +256,24 @@ Keputusan yang perlu diingat:
 - **Bot tetap jalan di dalam jendela**: percakapan disimpan sebelum membalas, karena `last_inbound_at` itulah yang membuka jendela 24 jam.
 
 Test baru: `tests/Feature/WhatsAppGuardsTest.php` (13 kasus — kuota dari plan, konsumsi per pesan, kuota habis, pengiriman gagal tidak memakan kuota, jatah add-on, rate limit per tenant, jendela 24 jam buka/tutup, template di luar jendela) dan `tests/Feature/WhatsAppOptOutAndStatusTest.php` (11 kasus — kata kunci utuh vs kalimat, opt-out menghentikan bot, kontak opt-out tidak pernah dikirimi, callback delivered/read/failed, status tidak mundur, status lintas tenant).
+
+#### B-3.5 Test end-to-end & hardening — ✅ Selesai 2026-11-21 (tugas 12 Nov, CHECKPOINT-1)
+
+Bukti bahwa rantainya utuh, bukan hanya tiap bagian: satu file test membangun percakapan dari webhook bertanda tangan sampai callback `delivered`/`read`, dengan hanya endpoint provider yang di-fake.
+
+| Berkas | Isi |
+| --- | --- |
+| `tests/Feature/WhatsAppEndToEndTest.php` | 5 kasus: pesan masuk → balasan lewat nomor + token tenant → `delivered` → `read`; alur penuh 4 pesan → lead + 4 balasan berstatus `delivered`; dua tenant dengan nomor kontak sama tidak saling melihat/menjawab, termasuk callback status; webhook yang di-replay tidak menjawab dua kali; kuota habis tidak meninggalkan percakapan setengah maju |
+| `app/Data/WhatsAppSendResult.php` | Hasil kirim eksplisit: `skipped()` vs `sent(?string $messageId)` |
+
+Hardening yang ikut diperbaiki (ditemukan saat menulis test di atas):
+
+- **`null` ganda dihapus.** Dulu `WhatsAppSender::sendFor()` mengembalikan `?string`, dan `null` berarti dua hal berlawanan: "sengaja tidak dikirim" dan "dikirim oleh driver `log` tanpa provider id". Bot memperlakukan keduanya sebagai sukses, sehingga saat kuota habis ia mencatat pesan keluar palsu dan memajukan state — pelanggan tidak pernah menerima pertanyaan yang dilewati. Sekarang `WhatsAppSendResult` membedakannya, dan bot berhenti tanpa menyimpan state atau baris pesan.
+- **Rate limit hanya dihitung saat benar-benar mencoba kirim.** Sebelumnya jatah per menit terpakai bahkan ketika `TemplateRequired` menolak teks bebas di luar jendela; percobaan yang tidak pernah sampai ke provider tidak boleh memakai kuota kecepatan.
+- **Kenaikan kuota atomik** (`increment('used')`), supaya dua worker yang mengirim untuk tenant yang sama tidak saling menimpa hitungan.
+- **Komentar usang dibersihkan** di `WhatsAppWebhookProcessor` dan `MetaCloudDriver` yang masih menyebut status/template sebagai pekerjaan 11 Nov, dan nama test webhook yang masih mengatakan status "tidak disimpan".
+
+Test: seluruh suite **473 kasus hijau** (`php artisan test`), `phpstan` 0 error, `pint` bersih, `npm run types:check` bersih.
 
 ### Item B-4 — Katalog / Pesanan / Keranjang
 

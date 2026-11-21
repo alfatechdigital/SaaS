@@ -241,7 +241,7 @@ class WhatsAppWebhookTest extends TestCase
         $this->assertSame(0, DB::table('whatsapp_messages')->count());
     }
 
-    public function test_delivery_status_callbacks_are_acknowledged_without_being_stored(): void
+    public function test_a_status_for_an_unknown_message_is_acknowledged_without_creating_a_row(): void
     {
         $this->connectedTenant();
 
