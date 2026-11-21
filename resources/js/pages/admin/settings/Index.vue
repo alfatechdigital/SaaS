@@ -5,6 +5,7 @@ import { useAppearance, type Appearance } from '@/composables/useAppearance';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
 import { index as teamIndex } from '@/routes/team';
+import { edit as whatsappEdit } from '@/routes/whatsapp';
 
 /**
  * Account & system preferences overview.
@@ -342,7 +343,7 @@ const systemRows = computed(() => [
             </div>
 
             <div
-                class="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 text-xs sm:grid-cols-3 dark:border-slate-800"
+                class="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 text-xs sm:grid-cols-2 lg:grid-cols-4 dark:border-slate-800"
             >
                 <Link
                     :href="profileEdit()"
@@ -370,6 +371,15 @@ const systemRows = computed(() => [
                         >group</span
                     >
                     <span>Kelola Tim</span>
+                </Link>
+                <Link
+                    :href="whatsappEdit.url({ current_team: teamSlug })"
+                    class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5 font-semibold text-slate-700 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
+                >
+                    <span class="material-symbols-outlined text-[18px]"
+                        >chat</span
+                    >
+                    <span>WhatsApp</span>
                 </Link>
             </div>
         </div>

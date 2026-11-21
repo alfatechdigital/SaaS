@@ -10,6 +10,7 @@ use App\Support\Entitlements;
 use Carbon\CarbonImmutable;
 use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -49,6 +50,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, UsageCounter> $usageCounters
  */
 #[Fillable(['name', 'slug', 'public_page_enabled', 'suspended_at', 'settings'])]
+#[Hidden(['whatsapp_access_token'])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */

@@ -17,6 +17,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Controllers\TenantTeamController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\WhatsAppSettingsController;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +45,12 @@ Route::prefix('{current_team}')
 
         // Account & system preferences overview in the Alfatech shell.
         Route::get('settings', SettingsController::class)->name('settings.index');
+
+        // The tenant's own WhatsApp Business number (B-3). Configuration only;
+        // sending is still gated by the `whatsapp_bot` entitlement.
+        Route::get('settings/whatsapp', [WhatsAppSettingsController::class, 'edit'])->name('whatsapp.edit');
+        Route::put('settings/whatsapp', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.update');
+        Route::delete('settings/whatsapp', [WhatsAppSettingsController::class, 'destroy'])->name('whatsapp.destroy');
 
         // The tenant's own team management, inside the tenant shell (PDR-04, PDR-07).
         Route::get('team', [TenantTeamController::class, 'index'])->name('team.index');

@@ -18,6 +18,7 @@ import { index as projectsIndex } from '@/routes/projects';
 import { edit as profileEdit } from '@/routes/profile';
 import { index as teamIndex } from '@/routes/team';
 import { index as transactionsIndex } from '@/routes/transactions';
+import { edit as whatsappEdit } from '@/routes/whatsapp';
 
 withDefaults(
     defineProps<{
@@ -92,6 +93,10 @@ const modules = computed(() => [
     {
         label: 'Kelola Tim',
         href: teamIndex.url({ current_team: teamSlug.value }),
+    },
+    {
+        label: 'WhatsApp',
+        href: whatsappEdit.url({ current_team: teamSlug.value }),
     },
     { label: 'Profil Saya', href: profileEdit().url },
 ]);

@@ -165,7 +165,7 @@ gantt
 ### 5.0 Progress Tracker
 
 > Centang tugas yang **sudah selesai & ter-commit**. Sumber kebenaran status tetap commit di `main`.
-> **Status per 21 Nov 2026:** ✅ selesai sampai **12 Nov 2026** — WhatsApp dua arah + hardening selesai di working tree (**belum di-commit**), **CHECKPOINT-1 lulus** (fitur sudah dua arah, jadi tidak perlu fallback). Berikutnya **16 Nov** (Basic readiness F-7).
+> **Status per 21 Nov 2026:** ✅ selesai sampai **12 Nov 2026** — WhatsApp dua arah + hardening **dan UI koneksi nomor tenant** selesai di working tree (**belum di-commit**), **CHECKPOINT-1 lulus** (fitur sudah dua arah, jadi tidak perlu fallback). Berikutnya **16 Nov** (Basic readiness F-7).
 
 **Oktober 2026 — Fondasi & Prioritas Urgent**
 

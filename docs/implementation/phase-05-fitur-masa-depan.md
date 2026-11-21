@@ -275,6 +275,25 @@ Hardening yang ikut diperbaiki (ditemukan saat menulis test di atas):
 
 Test: seluruh suite **473 kasus hijau** (`php artisan test`), `phpstan` 0 error, `pint` bersih, `npm run types:check` bersih.
 
+#### B-3.6 UI koneksi nomor tenant — ✅ Selesai 2026-11-21 (follow-up)
+
+Gelombang 1 berhenti di backend; menghubungkan nomor masih lewat Tinker. Bagian ini menutup celah itu agar tenant bisa mengatur nomornya sendiri.
+
+| Bagian | Isi |
+| --- | --- |
+| **Halaman** | `GET/PUT/DELETE {current_team}/settings/whatsapp` → `admin/settings/WhatsApp.vue`; tautan dari halaman Settings dan quick-nav |
+| **Controller** | `WhatsAppSettingsController` — status koneksi, simpan kredensial, putuskan |
+| **Form request** | `SaveWhatsAppSettingsRequest` — `phone_number_id` & WABA id harus digit; token wajib saat pertama menghubungkan, dan **kosong = pertahankan token lama** |
+| **Otorisasi** | `TeamPermission::UpdateTeam` (owner/admin); member biasa 403 |
+| **Entitlement** | Halaman tetap bisa dibuka saat paket belum mencakup `whatsapp_bot` — menyimpan kredensial adalah konfigurasi, pengiriman tetap diblokir `WhatsAppSender`. Halaman menampilkan peringatan paket |
+| **Keamanan** | Token tidak pernah dikirim balik ke browser; UI hanya menerima `has_token` |
+
+**Temuan keamanan yang ikut diperbaiki:** `auth.user.current_team` adalah shared Inertia prop di **semua** halaman, dan model `Team` diserialkan utuh — termasuk `whatsapp_access_token` yang sudah didekripsi. Artinya setiap halaman membocorkan token tenant ke browser. `Team` kini memakai `#[Hidden(['whatsapp_access_token'])]`, dengan regression test `test_the_shared_page_props_never_expose_the_token`.
+
+Test: `tests/Feature/WhatsAppSettingsTest.php` (13 kasus) — guest dialihkan ke login, status tanpa token, simpan & enkripsi token, token tidak bocor ke HTML, token lama dipertahankan saat field kosong, token wajib saat koneksi pertama, validasi angka, putuskan menghapus token, kredensial bisa disiapkan sebelum paket mencakup bot, member/non-member/tenant lain ditolak.
+
+Test suite setelah UI: **486 kasus hijau**, `phpstan` 0 error, `pint` bersih, `vue-tsc` bersih, `npm run build` + `build:ssr` sukses.
+
 ### Item B-4 — Katalog / Pesanan / Keranjang
 
 | Aspek                   | Keterangan                                                                                            |
