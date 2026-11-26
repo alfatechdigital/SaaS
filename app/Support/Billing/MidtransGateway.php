@@ -30,13 +30,22 @@ use Illuminate\Support\Facades\Http;
  */
 final class MidtransGateway implements PaymentGateway
 {
-    private const SANDBOX_URL = 'https://api.sandbox.midtrans.com';
+    /**
+     * Snap lives on `app.*`; the status/transaction API lives on `api.*`. They are
+     * different hosts, and mixing them up fails with a 404 the provider calls
+     * "unexpected", not with a hint about the host.
+     */
+    private const SNAP_SANDBOX_URL = 'https://app.sandbox.midtrans.com';
 
-    private const PRODUCTION_URL = 'https://api.midtrans.com';
+    private const SNAP_PRODUCTION_URL = 'https://app.midtrans.com';
+
+    private const API_SANDBOX_URL = 'https://api.sandbox.midtrans.com';
+
+    private const API_PRODUCTION_URL = 'https://api.midtrans.com';
 
     public function createTransaction(Invoice $invoice): PaymentTransaction
     {
-        $response = $this->client()->post($this->baseUrl().'/snap/v1/transactions', [
+        $response = $this->client()->post($this->snapBaseUrl().'/snap/v1/transactions', [
             'transaction_details' => [
                 'order_id' => $invoice->number,
                 'gross_amount' => $invoice->amount,
@@ -71,7 +80,7 @@ final class MidtransGateway implements PaymentGateway
 
     public function fetchStatus(string $orderId): PaymentStatusResult
     {
-        $response = $this->client()->get($this->baseUrl().'/v2/'.rawurlencode($orderId).'/status');
+        $response = $this->client()->get($this->apiBaseUrl().'/v2/'.rawurlencode($orderId).'/status');
 
         if ($response->failed()) {
             throw PaymentGatewayError::requestFailed('Midtrans', $this->describe($response));
@@ -99,11 +108,18 @@ final class MidtransGateway implements PaymentGateway
             ->timeout((int) config('billing.midtrans.timeout', 15));
     }
 
-    private function baseUrl(): string
+    private function snapBaseUrl(): string
     {
         return config('billing.midtrans.is_production') === true
-            ? self::PRODUCTION_URL
-            : self::SANDBOX_URL;
+            ? self::SNAP_PRODUCTION_URL
+            : self::SNAP_SANDBOX_URL;
+    }
+
+    private function apiBaseUrl(): string
+    {
+        return config('billing.midtrans.is_production') === true
+            ? self::API_PRODUCTION_URL
+            : self::API_SANDBOX_URL;
     }
 
     private function serverKey(): string

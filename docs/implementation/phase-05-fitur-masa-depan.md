@@ -182,7 +182,7 @@ Test: `InvoiceServiceTest` (harga bulanan/tahunan, idempotensi per periode, invo
 | Bagian | Yang dibangun |
 | --- | --- |
 | **Kontrak** | `App\Contracts\PaymentGateway` (`createTransaction`, `fetchStatus`) + DTO `PaymentTransaction`/`PaymentStatusResult` + enum `PaymentStatus` (`pending`/`paid`/`failed`/`expired`/`refunded`) |
-| **Midtrans** | `MidtransGateway`: Snap `/snap/v1/transactions` (order id = nomor invoice, expiry = grace 7 hari) dan `/v2/{order_id}/status`; HTTP Basic server key; sandbox default, produksi harus eksplisit |
+| **Midtrans** | `MidtransGateway`: Snap `/snap/v1/transactions` di host `app.*` (order id = nomor invoice, expiry = grace 7 hari) dan `/v2/{order_id}/status` di host `api.*`; HTTP Basic server key; sandbox default, produksi harus eksplisit |
 | **Tanpa kredensial** | `UnconfiguredPaymentGateway` + `BILLING_DRIVER=none` (default): menolak setiap panggilan, tidak pernah berpura-pura membuat link |
 | **Pembayaran invoice** | `InvoicePayment::start()` membuat satu link per invoice dan menyimpannya (`payment_token`/`payment_url`); invoice `paid`/`void` ditolak (`InvoiceNotPayable`). `refresh()` hanya membaca status |
 | **Skema** | Kolom `invoices.payment_token` + `invoices.payment_url` |

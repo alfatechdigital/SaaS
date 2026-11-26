@@ -30,7 +30,7 @@ class MidtransGatewayTest extends TestCase
         $this->configureMidtrans();
 
         Http::fake([
-            'https://api.sandbox.midtrans.com/snap/v1/transactions' => Http::response([
+            'https://app.sandbox.midtrans.com/snap/v1/transactions' => Http::response([
                 'token' => 'snap-token-1',
                 'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v4/redirection/snap-token-1',
             ], 201),
@@ -49,7 +49,7 @@ class MidtransGatewayTest extends TestCase
         Http::assertSent(function (Request $request) use ($invoice): bool {
             $payload = $request->data();
 
-            return $request->url() === 'https://api.sandbox.midtrans.com/snap/v1/transactions'
+            return $request->url() === 'https://app.sandbox.midtrans.com/snap/v1/transactions'
                 && $request->hasHeader('Authorization', 'Basic '.base64_encode('SB-Mid-server-test:'))
                 && $payload['transaction_details'] === [
                     'order_id' => $invoice->number,
@@ -84,7 +84,7 @@ class MidtransGatewayTest extends TestCase
         $this->configureMidtrans(production: true);
 
         Http::fake([
-            'https://api.midtrans.com/snap/v1/transactions' => Http::response([
+            'https://app.midtrans.com/snap/v1/transactions' => Http::response([
                 'token' => 'snap-token-2',
                 'redirect_url' => 'https://app.midtrans.com/snap/v4/redirection/snap-token-2',
             ], 201),
@@ -92,7 +92,7 @@ class MidtransGatewayTest extends TestCase
 
         app(InvoicePayment::class)->start($this->invoice());
 
-        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.midtrans.com/snap/v1/transactions');
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://app.midtrans.com/snap/v1/transactions');
     }
 
     public function test_a_paid_or_voided_invoice_cannot_be_paid_again(): void
