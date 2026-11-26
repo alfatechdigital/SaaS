@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { useAppearance, type Appearance } from '@/composables/useAppearance';
 import { useFeatures } from '@/composables/useFeatures';
+import { show as billingShow } from '@/routes/billing';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as securityEdit } from '@/routes/security';
 import { index as teamIndex } from '@/routes/team';
@@ -384,6 +385,15 @@ const systemRows = computed(() => [
                         >chat</span
                     >
                     <span>WhatsApp</span>
+                </Link>
+                <Link
+                    :href="billingShow.url({ current_team: teamSlug })"
+                    class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5 font-semibold text-slate-700 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
+                >
+                    <span class="material-symbols-outlined text-[18px]"
+                        >workspace_premium</span
+                    >
+                    <span>Paket saya</span>
                 </Link>
             </div>
         </div>

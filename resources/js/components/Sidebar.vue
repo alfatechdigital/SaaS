@@ -12,6 +12,7 @@ import { useFeatures } from '@/composables/useFeatures';
 import { usePermission, type PermissionKey } from '@/composables/usePermission';
 import { dashboard } from '@/routes';
 import { index as activityLogsIndex } from '@/routes/activity-logs';
+import { show as billingShow } from '@/routes/billing';
 import { edit as companyProfileEdit } from '@/routes/company-profile';
 import { index as contentsIndex } from '@/routes/contents';
 import { index as teamIndex } from '@/routes/team';
@@ -125,6 +126,11 @@ const navItems = computed<NavItem[]>(() => [
         label: 'Pengaturan',
         icon: 'settings',
         href: settingsIndex.url({ current_team: teamSlug.value }),
+    },
+    {
+        label: 'Paket saya',
+        icon: 'workspace_premium',
+        href: billingShow.url({ current_team: teamSlug.value }),
     },
 ]);
 

@@ -4,6 +4,7 @@ import { Building2, LogOut } from '@lucide/vue';
 import { computed } from 'vue';
 import { Toaster } from '@/components/ui/sonner';
 import { logout } from '@/routes';
+import { index as plansIndex } from '@/routes/platform/plans';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
 
 const page = usePage();
@@ -45,6 +46,12 @@ const user = computed(() => page.props.auth.user);
                         class="rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
                         Tenant
+                    </Link>
+                    <Link
+                        :href="plansIndex()"
+                        class="rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                        Paket
                     </Link>
                 </nav>
 

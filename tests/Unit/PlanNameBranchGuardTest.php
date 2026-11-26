@@ -16,9 +16,19 @@ use RecursiveIteratorIterator;
  *
  * Comment lines are skipped: documentation is allowed to *mention* the pattern it
  * forbids.
+ *
+ * Wayfinder's generated helpers (`resources/js/routes`, `resources/js/actions`)
+ * are skipped too: `{plan}` there is a route parameter — the id of a `plans` row —
+ * not a plan name, and the files are regenerated from `routes/*.php` on every
+ * build.
  */
 class PlanNameBranchGuardTest extends TestCase
 {
+    /**
+     * Generated glue, not application code.
+     */
+    private const GENERATED_PATHS = ['resources/js/routes/', 'resources/js/actions/'];
+
     /**
      * `->plan` as a property or method-less access, but not the `plan()` method.
      */
@@ -60,6 +70,10 @@ class PlanNameBranchGuardTest extends TestCase
                     continue;
                 }
 
+                if ($this->isGenerated($file->getPathname(), $base)) {
+                    continue;
+                }
+
                 $offenders = [...$offenders, ...$this->scan($file->getPathname(), $base)];
             }
         }
@@ -86,6 +100,22 @@ class PlanNameBranchGuardTest extends TestCase
         }
 
         return $offenders;
+    }
+
+    /**
+     * Whether the file lives under a generated directory.
+     */
+    private function isGenerated(string $file, string $base): bool
+    {
+        $relative = str_replace('\\', '/', substr($file, strlen($base) + 1));
+
+        foreach (self::GENERATED_PATHS as $prefix) {
+            if (str_starts_with($relative, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isComment(string $line): bool

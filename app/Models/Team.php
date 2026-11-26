@@ -336,6 +336,19 @@ class Team extends Model
     }
 
     /**
+     * The features this tenant bought separately from its plan (PDR-06).
+     *
+     * Read through {@see Entitlements}; the relation exists so a row
+     * can be created without making `team_id` mass-assignable.
+     *
+     * @return HasMany<TenantAddon, $this>
+     */
+    public function tenantAddons(): HasMany
+    {
+        return $this->hasMany(TenantAddon::class);
+    }
+
+    /**
      * Every subscription this tenant has had (B-2).
      *
      * @return HasMany<Subscription, $this>

@@ -78,7 +78,7 @@ Setelah Fase 1–4 (yang direncanakan):
 | Domain         | Resolusi tenant terabstraksi; tabel `domains` masih desain |
 | SEO            | Meta/OG/canonical/sitemap/robots per tenant                |
 | Entitlement    | `Feature` enum + plan di config + `Team::can()`            |
-| Billing        | Skema + service + invoice/dunning + driver Midtrans + webhook + rekonsiliasi/kuota/gating (B-2.1–B-2.6); UI Paket saya menyusul |
+| Billing        | Skema + service + invoice/dunning + driver Midtrans + webhook + rekonsiliasi/kuota/gating (B-2.1–B-2.6) + UI "Paket saya" & panel platform (B-2.7); self-service menyusul |
 | Audit platform | Tersedia                                                   |
 
 Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, WhatsApp, AI, analitik, kuota.
@@ -107,8 +107,8 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | Aspek                   | Keterangan                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1, **hanya sisi langganan SaaS** (tenant → platform). UI upgrade/downgrade tetap gelombang 2. |
-| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3); ✅ driver Midtrans (B-2.4); ✅ webhook terverifikasi (B-2.5); ✅ rekonsiliasi + kuota dasar + gating backend (B-2.6) |
-| **Sisa pekerjaan**      | UI "Paket saya" + panel platform (26 Nov); self-service & retensi (30 Nov)                                                              |
+| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3); ✅ driver Midtrans (B-2.4); ✅ webhook terverifikasi (B-2.5); ✅ rekonsiliasi + kuota dasar + gating backend (B-2.6); ✅ add-on + UI "Paket saya" + panel platform (B-2.7) |
+| **Sisa pekerjaan**      | Onboarding self-service + retensi (30 Nov); upgrade/downgrade & pembelian add-on mandiri (gelombang 2)                                  |
 | **Catatan Indonesia**   | Midtrans/Xendit **bukan** subscription billing penuh — status langganan kemungkinan harus dikelola sendiri (job pengecekan periode)   |
 | **Risiko utama**        | Uang nyata: kesalahan status = kerugian finansial; webhook tidak idempoten; penagihan ganda                                           |
 | **Prasyarat keputusan** | D-05, PDR-05                                                                                                                          |
@@ -151,7 +151,7 @@ Keputusan yang perlu diingat:
 - **`past_due` tetap memberi akses.** Grace 7 hari (§B.4.3) berarti fitur belum dicabut pada kegagalan tagihan pertama; `markExpired()` yang mengakhiri.
 - **Entitlement membaca langganan berjalan yang masih memberi akses.** `expired`/`canceled`/tanpa langganan → plan default; mematikan tenant sepenuhnya tetap urusan `teams.suspended_at` + job retensi, bukan plan.
 - **`$team->can()` tetap aman di luar request.** Sumber entitlement membungkus query-nya dalam `TenantContext::runFor($team, …)`, karena `subscriptions` dijaga global scope dan pertanyaan entitlement juga muncul dari command dan test.
-- **Add-on belum ada.** `addonFeaturesFor()` mengembalikan `[]` sampai `tenant_addons` dibangun (tugas 25 Nov) — fitur yang tidak dibeli tidak boleh muncul.
+- **Add-on kini nyata.** `addonFeaturesFor()` membaca `tenant_addons` sejak tugas 26 Nov — fitur yang tidak dibeli tetap tidak muncul, dan add-on tidak mengubah label paket.
 
 Test: `SubscriptionServiceTest` (trial, konversi trial→aktif dengan/tanpa sisa hari, tahunan, past_due → aktif/expired, batal trial vs berbayar, penutupan periode, transisi terlarang, trial kedua ditolak), `SubscriptionEntitlementTest` (tanpa langganan = default, aktif/trial/past_due menentukan plan, expired jatuh ke default, langganan berjalan menang atas yang sudah berakhir, binding asli terpasang), `BillingIntervalTest` (anti-overflow & label).
 
@@ -243,6 +243,32 @@ Keputusan yang perlu diingat:
 - **Daftar fitur di menu mengikuti paket, bukan nama modul.** Sidebar dan quick-nav memakai `feature` per item, sehingga menambah modul baru cukup satu baris di keduanya.
 
 Test: `InvoiceReconcilerTest` (settlement webhook yang hilang, `expire` → `void` tanpa menyentuh langganan, `pending` tidak mengubah, invoice tanpa link tidak pernah ditanya, satu lookup gagal tidak menghentikan yang lain, pass kedua tidak menyentuh invoice lunas, di luar jendela dilewati), `ReconcileBillingCommandTest` (driver `none` berhenti dengan peringatan, ringkasan pass), `SeatQuotaTest` (limit 1/3/10, undangan mengunci kursi, undangan kedaluwarsa tidak, accept ditolak saat kursi habis, accept di batas tetap boleh), `MonthlyQuotaTest` (limit dari paket, pemakaian dihitung, satu baris per periode, limit dibekukan, periode baru kuota baru), `ModuleEntitlementTest` (Basic 403 untuk proyek/konten/keuangan, Plus 403 untuk modul Pro tetapi boleh profil/portofolio, Pro boleh semuanya, tulis tugas tetap jalan), `BillingConfigTest` (jendela & batch rekonsiliasi).
+
+#### B-2.7 Add-on, UI "Paket saya" & panel platform — ✅ Selesai 2026-11-26 (tugas 26 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **`tenant_addons`** | Migrasi + model `TenantAddon` (`feature`, `starts_at`, `ends_at`, `provider_reference`) + unik `(team_id, feature)`; `App\Support\Billing\TenantAddons` (`active`, `all`, `grant`, `revoke`, `coveredByPlan`) sebagai satu-satunya penulis |
+| **Entitlement** | `SubscriptionEntitlementSource::addonFeaturesFor()` membaca add-on aktif; `Entitlements::features()` tetap menggabungkan fitur paket ∪ add-on tanpa mengubah `planCode` |
+| **UI tenant** | `GET {current_team}/settings/billing` (`billing.show`) → halaman `admin/settings/Billing`: paket, status langganan, periode, harga, fitur aktif + add-on, kuota pengguna & AI, daftar tagihan |
+| **Pembayaran** | `POST {current_team}/settings/billing/invoices/{invoice}/pay` (`billing.pay`, owner saja) memakai `InvoicePayment::start()` lalu redirect ke halaman Snap; link disimpan sehingga klik kedua tidak membuka transaksi baru; tanpa driver (`none`) tombol disembunyikan dan aksi ditolak |
+| **Panel paket** | `GET /platform/plans` + `PATCH /platform/plans/{plan}`: harga bulanan/tahunan, deskripsi, status dijual; fitur & kuota ditampilkan dari config (read-only) |
+| **Panel tenant** | `GET /platform/tenants/{team}/billing`: langganan, fitur efektif (add-on ditandai), kuota paket, pemakaian, riwayat add-on, tagihan terakhir; `POST /platform/tenants/{team}/addons` + `DELETE .../addons/{feature}` untuk grant/revoke |
+| **Audit** | Tiga aksi baru `PlatformAuditAction`: `plan.updated`, `tenant.addon.granted`, `tenant.addon.revoked` |
+| **Tipe & navigasi** | `resources/js/types/billing.ts`; menu "Paket saya" di sidebar, quick-nav, dan kartu Pengaturan; navigasi "Paket" di panel platform |
+
+Keputusan yang perlu diingat:
+
+- **Add-on tidak mengubah label paket.** "Basic + add-on" tetap Basic di daftar tenant; `planCode()` tidak pernah membaca `tenant_addons` (phase-04 §4.5.6).
+- **Grant mengulang baris, bukan menumpuk.** Karena `(team_id, feature)` unik, grant kedua memperpanjang baris yang sama; revoke menulis `ends_at = now` alih-alih menghapus, sehingga riwayat dan audit tetap terbaca.
+- **Fitur yang sudah termasuk paket tidak dijual ulang.** `coveredByPlan()` menolak grant dan panel menjawab dengan toast error — mencegah tagihan ganda untuk hal yang sama.
+- **Harga berubah, kontrak tidak.** Panel hanya menulis `plans` (komersial). Fitur/kuota tetap di `config/plans.php` (ADR-14, D-06); `PlanSeeder` masih menyalin config sehingga menjalankannya menimpa harga manual — halaman panel menyebutkan itu terang-terangan.
+- **Pembayaran milik pemilik.** Halaman boleh dibaca semua anggota (tahu apa yang dibayar tenant bukan rahasia), tetapi mengeluarkan uang hanya pemilik.
+- **Invoice dicari di dalam konteks tenant, bukan lewat route binding.** `invoices` dijaga team global scope dan binding berjalan sebelum `CurrentTeam::from()`, jadi lookup dilakukan di controller — pola yang sama dengan modul domain lain.
+- **Tanpa upgrade/downgrade.** G-2 tetap gelombang 2, jadi halaman hanya menyatakan paket dikelola operator alih-alih menyediakan tombol yang tidak melakukan apa pun.
+- **Panel tidak mengubah paket tenant.** Satu-satunya perubahan entitlement dari panel adalah add-on; paket mengikuti langganan supaya transisi status tidak bisa dilompati.
+
+Test: `TenantAddonTest` (satu baris per fitur, revoke mengakhiri tanpa menghapus, add-on kedaluwarsa berhenti berlaku, isolasi tenant), `AddonEntitlementTest` (add-on memberi fitur tanpa mengubah plan, Basic + add-on boleh membuka modul Pro, fitur default tetap), `TenantBillingPageTest` (halaman menampilkan paket/kuota/tagihan, semua anggota boleh membaca, owner membuka link Snap, klik kedua memakai transaksi yang sama, invoice lunas ditolak, anggota tidak boleh membayar, invoice tenant lain 404, driver `none` menolak), `PlatformPlanTest` (otorisasi platform, isi komersial + kontrak, ubah harga + audit, validasi harga), `PlatformTenantBillingTest` (otorisasi, props langganan/fitur/kuota, grant + audit + efek entitlement, fitur yang sudah termasuk ditolak, revoke + audit, daftar grantable mengecualikan fitur paket).
 
 ### Item B-3 — WhatsApp Integration ✅ **GELOMBANG 1**
 

@@ -11,6 +11,7 @@ import { useAppearance } from '@/composables/useAppearance';
 import { useFeatures } from '@/composables/useFeatures';
 import { dashboard } from '@/routes';
 import { index as activityLogsIndex } from '@/routes/activity-logs';
+import { show as billingShow } from '@/routes/billing';
 import { edit as companyProfileEdit } from '@/routes/company-profile';
 import { index as contentsIndex } from '@/routes/contents';
 import { index as leadsIndex } from '@/routes/leads';
@@ -114,6 +115,10 @@ const modules = computed<QuickModule[]>(() => {
             label: 'Kelola Tim',
             href: teamIndex.url({ current_team: teamSlug.value }),
             requiresMultiUser: true,
+        },
+        {
+            label: 'Paket saya',
+            href: billingShow.url({ current_team: teamSlug.value }),
         },
         {
             label: 'WhatsApp',

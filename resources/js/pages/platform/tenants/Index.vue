@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+    billing as tenantBillingRoute,
     destroy as destroyTenant,
     publicPage as togglePublicPageRoute,
     store,
@@ -108,6 +109,13 @@ function formatDate(value: string | null): string {
         dateStyle: 'medium',
         timeZone: 'Asia/Jakarta',
     }).format(new Date(value));
+}
+
+/**
+ * The tenant's billing page in the platform panel (F-8).
+ */
+function billingUrl(tenant: TenantRow): string {
+    return tenantBillingRoute.url(tenant.slug);
 }
 </script>
 
@@ -270,6 +278,20 @@ function formatDate(value: string | null): string {
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
+                                <Button
+                                    as="a"
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Paket & add-on tenant"
+                                    data-test="platform-tenant-billing-link"
+                                    :href="billingUrl(tenant)"
+                                >
+                                    <span
+                                        class="material-symbols-outlined text-[18px]"
+                                    >
+                                        workspace_premium
+                                    </span>
+                                </Button>
                                 <Button
                                     data-test="platform-tenant-toggle-suspension"
                                     variant="ghost"

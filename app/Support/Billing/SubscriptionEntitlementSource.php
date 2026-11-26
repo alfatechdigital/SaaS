@@ -6,6 +6,7 @@ use App\Contracts\TeamEntitlementSource;
 use App\Enums\Feature;
 use App\Enums\SubscriptionStatus;
 use App\Models\Team;
+use App\Support\Entitlements;
 use App\Support\TenantContext;
 
 /**
@@ -36,16 +37,15 @@ final class SubscriptionEntitlementSource implements TeamEntitlementSource
     }
 
     /**
-     * Features granted by add-ons.
+     * Features granted by add-ons (PDR-06).
      *
-     * `tenant_addons` is built in tugas 25 Nov; until it exists a tenant cannot buy
-     * an add-on, so the honest answer is "nothing purchased". Inventing a feature
-     * here would hand out entitlements nobody paid for.
+     * An add-on never changes the plan: the plan label stays Basic/Plus/Pro, and
+     * {@see Entitlements} unions these features with the plan's own.
      *
      * @return array<int, Feature>
      */
     public function addonFeaturesFor(Team $team): array
     {
-        return [];
+        return app(TenantAddons::class)->active($team);
     }
 }

@@ -5,6 +5,8 @@ use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\ContentItemController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\Platform\PlanController;
+use App\Http\Controllers\Platform\TenantBillingController as PlatformTenantBillingController;
 use App\Http\Controllers\PlatformTenantController;
 use App\Http\Controllers\PortfolioItemController;
 use App\Http\Controllers\ProjectController;
@@ -15,6 +17,7 @@ use App\Http\Controllers\PublicSitemapController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\Teams\TeamInvitationController;
+use App\Http\Controllers\TenantBillingController;
 use App\Http\Controllers\TenantTeamController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WhatsAppSettingsController;
@@ -54,6 +57,11 @@ Route::prefix('{current_team}')
         Route::get('settings/whatsapp', [WhatsAppSettingsController::class, 'edit'])->name('whatsapp.edit');
         Route::put('settings/whatsapp', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.update');
         Route::delete('settings/whatsapp', [WhatsAppSettingsController::class, 'destroy'])->name('whatsapp.destroy');
+
+        // "Paket saya" (B-2, tugas 26 Nov): what the tenant is on, what it gets, and
+        // what it still owes. Reading is open to every member; paying is owner-only.
+        Route::get('settings/billing', [TenantBillingController::class, 'show'])->name('billing.show');
+        Route::post('settings/billing/invoices/{invoice}/pay', [TenantBillingController::class, 'pay'])->name('billing.pay');
 
         // The tenant's own team management, inside the tenant shell (PDR-04, PDR-07).
         Route::get('team', [TenantTeamController::class, 'index'])->name('team.index');
@@ -97,6 +105,16 @@ Route::prefix('platform')
         Route::delete('tenants/{team}', [PlatformTenantController::class, 'destroy'])->name('tenants.destroy');
         Route::patch('tenants/{team}/public-page', [PlatformTenantController::class, 'updatePublicPage'])->name('tenants.public-page');
         Route::patch('tenants/{team}/suspension', [PlatformTenantController::class, 'updateSuspension'])->name('tenants.suspension');
+
+        // Plan catalogue (F-8). Commercial terms are editable; features and quotas
+        // stay in config and are shown read-only (ADR-14, D-06).
+        Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
+        Route::patch('plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
+
+        // One tenant's billing view and its add-ons (PDR-06).
+        Route::get('tenants/{team}/billing', [PlatformTenantBillingController::class, 'show'])->name('tenants.billing');
+        Route::post('tenants/{team}/addons', [PlatformTenantBillingController::class, 'storeAddon'])->name('tenants.addons.store');
+        Route::delete('tenants/{team}/addons/{feature}', [PlatformTenantBillingController::class, 'destroyAddon'])->name('tenants.addons.destroy');
     });
 
 require __DIR__.'/settings.php';

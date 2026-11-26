@@ -21,6 +21,9 @@ enum PlatformAuditAction: string
     case TenantActivated = 'tenant.activated';
     case PublicPageEnabled = 'tenant.public_page.enabled';
     case PublicPageDisabled = 'tenant.public_page.disabled';
+    case PlanUpdated = 'plan.updated';
+    case AddonGranted = 'tenant.addon.granted';
+    case AddonRevoked = 'tenant.addon.revoked';
 
     /**
      * Get the display label for the action.
@@ -34,6 +37,9 @@ enum PlatformAuditAction: string
             self::TenantActivated => 'Tenant diaktifkan kembali',
             self::PublicPageEnabled => 'Halaman publik diaktifkan',
             self::PublicPageDisabled => 'Halaman publik dinonaktifkan',
+            self::PlanUpdated => 'Paket diperbarui',
+            self::AddonGranted => 'Add-on diberikan',
+            self::AddonRevoked => 'Add-on dicabut',
         };
     }
 }
