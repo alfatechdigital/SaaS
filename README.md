@@ -198,6 +198,25 @@ npm run dev
 
 Untuk melihat versi produksi, gunakan `npm run build` dan akses lewat server Laravel — aset akan dilayani dari `public/build`.
 
+### Tunnel publik (opsional — webhook Midtrans)
+
+Midtrans tidak bisa mengirim notifikasi ke `localhost`, jadi saat menguji pembayaran sandbox
+buka tunnel ke server lokal lalu daftarkan URL-nya **sekali** di Midtrans Sandbox →
+*Settings → Payment → Payment notification URL*.
+
+```bash
+composer run tunnel -- --url=https://<dev-domain>.ngrok-free.app
+```
+
+| Hal                | Keterangan                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Prasyarat          | `ngrok` terpasang di `PATH`; `composer dev` (server `:8000`) sudah berjalan                                                |
+| Tanpa `--url`      | Memakai dev domain statis milik akun ngrok Anda; subdomain acak hanya bila akun belum punya dev domain                     |
+| Melihat URL        | Script memakai `--log=stdout`, jadi URL tercetak di terminal; UI lengkap tetap ada di <http://127.0.0.1:4040>              |
+| URL yang didaftar  | `https://<host>/webhooks/midtrans`                                                                                         |
+| Biaya              | Dev domain gratis bisa berubah bila dilepas; jangan pakai URL tunnel di konfigurasi produksi                              |
+| Tanpa tunnel       | Uji webhook secara lokal dengan POST bertanda tangan — lihat [phase-05 §B-2.5](docs/implementation/phase-05-fitur-masa-depan.md) |
+
 ### SSR produksi (server-side rendering)
 
 SSR hanya dibutuhkan agar **halaman publik** terkirim sebagai HTML jadi (SEO). Aplikasi tetap berjalan tanpanya: bila proses Node mati, Inertia _fallback_ ke render di klien.
