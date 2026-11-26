@@ -10,9 +10,11 @@ use Database\Factories\SubscriptionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One tenant's subscription — the source of truth for what the tenant has bought.
@@ -44,6 +46,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $updated_at
  * @property-read Team $team
  * @property-read Plan|null $plan
+ * @property-read Collection<int, Invoice> $invoices
  */
 #[Fillable([
     'plan_code',
@@ -108,6 +111,16 @@ class Subscription extends Model
     public function isCurrent(): bool
     {
         return $this->ended_at === null;
+    }
+
+    /**
+     * Every invoice this subscription has had, one per period.
+     *
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 
     /**

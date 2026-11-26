@@ -51,4 +51,22 @@ class BillingConfigTest extends TestCase
         $this->assertSame(7, config('billing.grace_days'));
         $this->assertSame(30, config('billing.retention_days'));
     }
+
+    public function test_dunning_sends_three_reminders_inside_the_grace_period(): void
+    {
+        /** @var array<int, int> $days */
+        $days = config('billing.dunning.days');
+
+        $this->assertCount(3, $days, '§B.4.3 promises three reminders.');
+
+        $sorted = $days;
+        sort($sorted);
+        $this->assertSame($sorted, $days, 'Reminders must be listed in the order they are sent.');
+        $this->assertSame([0, 3, 6], $days);
+        $this->assertLessThan(
+            (int) config('billing.grace_days'),
+            max($days),
+            'The last reminder must land before the grace period expires.',
+        );
+    }
 }

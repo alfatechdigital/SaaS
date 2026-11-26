@@ -33,6 +33,8 @@ use Carbon\CarbonImmutable;
  */
 final class SubscriptionService
 {
+    public function __construct(private readonly InvoiceService $invoices) {}
+
     /**
      * Start a tenant's trial, by default the 30-day Basic trial of §B.4.3.
      *
@@ -112,6 +114,10 @@ final class SubscriptionService
         }
 
         $subscription->save();
+
+        // Every paid period gets a matching invoice, so dunning and the 26 Nov
+        // "Paket saya" page have a complete history instead of starting blank.
+        $this->invoices->recordPaidPeriod($subscription, $payment, $providerReference);
 
         return $subscription;
     }

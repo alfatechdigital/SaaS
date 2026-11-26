@@ -34,6 +34,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dunning
+    |--------------------------------------------------------------------------
+    |
+    | §B.4.3 promises three reminders inside the 7-day grace period. Days are
+    | counted from the invoice's due date (the end of the paid period): 0, 3, 6 —
+    | the last one lands a day before the subscription expires, never after.
+    |
+    */
+
+    'dunning' => [
+        'days' => [0, 3, 6],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Prices
     |--------------------------------------------------------------------------
     |

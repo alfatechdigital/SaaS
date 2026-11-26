@@ -78,7 +78,7 @@ Setelah Fase 1–4 (yang direncanakan):
 | Domain         | Resolusi tenant terabstraksi; tabel `domains` masih desain |
 | SEO            | Meta/OG/canonical/sitemap/robots per tenant                |
 | Entitlement    | `Feature` enum + plan di config + `Team::can()`            |
-| Billing        | Skema + service langganan; entitlement membaca langganan (B-2.1/B-2.2); invoice, provider & gating menyusul |
+| Billing        | Skema + service langganan + invoice/dunning; entitlement membaca langganan (B-2.1–B-2.3); provider & gating menyusul |
 | Audit platform | Tersedia                                                   |
 
 Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, WhatsApp, AI, analitik, kuota.
@@ -107,8 +107,8 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | Aspek                   | Keterangan                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1, **hanya sisi langganan SaaS** (tenant → platform). UI upgrade/downgrade tetap gelombang 2. |
-| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel `plans`/`subscriptions` + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2)       |
-| **Sisa pekerjaan**      | Invoice + dunning; integrasi provider; webhook; rekonsiliasi/kuota; UI upgrade/downgrade                                              |
+| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3)  |
+| **Sisa pekerjaan**      | Integrasi provider; webhook; rekonsiliasi/kuota; UI upgrade/downgrade                                                                  |
 | **Catatan Indonesia**   | Midtrans/Xendit **bukan** subscription billing penuh — status langganan kemungkinan harus dikelola sendiri (job pengecekan periode)   |
 | **Risiko utama**        | Uang nyata: kesalahan status = kerugian finansial; webhook tidak idempoten; penagihan ganda                                           |
 | **Prasyarat keputusan** | D-05, PDR-05                                                                                                                          |
@@ -154,6 +154,28 @@ Keputusan yang perlu diingat:
 - **Add-on belum ada.** `addonFeaturesFor()` mengembalikan `[]` sampai `tenant_addons` dibangun (tugas 25 Nov) — fitur yang tidak dibeli tidak boleh muncul.
 
 Test: `SubscriptionServiceTest` (trial, konversi trial→aktif dengan/tanpa sisa hari, tahunan, past_due → aktif/expired, batal trial vs berbayar, penutupan periode, transisi terlarang, trial kedua ditolak), `SubscriptionEntitlementTest` (tanpa langganan = default, aktif/trial/past_due menentukan plan, expired jatuh ke default, langganan berjalan menang atas yang sudah berakhir, binding asli terpasang), `BillingIntervalTest` (anti-overflow & label).
+
+#### B-2.3 Invoice + periode langganan + job harian + dunning — ✅ Selesai 2026-11-26 (tugas 19 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **`invoices`** | Migrasi + model `Invoice` + factory: nomor deterministik `INV-{tanggal mulai}-{subscription}`, `status` (`open`/`paid`/`void`), `billing_interval`, `amount`, `currency`, periode, `due_at`, `paid_at`, `reminders_sent`, `reminded_at`, `provider`(+`_reference`); unik `(subscription_id, period_start)` |
+| **`InvoiceService`** | `issueNext()` menagih periode berikutnya dari harga `config/billing.php`; `recordPaidPeriod()` memastikan setiap periode yang dibayar punya invoice; `markPaid()` idempoten |
+| **Job harian** | Command `subscriptions:check-period` (jadwal 00:30) + `SubscriptionPeriodChecker`: batal→selesai, trial habis→`expired`, periode aktif habis→invoice + `past_due`, grace habis→`expired`, selain itu kirim pengingat |
+| **Dunning** | `InvoiceDunning` + `config('billing.dunning.days')` = `[0, 3, 6]` + notifikasi email `SubscriptionPaymentReminder` ke owner (langsung, bukan antrean) |
+
+Keputusan yang perlu diingat:
+
+- **Satu invoice per periode dijamin database.** Unique index `(subscription_id, period_start)` membuat job yang jalan dua kali atau webhook yang dikirim ulang tidak mungkin menagih bulan yang sama dua kali (RSK-02).
+- **Harga dibekukan saat invoice terbit.** `amount` disalin dari config; perubahan harga setelahnya tidak menulis ulang tagihan yang sudah dikirim.
+- **Trial tidak ditagih saat habis.** Trial berakhir → `expired` sesuai diagram §4.5.3; invoice pertama tercatat saat trial dikonversi menjadi berbayar (dan nanti bisa diterbitkan saat onboarding, tugas 30 Nov).
+- **Pembayaran terlambat tidak menagih ganda.** Periode baru mulai saat pembayaran, sehingga invoice lama yang sudah terbit untuk periode yang dilewati di-`void`, lalu invoice periode baru dicatat lunas — riwayatnya tetap terlihat.
+- **Pengingat dihitung dari `due_at` (akhir periode), tiga kali, berhenti sendiri.** Progres disimpan di `reminders_sent`, jadi command aman dijalankan berkali-kali sehari dan pengingat terakhir (hari ke-6) selalu jatuh sebelum grace 7 hari habis.
+- **Email dikirim langsung.** Janji §B.4.3 adalah tiga pengingat; pengingat yang hilang karena worker mati akan memutus langganan tanpa pemberitahuan.
+- **Tenant tanpa owner tidak dihitung.** Pengingat dilewati dan dicatat di log, agar masalah data tidak diam-diam menghabiskan slot pengingat.
+- **`markPaid()` idempoten.** Webhook (tugas 24 Nov) bisa datang dua kali; `paid_at` dan referensi pertama yang dipertahankan.
+
+Test: `InvoiceServiceTest` (harga bulanan/tahunan, idempotensi per periode, invoice trial, aktivasi → invoice lunas, pembayaran terlambat → invoice lama `void`, `markPaid` dua kali), `SubscriptionPeriodCheckerTest` (periode aktif → invoice + `past_due` + pengingat, periode belum habis tidak disentuh, tiga pengingat sesuai jadwal, expire saat grace habis, batal & trial tanpa invoice, `past_due` tanpa invoice dibuatkan), `CheckSubscriptionPeriodCommandTest` (lintas tenant tanpa konteks request, dijalankan dua kali tidak menggandakan tagihan/pengingat), `BillingConfigTest` (jadwal dunning).
 
 ### Item B-3 — WhatsApp Integration ✅ **GELOMBANG 1**
 
