@@ -78,7 +78,7 @@ Setelah Fase 1–4 (yang direncanakan):
 | Domain         | Resolusi tenant terabstraksi; tabel `domains` masih desain |
 | SEO            | Meta/OG/canonical/sitemap/robots per tenant                |
 | Entitlement    | `Feature` enum + plan di config + `Team::can()`            |
-| Billing        | Skema + service + invoice/dunning + driver Midtrans (B-2.1–B-2.4); webhook & gating menyusul |
+| Billing        | Skema + service + invoice/dunning + driver Midtrans + webhook (B-2.1–B-2.5); rekonsiliasi & gating menyusul |
 | Audit platform | Tersedia                                                   |
 
 Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, WhatsApp, AI, analitik, kuota.
@@ -107,8 +107,8 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | Aspek                   | Keterangan                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1, **hanya sisi langganan SaaS** (tenant → platform). UI upgrade/downgrade tetap gelombang 2. |
-| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3); ✅ driver Midtrans (B-2.4) |
-| **Sisa pekerjaan**      | Webhook; rekonsiliasi/kuota; UI upgrade/downgrade                                                                                      |
+| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3); ✅ driver Midtrans (B-2.4); ✅ webhook terverifikasi (B-2.5) |
+| **Sisa pekerjaan**      | Rekonsiliasi/kuota; UI upgrade/downgrade                                                                                               |
 | **Catatan Indonesia**   | Midtrans/Xendit **bukan** subscription billing penuh — status langganan kemungkinan harus dikelola sendiri (job pengecekan periode)   |
 | **Risiko utama**        | Uang nyata: kesalahan status = kerugian finansial; webhook tidak idempoten; penagihan ganda                                           |
 | **Prasyarat keputusan** | D-05, PDR-05                                                                                                                          |
@@ -197,6 +197,27 @@ Keputusan yang perlu diingat:
 - **Pesan error tidak memuat server key** — hanya status HTTP dan `status_message` dari Midtrans.
 
 Test: `MidtransGatewayTest` (payload/URL/auth Basic, expiry = grace, request kedua tidak membuat transaksi baru, host produksi, invoice lunas/void ditolak, gateway `none` menolak, server key kosong gagal sebelum request, respons gagal/tak terduga jadi error, 11 status Midtrans diterjemahkan, lookup gagal jadi error), `PaymentStatusTest` (hanya `paid` yang melunasi invoice).
+
+#### B-2.5 Webhook pembayaran idempoten + terverifikasi — ✅ Selesai 2026-11-26 (tugas 24 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **Route** | `POST /webhooks/midtrans`, di luar grup `web` (tanpa sesi/CSRF), hanya dilindungi middleware signature |
+| **Verifikasi** | `VerifyMidtransSignature`: SHA-512 `order_id + status_code + gross_amount + server_key` dengan `hash_equals`; 400 payload tak lengkap, 503 server key kosong, 403 signature salah |
+| **Idempoten** | Tabel + model `payment_events` dengan unique `(provider, order_id, transaction_id, transaction_status)`; delivery ulang berhenti di baris yang sudah `processed_at` |
+| **Sinkronisasi** | `MidtransWebhookProcessor`: `settlement`/`capture`+accept → invoice lunas (`provider_reference` = transaction id) + langganan aktif untuk **periode invoice**; `expire`/`deny`/`cancel`/`failure` → invoice `void`; `pending` → tidak ada perubahan; refund/chargeback → log untuk tindak lanjut manual |
+| **Gagal/retry** | Kegagalan saat menerapkan dicatat di `payment_events.error` lalu di-rethrow → HTTP 5xx → Midtrans mengirim ulang; semua langkah apply idempoten sehingga retry aman |
+
+Keputusan yang perlu diingat:
+
+- **Periode invoice menang atas waktu webhook.** Tenant yang membayar 9 hari terlambat tetap membeli periode yang ditagih, bukan bulan baru dari saat webhook datang — ini yang mencegah invoice ganda.
+- **Amount mismatch adalah keputusan, bukan error sementara.** Notifikasi bertanda tangan dengan nominal berbeda ditolak, dicatat (`Amount mismatch…`), dan dijawab 200 supaya tidak di-retry selamanya; perlu rekonsiliasi manual.
+- **Signature memakai string persis.** `gross_amount` Midtrans (`"349000.00"`) di-hash apa adanya; mengubah format sebelum hashing akan menolak notifikasi yang sah.
+- **Order tidak dikenal tetap dijawab 200.** Ia bukan milik aplikasi ini, dan 4xx hanya akan membuat Midtrans mengulang selamanya.
+- **5xx untuk kegagalan pemrosesan, 200 untuk keputusan.** Hanya kegagalan yang layak diulang yang membuat provider mengulang.
+- **Refund/chargeback belum mencabut akses otomatis.** Uang yang masuk tetap tercatat lunas; pencabutan manual dikerjakan terpisah (gelombang 2 / rekonsiliasi).
+
+Test: `MidtransWebhookTest` (settlement melunasi + aktivasi untuk periode invoice, delivery ulang tidak mengubah `paid_at`/tidak menambah invoice, settlement kedua tidak memperpanjang periode, signature salah 403, server key kosong 503, order tak dikenal 200, nominal beda tidak melunasi, `expire`/`deny` → `void`, `pending` tidak mengubah, refund tidak mengubah status, payload tak lengkap 400).
 
 ### Item B-3 — WhatsApp Integration ✅ **GELOMBANG 1**
 

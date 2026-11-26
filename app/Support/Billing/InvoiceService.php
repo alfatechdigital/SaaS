@@ -105,6 +105,25 @@ final class InvoiceService
     }
 
     /**
+     * Stop billing an invoice that can no longer be paid.
+     *
+     * Used when the provider reports a failed or expired transaction: the link is
+     * dead, so dunning must stop chasing it. A paid invoice is never voided — money
+     * that arrived stays on the record; a refund is a separate, manual decision.
+     */
+    public function void(Invoice $invoice): Invoice
+    {
+        if ($invoice->isPaid()) {
+            return $invoice;
+        }
+
+        $invoice->status = InvoiceStatus::Void;
+        $invoice->save();
+
+        return $invoice;
+    }
+
+    /**
      * The invoice for one period, created on first use.
      */
     private function forPeriod(

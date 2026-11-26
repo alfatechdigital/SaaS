@@ -5,13 +5,11 @@ namespace App\Support\Billing;
 use App\Contracts\PaymentGateway;
 use App\Data\PaymentStatusResult;
 use App\Data\PaymentTransaction;
-use App\Enums\PaymentStatus;
 use App\Exceptions\PaymentGatewayError;
 use App\Models\Invoice;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Midtrans, as the subscription billing provider (D-05).
@@ -88,7 +86,7 @@ final class MidtransGateway implements PaymentGateway
         $transactionId = $response->json('transaction_id');
 
         return new PaymentStatusResult(
-            $this->mapStatus($transactionStatus, $response->json('fraud_status')),
+            MidtransStatusMap::toPaymentStatus($transactionStatus, $response->json('fraud_status')),
             is_string($transactionId) && $transactionId !== '' ? $transactionId : null,
         );
     }
@@ -117,36 +115,6 @@ final class MidtransGateway implements PaymentGateway
         }
 
         return $key;
-    }
-
-    /**
-     * Translate Midtrans' vocabulary into ours.
-     *
-     * `capture` is only money when the fraud check accepted it; a challenged card
-     * stays pending. An unfamiliar status is treated as pending — never as paid —
-     * and logged, because granting access on an unknown word would be a guess with
-     * a paying tenant's account behind it.
-     */
-    private function mapStatus(string $transactionStatus, mixed $fraudStatus): PaymentStatus
-    {
-        return match ($transactionStatus) {
-            'settlement' => PaymentStatus::Paid,
-            'capture' => $fraudStatus === 'accept' ? PaymentStatus::Paid : PaymentStatus::Pending,
-            'pending', 'authorize' => PaymentStatus::Pending,
-            'deny', 'cancel', 'failure' => PaymentStatus::Failed,
-            'expire' => PaymentStatus::Expired,
-            'refund', 'partial_refund', 'chargeback', 'partial_chargeback' => PaymentStatus::Refunded,
-            default => $this->unknownStatus($transactionStatus),
-        };
-    }
-
-    private function unknownStatus(string $transactionStatus): PaymentStatus
-    {
-        Log::warning('Midtrans reported an unknown transaction status; treating it as pending.', [
-            'transaction_status' => $transactionStatus,
-        ]);
-
-        return PaymentStatus::Pending;
     }
 
     /**

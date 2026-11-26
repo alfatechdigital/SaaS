@@ -96,13 +96,16 @@ final class SubscriptionService
         BillingInterval $interval,
         ?string $providerReference = null,
         ?CarbonImmutable $paidAt = null,
+        ?CarbonImmutable $periodStart = null,
     ): Subscription {
         $this->assertCanTransitionTo($subscription, SubscriptionStatus::Active);
 
         $payment = $paidAt ?? CarbonImmutable::now();
         $paidUntil = $subscription->current_period_end;
 
-        $start = $paidUntil->greaterThan($payment) ? $paidUntil : $payment;
+        // A webhook knows the period the invoice was for; that period wins, because
+        // paying nine days late still buys the billed month, not a fresh one.
+        $start = $periodStart ?? ($paidUntil->greaterThan($payment) ? $paidUntil : $payment);
 
         $subscription->status = SubscriptionStatus::Active;
         $subscription->billing_interval = $interval;

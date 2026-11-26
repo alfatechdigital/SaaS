@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Webhooks\MidtransWebhookController;
 use App\Http\Controllers\Webhooks\WhatsAppWebhookController;
+use App\Http\Middleware\VerifyMidtransSignature;
 use App\Http\Middleware\VerifyWhatsAppSignature;
 use Illuminate\Support\Facades\Route;
 
@@ -22,3 +24,12 @@ Route::get('whatsapp', [WhatsAppWebhookController::class, 'verify'])
 Route::post('whatsapp', [WhatsAppWebhookController::class, 'receive'])
     ->middleware(VerifyWhatsAppSignature::class)
     ->name('webhooks.whatsapp.receive');
+
+/*
+| B-2 (tugas 24 Nov) — Midtrans signs the notification body itself, so the
+| signature middleware is the only authentication this route needs.
+*/
+
+Route::post('midtrans', [MidtransWebhookController::class, 'receive'])
+    ->middleware(VerifyMidtransSignature::class)
+    ->name('webhooks.midtrans.receive');
