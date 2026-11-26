@@ -48,6 +48,8 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, WhatsAppMessage> $whatsappMessages
  * @property-read Collection<int, WhatsAppConversation> $whatsappConversations
  * @property-read Collection<int, UsageCounter> $usageCounters
+ * @property-read Collection<int, Subscription> $subscriptions
+ * @property-read Subscription|null $currentSubscription
  */
 #[Fillable(['name', 'slug', 'public_page_enabled', 'suspended_at', 'settings'])]
 #[Hidden(['whatsapp_access_token'])]
@@ -331,6 +333,30 @@ class Team extends Model
     public function usageCounters(): HasMany
     {
         return $this->hasMany(UsageCounter::class);
+    }
+
+    /**
+     * Every subscription this tenant has had (B-2).
+     *
+     * @return HasMany<Subscription, $this>
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /**
+     * The subscription currently in force, or `null` when the tenant has none.
+     *
+     * "Current" is `ended_at IS NULL`, not a status: a subscription canceled to
+     * end at period close is still current (B.4.3). The database allows at most
+     * one such row, so this never has to choose between two.
+     *
+     * @return HasOne<Subscription, $this>
+     */
+    public function currentSubscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->whereNull('ended_at');
     }
 
     /**

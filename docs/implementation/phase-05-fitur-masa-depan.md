@@ -78,7 +78,7 @@ Setelah Fase 1–4 (yang direncanakan):
 | Domain         | Resolusi tenant terabstraksi; tabel `domains` masih desain |
 | SEO            | Meta/OG/canonical/sitemap/robots per tenant                |
 | Entitlement    | `Feature` enum + plan di config + `Team::can()`            |
-| Billing        | **Belum ada**                                              |
+| Billing        | Skema `plans`/`subscriptions` + mesin status (B-2.1); service & provider menyusul |
 | Audit platform | Tersedia                                                   |
 
 Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, WhatsApp, AI, analitik, kuota.
@@ -107,12 +107,32 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | Aspek                   | Keterangan                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1, **hanya sisi langganan SaaS** (tenant → platform). UI upgrade/downgrade tetap gelombang 2. |
-| **Fondasi siap**        | ✅ Entitlement (Fase 4), desain `plans`/`subscriptions` (Fase 4)                                                                      |
-| **Sisa pekerjaan**      | Tabel `plans`/`subscriptions`; integrasi provider; webhook; status siklus langganan; trial; invoice; dunning; UI upgrade/downgrade    |
+| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel `plans`/`subscriptions` + mesin status (B-2.1)                                                       |
+| **Sisa pekerjaan**      | Subscription service; integrasi provider; webhook; status siklus langganan; trial; invoice; dunning; UI upgrade/downgrade              |
 | **Catatan Indonesia**   | Midtrans/Xendit **bukan** subscription billing penuh — status langganan kemungkinan harus dikelola sendiri (job pengecekan periode)   |
 | **Risiko utama**        | Uang nyata: kesalahan status = kerugian finansial; webhook tidak idempoten; penagihan ganda                                           |
 | **Prasyarat keputusan** | D-05, PDR-05                                                                                                                          |
 | **Estimasi besar**      | Tinggi                                                                                                                                |
+
+#### B-2.1 Tabel langganan + mesin status — ✅ Selesai 2026-11-26 (tugas 17 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **`plans`** | Migrasi + model `Plan` (`code` unik, `name`, `description`, `price_monthly`, `price_yearly`, `is_active`) + `PlanSeeder` yang menyalin nama dari `config/plans.php` dan harga/deskripsi dari `config/billing.php` |
+| **`subscriptions`** | Migrasi + model `Subscription` (`plan_code`, `status`, `trial_ends_at`, `current_period_start`/`end`, `canceled_at`, `provider`, `provider_reference`, `ended_at`) |
+| **Mesin status** | `App\Enums\SubscriptionStatus`: `trialing`, `active`, `past_due`, `canceled`, `expired` + `allowedTransitions()`, `canTransitionTo()`, `isFinal()`, `grantsAccess()` |
+| **Konfigurasi harga** | `config/billing.php`: Basic 149rb/1,49jt, Plus 349rb/3,49jt, Pro 799rb/7,99jt; trial 30 hari, grace 7 hari, retensi 30 hari (§B.4.3) |
+
+Keputusan yang perlu diingat:
+
+- **Satu langganan berjalan per tenant dijamin database.** "Berjalan" = `ended_at IS NULL`, bukan status: langganan yang dibatalkan tetap berjalan sampai periodenya habis. MySQL dan PostgreSQL tidak punya bentuk index parsial yang sama, jadi kolom ter-GENERATE `current_team_id` (`case when ended_at is null then team_id else null end`) diberi unique index — NULL boleh berulang di ketiga engine, termasuk SQLite yang dipakai test.
+- **`plans` bukan sumber entitlement.** Fitur & kuota tetap di `config/plans.php` (ADR-14, D-06); tabel hanya menyimpan metadata komersial supaya invoice dan panel platform tidak perlu deploy untuk membaca harga.
+- **`suspended` bukan status langganan.** Suspensi platform tetap `teams.suspended_at` (Fase 2) agar dua sebab tidak tercampur dan mencabut satu tidak mencabut yang lain.
+- **`past_due` masih memberi akses.** Masa tenggang 7 hari (§B.4.3) berlaku; memotong fitur pada kegagalan tagihan pertama akan menghukum tenant yang kartunya sekadar kedaluwarsa.
+- **Transisi belum menulis apa pun.** Enum memegang aturan saja; service (tugas 18 Nov) yang menyimpan periode, `canceled_at`, `ended_at`, dan invoice. `trialing → expired` disediakan untuk trial yang berakhir tanpa pembayaran.
+- **Demo tenant memakai Pro.** `AlfatechDemoSeeder` membuat langganan Pro aktif untuk `alfatech` (§B.4.3), supaya begitu sumber entitlement billing dipasang (tugas 18 Nov) tenant demo sudah melihat seluruh fitur.
+
+Test: `SubscriptionStatusTest` (matriks transisi persis diagram §4.5.3, status final, akses saat grace, semua status terjangkau dari trial, label unik), `BillingConfigTest` (harga = §B.4.3, tahunan = 10× bulanan, durasi siklus), `PlanSeederTest` (salinan config, idempoten, `active()`), `SubscriptionTableTest` (satu langganan berjalan per tenant, baris berakhir tidak memblokir pengganti, cast enum, isolasi tenant).
 
 ### Item B-3 — WhatsApp Integration ✅ **GELOMBANG 1**
 

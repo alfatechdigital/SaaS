@@ -7,6 +7,7 @@ use App\Enums\ContentPlatform;
 use App\Enums\ContentStatus;
 use App\Enums\LeadStatus;
 use App\Enums\ProjectStatus;
+use App\Enums\SubscriptionStatus;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TeamRole;
@@ -57,6 +58,7 @@ class AlfatechDemoSeeder extends Seeder
             $this->seedTransactions();
             $this->seedPortfolioItems();
             $this->seedActivityLogs();
+            $this->seedSubscription();
         });
     }
 
@@ -593,5 +595,30 @@ class AlfatechDemoSeeder extends Seeder
                 'updated_at' => Carbon::parse($log[4]),
             ]);
         }
+    }
+
+    /**
+     * Give the demo tenant the Pro plan.
+     *
+     * §B.4.3 requires `alfatech` to expose every feature, so it holds a paid Pro
+     * period rather than a trial that is about to expire. The row is what the
+     * subscription service (tugas 18 Nov) and the entitlement source will read;
+     * nothing is charged for it.
+     */
+    private function seedSubscription(): void
+    {
+        $start = Carbon::now()->startOfDay();
+
+        $this->team->subscriptions()->create([
+            'plan_code' => 'pro',
+            'status' => SubscriptionStatus::Active,
+            'trial_ends_at' => null,
+            'current_period_start' => $start,
+            'current_period_end' => $start->copy()->addMonth(),
+            'canceled_at' => null,
+            'provider' => (string) config('billing.provider', 'midtrans'),
+            'provider_reference' => null,
+            'ended_at' => null,
+        ]);
     }
 }

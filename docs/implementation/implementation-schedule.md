@@ -165,7 +165,7 @@ gantt
 ### 5.0 Progress Tracker
 
 > Centang tugas yang **sudah selesai & ter-commit**. Sumber kebenaran status tetap commit di `main`.
-> **Status per 21 Nov 2026:** ✅ selesai sampai **16 Nov 2026** — WhatsApp dua arah + hardening, UI koneksi nomor tenant (**sudah ter-commit**), dan **Basic readiness (F-7)** (**belum di-commit**). **CHECKPOINT-1 lulus**. Berikutnya **17 Nov** (SaaS billing 1: tabel + state machine).
+> **Status per 26 Nov 2026:** ✅ selesai sampai **17 Nov 2026** — WhatsApp dua arah + hardening, UI koneksi nomor tenant, Basic readiness (F-7), dan **SaaS billing (1): tabel `plans`/`subscriptions` + mesin status**. **CHECKPOINT-1 lulus**. Berikutnya **18 Nov** (subscription service).
 
 **Oktober 2026 — Fondasi & Prioritas Urgent**
 
@@ -197,8 +197,8 @@ gantt
 - [x] **10 Nov** — WhatsApp (3) bot dua arah
 - [x] **11 Nov** — WhatsApp (4) template, log & kuota
 - [x] **12 Nov** 🚦 — WhatsApp (5) test + hardening — **CHECKPOINT-1** ✅ (selesai 21 Nov)
-- [x] **16 Nov** — Basic readiness (F-7) ✅ (selesai 21 Nov, belum di-commit)
-- [ ] **17 Nov** — SaaS billing (1) tabel + state machine
+- [x] **16 Nov** — Basic readiness (F-7) ✅ (selesai 21 Nov)
+- [x] **17 Nov** — SaaS billing (1) tabel + state machine ✅ (selesai 26 Nov)
 - [ ] **18 Nov** — SaaS billing (2) subscription service
 - [ ] **19 Nov** — SaaS billing (3) invoice + dunning
 - [ ] **23 Nov** — SaaS billing (4) provider
@@ -446,3 +446,4 @@ Sebuah tugas selesai **hanya bila** (master plan §19.2):
 | 2.0.0 | 2026-09-30 | **Revisi besar.** Pengerjaan dengan AI agent (±2,4×); lingkup bertambah (WhatsApp bot 2 arah, cashflow minimalis, SEO automation, SaaS billing, payment link Lite); Fase 3 domain, Billing UI, dan Full e-commerce dipindah ke gelombang 2; ditambah checkpoint, tangga fallback, dan aturan pemakaian AI                                                                                                                                                                                                                                                                                | Software Architect                 |
 | 2.1.0 | 2026-10-28 | **Revisi akibat keputusan paket (PDR-01/03/05/06/07/08, D-05, D-10).** Tiga pekerjaan baru masuk gelombang 1: **F-7 Basic readiness** (form kontak umum + gerbang `lead_management`/seat), **F-8 panel platform paket**, **F-9 onboarding self-service + job retensi**. **Cashflow minimalis dipindah ke gelombang 2** (G-5) sebagai sumber ruang. Fase 4 (3–4 Nov) diperluas ke fitur tingkat modul & kuota; `useFeatures()` pindah ke 26 Nov; 16 Nov jadi Basic readiness; 17 Nov billing mulai; 26 Nov + panel platform; 30 Nov + self-service & retensi. Tangga fallback disesuaikan | Product Owner + Software Architect |
 | 2.2.0 | 2026-11-02 | **02 Nov selesai:** SEO automation (B-8 dasar) — `PublicSitemap` sebagai satu pembangun sitemap, `PingSitemapJob` + `TenantCache` untuk deduplikasi per tenant, `PublicSeoObserver` sebagai pemicu, `config/seo.php` untuk endpoint (kosong secara default), `sameAs` dari `social_links`. Ikut diperbaiki: listener `JobProcessing` tidak lagi menghapus tenant pada koneksi `sync` (job inline tidak boleh merusak konteks request). Suite **385 test / 1583 assertion** hijau | AI agent + Software Architect |
+| 2.3.0 | 2026-11-26 | **17 Nov selesai:** SaaS billing (1) — tabel `plans`/`subscriptions` + model + mesin status (`SubscriptionStatus`) + `config/billing.php` (harga §B.4.3) + `PlanSeeder`; satu langganan berjalan per tenant dijamin unique index pada kolom ter-GENERATE. Detail di [phase-05 B-2.1](phase-05-fitur-masa-depan.md#b21-tabel-langganan--mesin-status--selesai-2026-11-26-tugas-17-nov). Suite **515 test / 2257 assertion** hijau | AI agent + Software Architect |

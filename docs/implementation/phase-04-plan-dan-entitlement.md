@@ -238,7 +238,7 @@ Add-on (tugas 4.5.6):
 - `tenant_addons` **tidak** mengubah `subscriptions.plan_code` — label paket tenant tetap Basic/Plus/Pro (§B.4.2).
 - Entitlement membaca add-on lewat `TeamEntitlementSource::addonFeaturesFor()` yang sudah ada; implementasi billing cukup mengembalikan fitur dengan `status = active` dan `ends_at` null/`> now()`.
 
-> **Tidak ada migrasi di fase ini** (tugas 4.5.7). Empat tabel di atas baru dibuat bersama B-2 (SaaS billing, mulai 17 Nov).
+> **Tidak ada migrasi di fase ini** (tugas 4.5.7). Empat tabel di atas baru dibuat bersama B-2 (SaaS billing, mulai 17 Nov). ✅ 2026-11-26: `plans` + `subscriptions` sudah dibuat beserta mesin statusnya — lihat [phase-05 B-2.1](phase-05-fitur-masa-depan.md#b21-tabel-langganan--mesin-status--selesai-2026-11-26-tugas-17-nov).
 
 ### 4.6 Aturan Akses pada Fitur yang Sudah Ada
 

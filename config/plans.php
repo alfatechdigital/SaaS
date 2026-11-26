@@ -30,8 +30,10 @@ return [
     | branch on the plan name — ask the entitlement service instead
     | (`$team->can(Feature::X)`); see phase-04 §4.3.5.
     |
-    | Prices and billing metadata are not here on purpose: SaaS billing is a
-    | separate workstream (B-2) and owns them.
+    | Prices and billing metadata are not here on purpose: they live in
+    | `config/billing.php` (B-2, tugas 17 Nov), which `PlanSeeder` copies into the
+    | `plans` table together with the names below. Entitlement still reads only
+    | the feature lists and limits in this file.
     |
     */
 
