@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\AuthorizesTeamModule;
+use App\Enums\Feature;
 use App\Enums\TeamPermission;
 use App\Enums\TransactionCategory;
 use App\Http\Requests\Transaction\SaveTransactionRequest;
@@ -27,6 +28,7 @@ class TransactionController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageFinance);
+        $this->authorizeFeature($team, Feature::Finance);
 
         $transactions = Transaction::query()
             ->with(['project:id,name', 'createdBy:id,name'])
@@ -57,6 +59,8 @@ class TransactionController extends Controller
      */
     public function store(SaveTransactionRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::Finance);
+
         $this->persist($request, new Transaction);
 
         Inertia::flash('toast', [
@@ -72,6 +76,8 @@ class TransactionController extends Controller
      */
     public function update(SaveTransactionRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::Finance);
+
         $model = Transaction::query()
             ->findOrFail((int) $request->route('transaction'));
 
@@ -93,6 +99,7 @@ class TransactionController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageFinance);
+        $this->authorizeFeature($team, Feature::Finance);
 
         Transaction::query()
             ->findOrFail((int) $request->route('transaction'))

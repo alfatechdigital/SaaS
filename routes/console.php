@@ -30,3 +30,9 @@ Schedule::command('db:backup')->dailyAt('02:00')->description('Backup database h
 // ditutup sendiri: invoice perpanjangan, masa tenggang, pengingat, lalu expire.
 // Jamnya dipisah dari backup agar keduanya tidak berebut koneksi.
 Schedule::command('subscriptions:check-period')->dailyAt('00:30')->description('Tutup periode langganan, terbitkan invoice, kirim pengingat');
+
+// B-2 — webhook bisa terlewat (deploy, DNS, pengiriman ditolak), dan invoice
+// yang sudah dibayar tapi masih `open` adalah ketidaksepakatan paling mahal:
+// dunning terus menagih uang yang sudah masuk. Dijalankan setelah job periode
+// supaya yang ditagih hari ini ikut diperiksa.
+Schedule::command('billing:reconcile')->dailyAt('01:00')->description('Rekonsiliasi invoice dengan status transaksi provider');

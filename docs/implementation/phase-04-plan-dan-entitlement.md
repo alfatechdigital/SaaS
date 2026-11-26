@@ -142,13 +142,15 @@ Harga dan metadata billing **sengaja tidak** dimasukkan: itu milik workstream bi
 | `App\Support\Entitlements`               | **Baru.** `planCode()`, `plan()`, `features()`, `can()`, `limit()`. Fitur efektif = fitur plan ∪ add-on aktif, dideduplikasi. Plan tak dikenal → `App\Exceptions\UnknownPlan` (gagal keras, bukan diam-diam jatuh ke default).          |
 | `App\Models\Team`                        | `can(Feature): bool` (tugas 4.3.2) dan `features(): array<int, string>` (tugas 4.3.3) — keduanya mendelegasikan ke `Entitlements`.                                                                                                 |
 | `App\Concerns\AuthorizesTeamModule`      | Method baru `authorizeFeature(Team, Feature)` → `abort_unless($team->can($feature), 403)` (tugas 4.3.4).                                                                                                                            |
+| `App\Support\Billing\SeatQuota`          | **Baru (2026-11-26, tugas 25 Nov).** Kuota `users` 1/3/10 ditegakkan: kursi = `team_members` + undangan hidup; dipakai saat mengundang dan saat menerima undangan.                                                                   |
+| `App\Support\Billing\MonthlyQuota`       | **Baru (2026-11-26, tugas 25 Nov).** Meter `usage_counters` untuk metrik yang di-increment (`ai_generations`, limit `ai_generations_per_month`).                                                                                     |
 | `tests/Unit/PlanNameBranchGuardTest`     | **Baru.** Memindai `app/`, `routes/`, `resources/js/` dan gagal bila ada `->plan` atau perbandingan nama plan (tugas 4.3.5). Baris komentar dilewati agar dokumentasi boleh menyebut pola yang dilarang.                             |
 
 Keputusan turunan:
 
 - **Tidak ada `isPro()`/`isBasic()`.** Pertanyaan selalu berbentuk fitur, karena itu satu-satunya bentuk yang selamat saat isi paket berubah.
 - **Tidak ada cache entitlement.** Sumber datanya config (sudah di-cache Laravel) + satu query saat billing hadir; cache akan menambah risiko basi saat plan berubah (RF4-4) tanpa manfaat terukur sekarang.
-- **`limit()` hanya membaca** angka kuota, belum menegakkan apa pun — penegakan butuh `usage_counters` (workstream billing).
+- **`limit()` hanya membaca** angka kuota. Penegakannya ada di workstream billing (2026-11-26): `SeatQuota` menghitung kursi (`users`) live dari `team_members` + undangan hidup, `MonthlyQuota` memakai `usage_counters` untuk metrik yang di-increment (`ai_generations`).
 - `HandleInertiaRequests` membagikan `features` (daftar fitur efektif) dan `limits` (kuota plan) sebagai shared prop sejak 2026-11-21; UI memakainya untuk menyembunyikan menu, tetapi server tetap menolak sendiri.
 
 ### 4.4 Integrasi ke Frontend — ✅ Selesai 2026-11-21
@@ -230,8 +232,8 @@ Implikasi provider (tugas 4.5.4, D-05 = Midtrans):
 Kuota (tugas 4.5.5):
 
 - `usage_counters.limit` **disalin** dari `config('plans.plans.{code}.limits')` saat periode dimulai — nilai dihitung ulang bila plan berubah, tapi angka historis tetap terbaca.
-- `users` dihitung dari `team_members`, tidak di-increment manual (menghindari drift saat undangan dibatalkan).
-- `ai_generations` di-increment per pemakaian; `0` berarti fitur tidak tersedia untuk plan tersebut.
+- `users` dihitung dari `team_members`, tidak di-increment manual (menghindari drift saat undangan dibatalkan). ✅ 2026-11-26: `SeatQuota` membaca `team_members` + undangan hidup, jadi `usage_counters` tidak dipakai untuk metrik ini.
+- `ai_generations` di-increment per pemakaian; `0` berarti fitur tidak tersedia untuk plan tersebut. ✅ 2026-11-26: `MonthlyQuota` (metric `ai_generations`, limit `ai_generations_per_month`) siap dipakai modul Content AI; baris counter membekukan `limit` saat periode pertama memakai metrik itu.
 
 Add-on (tugas 4.5.6):
 
@@ -246,9 +248,11 @@ Add-on (tugas 4.5.6):
 | ----- | ------------------------------------------------------------------------------------------ | --------------------- |
 | 4.6.1 | **Jangan** langsung membatasi fitur yang sudah jalan (proyek, lead, dsb.) pada fase ini    | Itu perubahan produk! |
 | 4.6.2 | Bila kelak dibatasi, lakukan bertahap + komunikasi ke tenant                               | Catat sebagai FUTURE  |
-| 4.6.3 | Sediakan pola: entitlement diperiksa di controller/policy, bukan disembunyikan hanya di UI |                       |
+| 4.6.3 | Sediakan pola: entitlement diperiksa di controller/policy, bukan disembunyikan hanya di UI | ✅ 2026-11-26 (tugas 25 Nov): proyek/tugas/konten/keuangan + profil/portofolio memakai `authorizeFeature()`; menu & dashboard mengikuti |
 
 > **Penting:** membatasi fitur yang saat ini bebas dipakai adalah **keputusan produk**, bukan keputusan teknis. Fase ini hanya menyiapkan alatnya.
+>
+> **Keputusan 2026-11-26 (tugas 25 Nov).** Pembatasan itu diambil: modul yang menurut `config/plans.php` adalah milik paket lebih tinggi — Proyek (`project_management`), Tugas (`task_management`), Konten (`content_planner`), Keuangan (`finance`) — kini ditolak backend untuk paket yang tidak memuatnya, dan menunya disembunyikan. Profil perusahaan & portofolio (`company_profile`) ikut diperiksa meski tersedia di semua paket, supaya setiap controller modul punya satu pemeriksaan yang jelas. Fitur yang belum punya kode (`custom_domain`, `form_builder`, `email_automation`, `google_sheet_sync`, `payment_gateway`, `seo_advanced`, `content_ai`, `advanced_automation`, `role_management`) tidak punya pintu untuk ditutup sampai modulnya dibangun.
 
 ---
 

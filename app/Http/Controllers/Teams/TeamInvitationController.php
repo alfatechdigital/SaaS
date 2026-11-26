@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Teams;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Teams\RespondToTeamInvitationRequest;
 use App\Models\TeamInvitation;
+use App\Support\Billing\SeatQuota;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -31,6 +32,14 @@ class TeamInvitationController extends Controller
 
         DB::transaction(function () use ($user, $invitation) {
             $team = $invitation->team;
+
+            // A seat can be taken between sending and accepting (another invite
+            // was accepted first), so the quota is checked again at the moment the
+            // seat is really claimed. An existing member re-accepting does not
+            // consume a second seat.
+            if (! $team->memberships()->where('user_id', $user->id)->exists()) {
+                app(SeatQuota::class)->ensureRoom($team, $invitation);
+            }
 
             $team->memberships()->firstOrCreate(
                 ['user_id' => $user->id],

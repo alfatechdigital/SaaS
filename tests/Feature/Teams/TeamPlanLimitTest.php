@@ -2,14 +2,11 @@
 
 namespace Tests\Feature\Teams;
 
-use App\Contracts\TeamEntitlementSource;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
-use App\Support\Entitlements;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use Tests\Support\FakeTeamEntitlementSource;
 use Tests\TestCase;
 
 /**
@@ -22,14 +19,12 @@ class TeamPlanLimitTest extends TestCase
 
     private function useBasicPlan(): void
     {
-        $this->app->instance(TeamEntitlementSource::class, new FakeTeamEntitlementSource('basic'));
-        $this->app->forgetInstance(Entitlements::class);
+        $this->usePlan('basic');
     }
 
     private function useMultiUserPlan(): void
     {
-        $this->app->instance(TeamEntitlementSource::class, new FakeTeamEntitlementSource('plus'));
-        $this->app->forgetInstance(Entitlements::class);
+        $this->usePlan('plus');
     }
 
     /**

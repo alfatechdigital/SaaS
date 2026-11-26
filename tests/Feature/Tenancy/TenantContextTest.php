@@ -38,6 +38,10 @@ class TenantContextTest extends TestCase
     {
         parent::setUp();
 
+        // Requests below open Pro modules (projects); the plan is not the subject
+        // of these tests.
+        $this->usePlan('pro');
+
         $this->context = app(TenantContext::class);
     }
 

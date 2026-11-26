@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Feature;
 use App\Http\Resources\ActivityLogResource;
 use App\Http\Resources\ContentItemResource;
 use App\Http\Resources\LeadResource;
@@ -33,8 +34,12 @@ class DashboardController extends Controller
 
         // Activate the request's tenant. Every query below is confined by the
         // team global scope, so none of them needs an explicit `->forTeam()`.
-        CurrentTeam::from($request);
+        $team = CurrentTeam::from($request);
 
+        // A module the plan does not include is empty here, not just closed on
+        // its own page: the dashboard must not advertise data the tenant cannot
+        // open (Fase 4, tugas 4.6.3). The prop keys stay, so the page keeps its
+        // shape for every plan.
         $email = strtolower($user->email);
 
         $pendingInvitations = TeamInvitation::query()
@@ -55,24 +60,32 @@ class DashboardController extends Controller
                 ],
             ]);
 
-        $projects = Project::query()
-            ->with('pic:id,name,job_title')
-            ->orderBy('deadline')
-            ->get();
+        $projects = $team->can(Feature::ProjectManagement)
+            ? Project::query()
+                ->with('pic:id,name,job_title')
+                ->orderBy('deadline')
+                ->get()
+            : collect();
 
-        $leads = Lead::query()
-            ->orderByDesc('created_at')
-            ->get();
+        $leads = $team->can(Feature::LeadManagement)
+            ? Lead::query()
+                ->orderByDesc('created_at')
+                ->get()
+            : collect();
 
-        $contents = ContentItem::query()
-            ->with('assignee:id,name')
-            ->orderByDesc('created_at')
-            ->limit(6)
-            ->get();
+        $contents = $team->can(Feature::ContentPlanner)
+            ? ContentItem::query()
+                ->with('assignee:id,name')
+                ->orderByDesc('created_at')
+                ->limit(6)
+                ->get()
+            : collect();
 
-        $transactions = Transaction::query()
-            ->orderByDesc('date')
-            ->get();
+        $transactions = $team->can(Feature::Finance)
+            ? Transaction::query()
+                ->orderByDesc('date')
+                ->get()
+            : collect();
 
         $activityLogs = ActivityLog::query()
             ->with('performedBy:id,name')

@@ -78,7 +78,7 @@ Setelah Fase 1–4 (yang direncanakan):
 | Domain         | Resolusi tenant terabstraksi; tabel `domains` masih desain |
 | SEO            | Meta/OG/canonical/sitemap/robots per tenant                |
 | Entitlement    | `Feature` enum + plan di config + `Team::can()`            |
-| Billing        | Skema + service + invoice/dunning + driver Midtrans + webhook (B-2.1–B-2.5); rekonsiliasi & gating menyusul |
+| Billing        | Skema + service + invoice/dunning + driver Midtrans + webhook + rekonsiliasi/kuota/gating (B-2.1–B-2.6); UI Paket saya menyusul |
 | Audit platform | Tersedia                                                   |
 
 Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, WhatsApp, AI, analitik, kuota.
@@ -107,8 +107,8 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | Aspek                   | Keterangan                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1, **hanya sisi langganan SaaS** (tenant → platform). UI upgrade/downgrade tetap gelombang 2. |
-| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3); ✅ driver Midtrans (B-2.4); ✅ webhook terverifikasi (B-2.5) |
-| **Sisa pekerjaan**      | Rekonsiliasi/kuota; UI upgrade/downgrade                                                                                               |
+| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3); ✅ driver Midtrans (B-2.4); ✅ webhook terverifikasi (B-2.5); ✅ rekonsiliasi + kuota dasar + gating backend (B-2.6) |
+| **Sisa pekerjaan**      | UI "Paket saya" + panel platform (26 Nov); self-service & retensi (30 Nov)                                                              |
 | **Catatan Indonesia**   | Midtrans/Xendit **bukan** subscription billing penuh — status langganan kemungkinan harus dikelola sendiri (job pengecekan periode)   |
 | **Risiko utama**        | Uang nyata: kesalahan status = kerugian finansial; webhook tidak idempoten; penagihan ganda                                           |
 | **Prasyarat keputusan** | D-05, PDR-05                                                                                                                          |
@@ -218,6 +218,31 @@ Keputusan yang perlu diingat:
 - **Refund/chargeback belum mencabut akses otomatis.** Uang yang masuk tetap tercatat lunas; pencabutan manual dikerjakan terpisah (gelombang 2 / rekonsiliasi).
 
 Test: `MidtransWebhookTest` (settlement melunasi + aktivasi untuk periode invoice, delivery ulang tidak mengubah `paid_at`/tidak menambah invoice, settlement kedua tidak memperpanjang periode, signature salah 403, server key kosong 503, order tak dikenal 200, nominal beda tidak melunasi, `expire`/`deny` → `void`, `pending` tidak mengubah, refund tidak mengubah status, payload tak lengkap 400).
+
+#### B-2.6 Rekonsiliasi, kuota dasar & penegakan entitlement di backend — ✅ Selesai 2026-11-26 (tugas 25 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **Penerapan bersama** | `App\Support\Billing\PaymentApplication` — satu-satunya tempat status transaksi diterjemahkan menjadi invoice + langganan; dipakai webhook (B-2.5) **dan** rekonsiliasi |
+| **Rekonsiliasi** | `InvoiceReconciler` + command `billing:reconcile` (jadwal 01:00) + `config('billing.reconciliation')`: invoice `open` yang **punya link pembayaran** dan `updated_at` masih di dalam jendela 30 hari ditanyakan statusnya ke provider; hasilnya `ReconciliationReport` (diperiksa/lunas/ditutup/menunggu/tidak berubah/gagal) |
+| **Kuota seat** | `SeatQuota` (limit `users` 1/3/10) dipakai saat **mengundang** dan saat **menerima undangan**; kursi = anggota + undangan yang belum kedaluwarsa |
+| **Kuota AI** | `MonthlyQuota` di atas `usage_counters` untuk metric `ai_generations` (limit `ai_generations_per_month`: 0/0/50), `limit` dibekukan saat periode pertama memakai metrik itu |
+| **Gating backend** | `ProjectController` (`project_management`), `TaskController` (`task_management`), `ContentItemController` (`content_planner`), `TransactionController` (`finance`), `CompanyProfileController`/`PortfolioItemController` (`company_profile`) memeriksa entitlement seperti `LeadController`; dashboard tidak lagi mengirim data modul yang tidak dimiliki paket; menu sidebar/quick-nav menyembunyikan modul yang sama |
+
+Keputusan yang perlu diingat:
+
+- **Webhook dan rekonsiliasi memakai satu jalur penerapan.** Dua salinan `switch` akan menyimpang, dan menyimpangnya berarti periode yang dibayar dua kali atau tidak sama sekali.
+- **Rekonsiliasi hanya bertanya, tidak menebak.** Yang ditanyakan hanya invoice ber-link (tanpa link tidak ada transaksi di provider), dan yang diterapkan tetap lewat `PaymentApplication` sehingga hasilnya identik dengan webhook. `pending` tidak mengubah apa pun.
+- **`updated_at`, bukan `created_at`, sebagai jendela.** Invoice tahunan bisa terbit berbulan-bulan sebelum tenant menekan "Bayar"; yang menandai uang sedang di jalan adalah tulisan link pembayaran.
+- **Kegagalan satu order tidak menghentikan pass.** Status dicatat di log, `failed` di laporan, dan pass besok mengulang. Driver `none` berhenti lebih awal dengan peringatan — tidak ada provider untuk ditanyai.
+- **Kursi dihitung, bukan dilacak.** `users` = jumlah `team_members` + undangan hidup, sesuai catatan §4.5.5; `usage_counters` tetap untuk metrik yang benar-benar bertambah (AI). Undangan mengunci kursi sejak dikirim, jadi Plus tidak bisa menjanjikan sepuluh kursi lalu gagal saat diterima.
+- **Undangan yang sedang diterima tidak dihitung dua kali.** Saat accept, undangan itu dikecualikan dari hitungan kursi — kalau tidak, undangan terakhir selalu ditolak oleh batasnya sendiri.
+- **Basic tetap 403 di halaman tim.** Batas 1 pengguna sudah menutup halaman tim; kuota seat hanya menambah penjagaan di paket yang punya anggota.
+- **Fitur tanpa kode tidak "digating".** `custom_domain`, `form_builder`, `email_automation`, `google_sheet_sync`, `payment_gateway`, `seo_advanced`, `content_ai`, `advanced_automation`, dan `role_management` belum punya pintu di aplikasi, jadi tidak ada yang bisa ditolak; begitu modulnya dibangun, controller-nya memakai `authorizeFeature()` yang sama.
+- **Halaman pengaturan WhatsApp tetap terbuka.** Keputusan 2026-11-12 masih berlaku: menyimpan kredensial adalah konfigurasi, sedangkan **mengirim** yang dibatasi `whatsapp_bot`.
+- **Daftar fitur di menu mengikuti paket, bukan nama modul.** Sidebar dan quick-nav memakai `feature` per item, sehingga menambah modul baru cukup satu baris di keduanya.
+
+Test: `InvoiceReconcilerTest` (settlement webhook yang hilang, `expire` → `void` tanpa menyentuh langganan, `pending` tidak mengubah, invoice tanpa link tidak pernah ditanya, satu lookup gagal tidak menghentikan yang lain, pass kedua tidak menyentuh invoice lunas, di luar jendela dilewati), `ReconcileBillingCommandTest` (driver `none` berhenti dengan peringatan, ringkasan pass), `SeatQuotaTest` (limit 1/3/10, undangan mengunci kursi, undangan kedaluwarsa tidak, accept ditolak saat kursi habis, accept di batas tetap boleh), `MonthlyQuotaTest` (limit dari paket, pemakaian dihitung, satu baris per periode, limit dibekukan, periode baru kuota baru), `ModuleEntitlementTest` (Basic 403 untuk proyek/konten/keuangan, Plus 403 untuk modul Pro tetapi boleh profil/portofolio, Pro boleh semuanya, tulis tugas tetap jalan), `BillingConfigTest` (jendela & batch rekonsiliasi).
 
 ### Item B-3 — WhatsApp Integration ✅ **GELOMBANG 1**
 

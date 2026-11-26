@@ -2,10 +2,7 @@
 
 namespace Tests\Feature\Domain;
 
-use App\Contracts\TeamEntitlementSource;
 use App\Models\Lead;
-use App\Support\Entitlements;
-use Tests\Support\FakeTeamEntitlementSource;
 
 /**
  * `lead_management` is a Plus feature; the CRM must reject Basic tenants even
@@ -15,8 +12,7 @@ class LeadEntitlementTest extends DomainTestCase
 {
     private function useBasicPlan(): void
     {
-        $this->app->instance(TeamEntitlementSource::class, new FakeTeamEntitlementSource('basic'));
-        $this->app->forgetInstance(Entitlements::class);
+        $this->usePlan('basic');
     }
 
     public function test_basic_cannot_open_the_lead_pipeline(): void

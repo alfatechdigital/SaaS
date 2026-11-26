@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\AuthorizesTeamModule;
+use App\Enums\Feature;
 use App\Enums\TeamPermission;
 use App\Http\Requests\PortfolioItem\SavePortfolioItemRequest;
 use App\Http\Resources\PortfolioItemResource;
@@ -25,6 +26,7 @@ class PortfolioItemController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManagePortfolio);
+        $this->authorizeFeature($team, Feature::CompanyProfile);
 
         $items = PortfolioItem::query()
             ->orderByDesc('completion_date')
@@ -40,6 +42,8 @@ class PortfolioItemController extends Controller
      */
     public function store(SavePortfolioItemRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::CompanyProfile);
+
         PortfolioItem::create([
             'team_id' => $request->team()->id,
             ...$request->validated(),
@@ -58,6 +62,8 @@ class PortfolioItemController extends Controller
      */
     public function update(SavePortfolioItemRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::CompanyProfile);
+
         $item = PortfolioItem::query()
             ->findOrFail((int) $request->route('portfolioItem'));
 
@@ -79,6 +85,7 @@ class PortfolioItemController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManagePortfolio);
+        $this->authorizeFeature($team, Feature::CompanyProfile);
 
         PortfolioItem::query()
             ->findOrFail((int) $request->route('portfolioItem'))

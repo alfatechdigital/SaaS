@@ -71,6 +71,7 @@ const navItems = computed<NavItem[]>(() => [
         label: 'Proyek',
         icon: 'folder_open',
         href: projectsIndex.url({ current_team: teamSlug.value }),
+        feature: 'project_management',
     },
     {
         label: 'Leads / CRM',
@@ -84,24 +85,28 @@ const navItems = computed<NavItem[]>(() => [
         icon: 'apartment',
         href: companyProfileEdit.url({ current_team: teamSlug.value }),
         permission: 'canManageCompanyProfile',
+        feature: 'company_profile',
     },
     {
         label: 'Portofolio',
         icon: 'work',
         href: portfolioIndex.url({ current_team: teamSlug.value }),
         permission: 'canManagePortfolio',
+        feature: 'company_profile',
     },
     {
         label: 'Konten Medsos',
         icon: 'share',
         href: contentsIndex.url({ current_team: teamSlug.value }),
         permission: 'canManageContent',
+        feature: 'content_planner',
     },
     {
         label: 'Keuangan',
         icon: 'account_balance_wallet',
         href: transactionsIndex.url({ current_team: teamSlug.value }),
         permission: 'canManageFinance',
+        feature: 'finance',
     },
     {
         label: 'Log Aktivitas',

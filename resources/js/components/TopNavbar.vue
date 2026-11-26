@@ -58,9 +58,20 @@ const initials = computed(() =>
  * placeholder promised "cari proyek, klien, atau leads" — a search that needs a
  * backend endpoint this app does not have. It now navigates between the pages
  * that actually exist, which is what the box can honestly deliver.
+ *
+ * `feature` and `requiresMultiUser` mirror the sidebar gates: a plan that does
+ * not include a module hides it here too, and the server still rejects a direct
+ * visit (Fase 4, tugas 4.6.3).
  */
-const modules = computed(() =>
-    [
+interface QuickModule {
+    label: string;
+    href: string;
+    feature?: string;
+    requiresMultiUser?: boolean;
+}
+
+const modules = computed<QuickModule[]>(() => {
+    const items: QuickModule[] = [
         {
             label: 'Dashboard',
             href: dashboard({ current_team: teamSlug.value }).url,
@@ -68,26 +79,32 @@ const modules = computed(() =>
         {
             label: 'Proyek',
             href: projectsIndex.url({ current_team: teamSlug.value }),
+            feature: 'project_management',
         },
         {
             label: 'Leads / CRM',
             href: leadsIndex.url({ current_team: teamSlug.value }),
+            feature: 'lead_management',
         },
         {
             label: 'Profil Perusahaan',
             href: companyProfileEdit.url({ current_team: teamSlug.value }),
+            feature: 'company_profile',
         },
         {
             label: 'Portofolio',
             href: portfolioIndex.url({ current_team: teamSlug.value }),
+            feature: 'company_profile',
         },
         {
             label: 'Konten Medsos',
             href: contentsIndex.url({ current_team: teamSlug.value }),
+            feature: 'content_planner',
         },
         {
             label: 'Keuangan',
             href: transactionsIndex.url({ current_team: teamSlug.value }),
+            feature: 'finance',
         },
         {
             label: 'Log Aktivitas',
@@ -96,26 +113,28 @@ const modules = computed(() =>
         {
             label: 'Kelola Tim',
             href: teamIndex.url({ current_team: teamSlug.value }),
+            requiresMultiUser: true,
         },
         {
             label: 'WhatsApp',
             href: whatsappEdit.url({ current_team: teamSlug.value }),
         },
         { label: 'Profil Saya', href: profileEdit().url },
-    ].filter((module) => {
+    ];
+
+    return items.filter((module) => {
         // Entitlement decides what the plan includes; the server still rejects a
         // direct visit. Hidden here so quick-nav never offers a 403 (F-7).
-        if (module.label === 'Leads / CRM') {
-            return canUseFeature('lead_management');
+        if (module.feature && !canUseFeature(module.feature)) {
+            return false;
         }
-
-        if (module.label === 'Kelola Tim') {
-            return (limit('users') ?? 0) > 1;
+        if (module.requiresMultiUser && (limit('users') ?? 0) <= 1) {
+            return false;
         }
 
         return true;
-    }),
-);
+    });
+});
 
 const searchResults = computed(() => {
     const query = searchQuery.value.trim().toLowerCase();

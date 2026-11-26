@@ -426,6 +426,7 @@ function exportReport(): void {
         <!-- KPI cards -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div
+                v-if="canUseFeature('finance')"
                 class="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
             >
                 <div class="flex items-start justify-between">
@@ -494,6 +495,7 @@ function exportReport(): void {
             </div>
 
             <div
+                v-if="canUseFeature('project_management')"
                 class="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
             >
                 <div class="flex items-start justify-between">
@@ -547,6 +549,7 @@ function exportReport(): void {
             </div>
 
             <div
+                v-if="canUseFeature('lead_management')"
                 class="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
             >
                 <div class="flex items-start justify-between">
@@ -592,6 +595,7 @@ function exportReport(): void {
             </div>
 
             <div
+                v-if="canUseFeature('finance')"
                 class="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
             >
                 <div class="flex items-start justify-between">
@@ -646,6 +650,7 @@ function exportReport(): void {
             <div class="space-y-6 lg:col-span-8">
                 <!-- Active projects -->
                 <div
+                    v-if="canUseFeature('project_management')"
                     class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
@@ -852,6 +857,7 @@ function exportReport(): void {
             <div class="space-y-6 lg:col-span-4">
                 <!-- Content schedule -->
                 <div
+                    v-if="canUseFeature('content_planner')"
                     class="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div class="mb-4 flex items-center justify-between">

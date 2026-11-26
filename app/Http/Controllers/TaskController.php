@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\AuthorizesTeamModule;
+use App\Enums\Feature;
 use App\Enums\TeamPermission;
 use App\Http\Requests\Task\SaveTaskRequest;
 use App\Models\Task;
@@ -20,6 +21,8 @@ class TaskController extends Controller
      */
     public function store(SaveTaskRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::TaskManagement);
+
         Task::create([
             'team_id' => $request->team()->id,
             ...$request->validated(),
@@ -38,6 +41,8 @@ class TaskController extends Controller
      */
     public function update(SaveTaskRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::TaskManagement);
+
         $model = Task::query()
             ->findOrFail((int) $request->route('task'));
 
@@ -59,6 +64,7 @@ class TaskController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageProjects);
+        $this->authorizeFeature($team, Feature::TaskManagement);
 
         Task::query()
             ->findOrFail((int) $request->route('task'))

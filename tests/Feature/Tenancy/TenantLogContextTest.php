@@ -36,6 +36,10 @@ class TenantLogContextTest extends TestCase
     {
         parent::setUp();
 
+        // The request under test opens a Pro module (projects); the plan must not
+        // be what it trips over.
+        $this->usePlan('pro');
+
         $this->context = app(TenantContext::class);
 
         Log::listen(function (MessageLogged $event): void {

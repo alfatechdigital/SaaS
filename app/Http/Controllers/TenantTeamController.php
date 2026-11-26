@@ -11,6 +11,7 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Notifications\Teams\TeamInvitation as TeamInvitationNotification;
+use App\Support\Billing\SeatQuota;
 use App\Support\CurrentTeam;
 use App\Support\Entitlements;
 use Illuminate\Http\RedirectResponse;
@@ -172,6 +173,10 @@ class TenantTeamController extends Controller
         $this->ensureMultiUserPlan($team);
 
         Gate::authorize('inviteMember', $team);
+
+        // An invitation holds a seat: without this, a Plus tenant could send ten
+        // invitations and only discover the limit when they are accepted.
+        app(SeatQuota::class)->ensureRoom($team);
 
         $invitation = $team->invitations()->create([
             'email' => $request->validated('email'),

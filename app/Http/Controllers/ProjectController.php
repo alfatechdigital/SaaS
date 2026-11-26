@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\AuthorizesTeamModule;
+use App\Enums\Feature;
 use App\Enums\TeamPermission;
 use App\Http\Requests\Project\SaveProjectRequest;
 use App\Http\Resources\ProjectResource;
@@ -28,6 +29,7 @@ class ProjectController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageProjects);
+        $this->authorizeFeature($team, Feature::ProjectManagement);
 
         $projects = Project::query()
             ->with('pic:id,name,job_title')
@@ -51,6 +53,8 @@ class ProjectController extends Controller
      */
     public function store(SaveProjectRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::ProjectManagement);
+
         Project::create([
             'team_id' => $request->team()->id,
             ...$request->validated(),
@@ -69,6 +73,8 @@ class ProjectController extends Controller
      */
     public function update(SaveProjectRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::ProjectManagement);
+
         $model = Project::query()
             ->findOrFail((int) $request->route('project'));
 
@@ -90,6 +96,7 @@ class ProjectController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageProjects);
+        $this->authorizeFeature($team, Feature::ProjectManagement);
 
         Project::query()
             ->findOrFail((int) $request->route('project'))

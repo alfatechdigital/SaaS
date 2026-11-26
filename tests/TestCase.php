@@ -2,14 +2,33 @@
 
 namespace Tests;
 
+use App\Contracts\TeamEntitlementSource;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Entitlements;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Laravel\Fortify\Features;
+use Tests\Support\FakeTeamEntitlementSource;
 
 abstract class TestCase extends BaseTestCase
 {
+    /**
+     * Pin the tenant's plan for the rest of the test.
+     *
+     * Entitlement is a product gate now, not decoration: a test about projects,
+     * tasks, contents or finance needs a plan that includes the module. The fake
+     * source keeps that decision out of the database, exactly like
+     * {@see FakeTeamEntitlementSource} was already used for entitlement tests.
+     *
+     * @param  string|null  $planCode  a key of `config('plans.plans')`, or null for "no subscription"
+     */
+    protected function usePlan(?string $planCode): void
+    {
+        $this->app->instance(TeamEntitlementSource::class, new FakeTeamEntitlementSource($planCode));
+        $this->app->forgetInstance(Entitlements::class);
+    }
+
     /**
      * Create a tenant and make the given user its member.
      *

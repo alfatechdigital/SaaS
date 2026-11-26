@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\AuthorizesTeamModule;
+use App\Enums\Feature;
 use App\Enums\TeamPermission;
 use App\Http\Requests\ContentItem\SaveContentItemRequest;
 use App\Http\Resources\ContentItemResource;
@@ -26,6 +27,7 @@ class ContentItemController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageContent);
+        $this->authorizeFeature($team, Feature::ContentPlanner);
 
         $contents = ContentItem::query()
             ->with('assignee:id,name')
@@ -43,6 +45,8 @@ class ContentItemController extends Controller
      */
     public function store(SaveContentItemRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::ContentPlanner);
+
         ContentItem::create([
             'team_id' => $request->team()->id,
             ...$request->validated(),
@@ -61,6 +65,8 @@ class ContentItemController extends Controller
      */
     public function update(SaveContentItemRequest $request): RedirectResponse
     {
+        $this->authorizeFeature($request->team(), Feature::ContentPlanner);
+
         $model = ContentItem::query()
             ->findOrFail((int) $request->route('content'));
 
@@ -82,6 +88,7 @@ class ContentItemController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageContent);
+        $this->authorizeFeature($team, Feature::ContentPlanner);
 
         ContentItem::query()
             ->findOrFail((int) $request->route('content'))

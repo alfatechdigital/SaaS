@@ -2,11 +2,8 @@
 
 namespace App\Support\Billing;
 
-use App\Enums\PaymentStatus;
-use App\Enums\SubscriptionStatus;
 use App\Models\Invoice;
 use App\Models\PaymentEvent;
-use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -16,7 +13,8 @@ use Throwable;
  * Applies one verified Midtrans notification (B-2, tugas 24 Nov).
  *
  * The provider only reports a transaction; what it means for the invoice and the
- * subscription is decided here, in this order:
+ * subscription is decided by {@see PaymentApplication}. This class owns the
+ * delivery problems instead:
  *
  * 1. **Unknown order** → log and accept. It is not ours to apply, and a non-2xx
  *    answer would make Midtrans retry forever.
@@ -32,10 +30,7 @@ use Throwable;
  */
 final class MidtransWebhookProcessor
 {
-    public function __construct(
-        private readonly InvoiceService $invoices,
-        private readonly SubscriptionService $subscriptions,
-    ) {}
+    public function __construct(private readonly PaymentApplication $application) {}
 
     /**
      * @throws Throwable when applying failed; the caller must answer 5xx so the
@@ -93,9 +88,12 @@ final class MidtransWebhookProcessor
         }
 
         try {
-            app(TenantContext::class)->runFor($invoice->team, function () use ($invoice, $notification): void {
-                $this->apply($invoice, $notification);
-            });
+            $this->application->apply(
+                $invoice,
+                $notification->status,
+                $notification->transactionId,
+                'webhook',
+            );
         } catch (Throwable $exception) {
             $event->fill(['error' => Str::limit($exception->getMessage(), 250)])->save();
 
@@ -106,72 +104,6 @@ final class MidtransWebhookProcessor
             'processed_at' => CarbonImmutable::now(),
             'error' => null,
         ])->save();
-    }
-
-    private function apply(Invoice $invoice, MidtransNotification $notification): void
-    {
-        switch ($notification->status) {
-            case PaymentStatus::Paid:
-                $this->applyPaid($invoice, $notification);
-                break;
-
-            case PaymentStatus::Failed:
-            case PaymentStatus::Expired:
-                $this->applyUnpaid($invoice, $notification);
-                break;
-
-            case PaymentStatus::Refunded:
-                Log::warning('A Midtrans refund/chargeback needs manual follow-up.', [
-                    'invoice' => $invoice->number,
-                    'transaction_status' => $notification->transactionStatus,
-                ]);
-                break;
-
-            case PaymentStatus::Pending:
-                break;
-        }
-    }
-
-    private function applyPaid(Invoice $invoice, MidtransNotification $notification): void
-    {
-        $paidAt = CarbonImmutable::now();
-
-        if ($invoice->isOpen()) {
-            $this->invoices->markPaid($invoice, $paidAt, $notification->transactionId);
-        }
-
-        $subscription = $invoice->subscription;
-
-        if (! in_array($subscription->status, [SubscriptionStatus::Trialing, SubscriptionStatus::PastDue], true)) {
-            Log::info('An invoice was settled, but the subscription needs no activation.', [
-                'invoice' => $invoice->number,
-                'subscription_status' => $subscription->status->value,
-            ]);
-
-            return;
-        }
-
-        // The invoice decides the period: paying late buys exactly the period that
-        // was billed, not a fresh month from the moment the webhook arrived.
-        $this->subscriptions->activate(
-            $subscription,
-            $invoice->billing_interval,
-            $notification->transactionId,
-            $paidAt,
-            $invoice->period_start,
-        );
-    }
-
-    private function applyUnpaid(Invoice $invoice, MidtransNotification $notification): void
-    {
-        if ($invoice->isOpen()) {
-            $this->invoices->void($invoice);
-        }
-
-        Log::info('A Midtrans transaction ended without money.', [
-            'invoice' => $invoice->number,
-            'transaction_status' => $notification->transactionStatus,
-        ]);
     }
 
     /**

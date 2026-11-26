@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\AuthorizesTeamModule;
+use App\Enums\Feature;
 use App\Enums\TeamPermission;
 use App\Http\Requests\CompanyProfile\UpdateCompanyProfileRequest;
 use App\Http\Resources\CompanyProfileResource;
@@ -25,6 +26,7 @@ class CompanyProfileController extends Controller
         $team = CurrentTeam::from($request);
 
         $this->authorizeModule($request->user(), $team, TeamPermission::ManageCompanyProfile);
+        $this->authorizeFeature($team, Feature::CompanyProfile);
 
         $profile = CompanyProfile::query()->first();
 
@@ -41,6 +43,8 @@ class CompanyProfileController extends Controller
     public function update(UpdateCompanyProfileRequest $request): RedirectResponse
     {
         $team = $request->team();
+
+        $this->authorizeFeature($team, Feature::CompanyProfile);
 
         $profile = CompanyProfile::query()
             ->firstOrNew(['team_id' => $team->id]);

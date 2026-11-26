@@ -165,7 +165,7 @@ gantt
 ### 5.0 Progress Tracker
 
 > Centang tugas yang **sudah selesai & ter-commit**. Sumber kebenaran status tetap commit di `main`.
-> **Status per 26 Nov 2026:** ✅ selesai sampai **24 Nov 2026** — WhatsApp dua arah + hardening, UI koneksi nomor tenant, Basic readiness (F-7), **SaaS billing (1)–(5): tabel + mesin status, subscription service + entitlement billing, invoice + periode + dunning, driver Midtrans, dan webhook terverifikasi**. **CHECKPOINT-1 lulus**. Berikutnya **25 Nov** (rekonsiliasi + gating backend).
+> **Status per 26 Nov 2026:** ✅ selesai sampai **25 Nov 2026** — WhatsApp dua arah + hardening, UI koneksi nomor tenant, Basic readiness (F-7), **SaaS billing (1)–(6): tabel + mesin status, subscription service + entitlement billing, invoice + periode + dunning, driver Midtrans, webhook terverifikasi, serta rekonsiliasi + kuota dasar + gating backend**. **CHECKPOINT-1 lulus**. Berikutnya **26 Nov** (UI "Paket saya" + panel platform).
 
 **Oktober 2026 — Fondasi & Prioritas Urgent**
 
@@ -203,7 +203,7 @@ gantt
 - [x] **19 Nov** — SaaS billing (3) invoice + dunning ✅ (selesai 26 Nov)
 - [x] **23 Nov** — SaaS billing (4) provider ✅ (selesai 26 Nov)
 - [x] **24 Nov** — SaaS billing (5) webhook ✅ (selesai 26 Nov)
-- [ ] **25 Nov** — SaaS billing (6) rekonsiliasi + gating backend
+- [x] **25 Nov** — SaaS billing (6) rekonsiliasi + gating backend ✅ (selesai 26 Nov)
 - [ ] **26 Nov** — SaaS billing (7) UI + panel platform (F-8)
 - [ ] **30 Nov** — SaaS billing (8) + onboarding self-service (F-9)
 

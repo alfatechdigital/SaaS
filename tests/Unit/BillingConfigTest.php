@@ -52,6 +52,12 @@ class BillingConfigTest extends TestCase
         $this->assertSame(30, config('billing.retention_days'));
     }
 
+    public function test_reconciliation_stays_bounded(): void
+    {
+        $this->assertSame(30, config('billing.reconciliation.window_days'));
+        $this->assertSame(100, config('billing.reconciliation.batch'));
+    }
+
     public function test_dunning_sends_three_reminders_inside_the_grace_period(): void
     {
         /** @var array<int, int> $days */

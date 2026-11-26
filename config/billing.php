@@ -83,6 +83,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Reconciliation
+    |--------------------------------------------------------------------------
+    |
+    | A webhook can be missed (deploy, DNS, rejected delivery), leaving a paid
+    | invoice open while dunning keeps chasing it. The daily pass asks the
+    | provider about open invoices that have a payment link, but only within this
+    | window so the work stays bounded: older disagreements are a manual matter.
+    |
+    | The window is measured from the invoice's `updated_at` — the moment its
+    | payment link was written — because a yearly invoice can be issued long
+    | before the tenant decides to pay.
+    |
+    */
+
+    'reconciliation' => [
+        'window_days' => 30,
+        'batch' => 100,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Prices
     |--------------------------------------------------------------------------
     |
