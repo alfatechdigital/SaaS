@@ -165,7 +165,7 @@ gantt
 ### 5.0 Progress Tracker
 
 > Centang tugas yang **sudah selesai & ter-commit**. Sumber kebenaran status tetap commit di `main`.
-> **Status per 26 Nov 2026:** ✅ selesai sampai **19 Nov 2026** — WhatsApp dua arah + hardening, UI koneksi nomor tenant, Basic readiness (F-7), **SaaS billing (1)–(3): tabel + mesin status, subscription service + entitlement billing, invoice + periode + dunning**. **CHECKPOINT-1 lulus**. Berikutnya **23 Nov** (integrasi provider Midtrans).
+> **Status per 26 Nov 2026:** ✅ selesai sampai **23 Nov 2026** — WhatsApp dua arah + hardening, UI koneksi nomor tenant, Basic readiness (F-7), **SaaS billing (1)–(4): tabel + mesin status, subscription service + entitlement billing, invoice + periode + dunning, dan driver Midtrans**. **CHECKPOINT-1 lulus**. Berikutnya **24 Nov** (webhook pembayaran).
 
 **Oktober 2026 — Fondasi & Prioritas Urgent**
 
@@ -201,7 +201,7 @@ gantt
 - [x] **17 Nov** — SaaS billing (1) tabel + state machine ✅ (selesai 26 Nov)
 - [x] **18 Nov** — SaaS billing (2) subscription service ✅ (selesai 26 Nov)
 - [x] **19 Nov** — SaaS billing (3) invoice + dunning ✅ (selesai 26 Nov)
-- [ ] **23 Nov** — SaaS billing (4) provider
+- [x] **23 Nov** — SaaS billing (4) provider ✅ (selesai 26 Nov)
 - [ ] **24 Nov** — SaaS billing (5) webhook
 - [ ] **25 Nov** — SaaS billing (6) rekonsiliasi + gating backend
 - [ ] **26 Nov** — SaaS billing (7) UI + panel platform (F-8)
@@ -449,3 +449,4 @@ Sebuah tugas selesai **hanya bila** (master plan §19.2):
 | 2.3.0 | 2026-11-26 | **17 Nov selesai:** SaaS billing (1) — tabel `plans`/`subscriptions` + model + mesin status (`SubscriptionStatus`) + `config/billing.php` (harga §B.4.3) + `PlanSeeder`; satu langganan berjalan per tenant dijamin unique index pada kolom ter-GENERATE. Detail di [phase-05 B-2.1](phase-05-fitur-masa-depan.md#b21-tabel-langganan--mesin-status--selesai-2026-11-26-tugas-17-nov). Suite **515 test / 2257 assertion** hijau | AI agent + Software Architect |
 | 2.4.0 | 2026-11-26 | **18 Nov selesai:** SaaS billing (2) — `SubscriptionService` (trial 30 hari, aktivasi tanpa kehilangan hari, past_due/grace, batal trial vs batal akhir periode), `BillingInterval` + kolom `billing_interval`, dan `SubscriptionEntitlementSource` menggantikan `NoSubscriptionSource` (plan = langganan berjalan; tanpa langganan = plan default). Detail di [phase-05 B-2.2](phase-05-fitur-masa-depan.md#b22-subscription-service--integrasi-entitlement--selesai-2026-11-26-tugas-18-nov). Suite **541 test / 2318 assertion** hijau | AI agent + Software Architect |
 | 2.5.0 | 2026-11-26 | **19 Nov selesai:** SaaS billing (3) — tabel + model `invoices` (unik per `subscription_id`+`period_start`), `InvoiceService` (tagihan periode berikutnya dari harga config, periode dibayar selalu punya invoice, invoice terlambat di-`void`), command harian `subscriptions:check-period` + `SubscriptionPeriodChecker` (tutup periode, `past_due`, `expired`, batal), dan dunning 3× email (`billing.dunning.days` = 0/3/6). Detail di [phase-05 B-2.3](phase-05-fitur-masa-depan.md#b23-invoice--periode-langganan--job-harian--dunning--selesai-2026-11-26-tugas-19-nov). Suite **558 test / 2389 assertion** hijau | AI agent + Software Architect |
+| 2.6.0 | 2026-11-26 | **23 Nov selesai:** SaaS billing (4) — kontrak `PaymentGateway` + DTO/enum status, `MidtransGateway` (Snap create + status lookup, Basic auth, sandbox default), `UnconfiguredPaymentGateway` (`BILLING_DRIVER=none`) yang menolak semua panggilan, `InvoicePayment` (satu link per invoice, disimpan di `payment_token`/`payment_url`), serta binding driver. Detail di [phase-05 B-2.4](phase-05-fitur-masa-depan.md#b24-integrasi-provider-midtrans--selesai-2026-11-26-tugas-23-nov). Suite **571 test / 2426 assertion** hijau | AI agent + Software Architect |

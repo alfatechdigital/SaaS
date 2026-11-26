@@ -78,7 +78,7 @@ Setelah Fase 1–4 (yang direncanakan):
 | Domain         | Resolusi tenant terabstraksi; tabel `domains` masih desain |
 | SEO            | Meta/OG/canonical/sitemap/robots per tenant                |
 | Entitlement    | `Feature` enum + plan di config + `Team::can()`            |
-| Billing        | Skema + service langganan + invoice/dunning; entitlement membaca langganan (B-2.1–B-2.3); provider & gating menyusul |
+| Billing        | Skema + service + invoice/dunning + driver Midtrans (B-2.1–B-2.4); webhook & gating menyusul |
 | Audit platform | Tersedia                                                   |
 
 Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, WhatsApp, AI, analitik, kuota.
@@ -107,8 +107,8 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | Aspek                   | Keterangan                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1, **hanya sisi langganan SaaS** (tenant → platform). UI upgrade/downgrade tetap gelombang 2. |
-| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3)  |
-| **Sisa pekerjaan**      | Integrasi provider; webhook; rekonsiliasi/kuota; UI upgrade/downgrade                                                                  |
+| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2); ✅ invoice + dunning (B-2.3); ✅ driver Midtrans (B-2.4) |
+| **Sisa pekerjaan**      | Webhook; rekonsiliasi/kuota; UI upgrade/downgrade                                                                                      |
 | **Catatan Indonesia**   | Midtrans/Xendit **bukan** subscription billing penuh — status langganan kemungkinan harus dikelola sendiri (job pengecekan periode)   |
 | **Risiko utama**        | Uang nyata: kesalahan status = kerugian finansial; webhook tidak idempoten; penagihan ganda                                           |
 | **Prasyarat keputusan** | D-05, PDR-05                                                                                                                          |
@@ -176,6 +176,27 @@ Keputusan yang perlu diingat:
 - **`markPaid()` idempoten.** Webhook (tugas 24 Nov) bisa datang dua kali; `paid_at` dan referensi pertama yang dipertahankan.
 
 Test: `InvoiceServiceTest` (harga bulanan/tahunan, idempotensi per periode, invoice trial, aktivasi → invoice lunas, pembayaran terlambat → invoice lama `void`, `markPaid` dua kali), `SubscriptionPeriodCheckerTest` (periode aktif → invoice + `past_due` + pengingat, periode belum habis tidak disentuh, tiga pengingat sesuai jadwal, expire saat grace habis, batal & trial tanpa invoice, `past_due` tanpa invoice dibuatkan), `CheckSubscriptionPeriodCommandTest` (lintas tenant tanpa konteks request, dijalankan dua kali tidak menggandakan tagihan/pengingat), `BillingConfigTest` (jadwal dunning).
+
+#### B-2.4 Integrasi provider Midtrans — ✅ Selesai 2026-11-26 (tugas 23 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **Kontrak** | `App\Contracts\PaymentGateway` (`createTransaction`, `fetchStatus`) + DTO `PaymentTransaction`/`PaymentStatusResult` + enum `PaymentStatus` (`pending`/`paid`/`failed`/`expired`/`refunded`) |
+| **Midtrans** | `MidtransGateway`: Snap `/snap/v1/transactions` (order id = nomor invoice, expiry = grace 7 hari) dan `/v2/{order_id}/status`; HTTP Basic server key; sandbox default, produksi harus eksplisit |
+| **Tanpa kredensial** | `UnconfiguredPaymentGateway` + `BILLING_DRIVER=none` (default): menolak setiap panggilan, tidak pernah berpura-pura membuat link |
+| **Pembayaran invoice** | `InvoicePayment::start()` membuat satu link per invoice dan menyimpannya (`payment_token`/`payment_url`); invoice `paid`/`void` ditolak (`InvoiceNotPayable`). `refresh()` hanya membaca status |
+| **Skema** | Kolom `invoices.payment_token` + `invoices.payment_url` |
+
+Keputusan yang perlu diingat:
+
+- **Order id Midtrans = nomor invoice.** Itu yang membuat permintaan ulang tidak membuka transaksi kedua, dan nanti membuat webhook bisa dipetakan ke invoice tanpa tabel bantu.
+- **Link disimpan, bukan dibuat ulang.** UI (26 Nov) menampilkan link yang sama; periode yang sama tidak pernah punya dua transaksi.
+- **Penerapan status bukan tugas provider.** `refresh()` dan webhook hanya membaca/menyampaikan; yang mengubah invoice + langganan adalah webhook terverifikasi (tugas 24 Nov) dan rekonsiliasi (tugas 25 Nov).
+- **Status tak dikenal = `pending`, bukan `paid`.** Memberi akses atas kata yang tidak dipahami adalah tebakan dengan uang tenant di belakangnya.
+- **Sandbox adalah default.** Produksi menuntut `MIDTRANS_IS_PRODUCTION=true` **dan** server key live, sehingga `.env` yang tersalin tidak diam-diam menagih pelanggan sungguhan.
+- **Pesan error tidak memuat server key** — hanya status HTTP dan `status_message` dari Midtrans.
+
+Test: `MidtransGatewayTest` (payload/URL/auth Basic, expiry = grace, request kedua tidak membuat transaksi baru, host produksi, invoice lunas/void ditolak, gateway `none` menolak, server key kosong gagal sebelum request, respons gagal/tak terduga jadi error, 11 status Midtrans diterjemahkan, lookup gagal jadi error), `PaymentStatusTest` (hanya `paid` yang melunasi invoice).
 
 ### Item B-3 — WhatsApp Integration ✅ **GELOMBANG 1**
 

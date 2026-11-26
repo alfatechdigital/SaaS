@@ -40,6 +40,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $reminded_at
  * @property string|null $provider
  * @property string|null $provider_reference
+ * @property string|null $payment_token
+ * @property string|null $payment_url
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Team $team
@@ -61,6 +63,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'reminded_at',
     'provider',
     'provider_reference',
+    'payment_token',
+    'payment_url',
 ])]
 class Invoice extends Model
 {

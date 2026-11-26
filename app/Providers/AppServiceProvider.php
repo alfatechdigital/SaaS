@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\PaymentGateway;
 use App\Contracts\TeamEntitlementSource;
 use App\Contracts\WhatsAppDriver;
 use App\Models\CompanyProfile;
@@ -14,7 +15,9 @@ use App\Models\Team;
 use App\Models\Transaction;
 use App\Observers\ActivityObserver;
 use App\Observers\PublicSeoObserver;
+use App\Support\Billing\MidtransGateway;
 use App\Support\Billing\SubscriptionEntitlementSource;
+use App\Support\Billing\UnconfiguredPaymentGateway;
 use App\Support\Entitlements;
 use App\Support\TenantContext;
 use App\Support\WhatsApp\LogDriver;
@@ -44,6 +47,21 @@ class AppServiceProvider extends ServiceProvider
         // without one runs on `config('plans.default_plan')`.
         $this->app->singleton(TeamEntitlementSource::class, SubscriptionEntitlementSource::class);
         $this->app->singleton(Entitlements::class);
+
+        // One payment gateway per deployment. `none` by default: it refuses every
+        // call, so a fresh clone or CI run can never charge anyone. Production sets
+        // BILLING_DRIVER=midtrans plus a live server key.
+        $this->app->singleton(PaymentGateway::class, function (): PaymentGateway {
+            $driver = (string) config('billing.driver', 'none');
+
+            return match ($driver) {
+                'midtrans' => new MidtransGateway,
+                'none' => new UnconfiguredPaymentGateway,
+                default => throw new InvalidArgumentException(
+                    sprintf('Unsupported billing driver [%s]. Use "midtrans" or "none".', $driver),
+                ),
+            };
+        });
 
         // One WhatsApp transport per deployment. `log` by default, so nothing can
         // reach a real number unless WHATSAPP_DRIVER says so.

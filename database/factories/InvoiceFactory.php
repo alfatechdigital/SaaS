@@ -45,6 +45,8 @@ class InvoiceFactory extends Factory
             'reminded_at' => null,
             'provider' => 'midtrans',
             'provider_reference' => null,
+            'payment_token' => null,
+            'payment_url' => null,
         ];
     }
 

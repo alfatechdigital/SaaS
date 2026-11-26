@@ -4,6 +4,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Driver
+    |--------------------------------------------------------------------------
+    |
+    | `none` (the default) refuses every payment call: a fresh clone or a CI run
+    | must never be able to charge anyone, just like `WHATSAPP_DRIVER=log`.
+    | `midtrans` talks to the Midtrans Snap/Core API.
+    |
+    | Production sets BILLING_DRIVER=midtrans and a live server key.
+    |
+    */
+
+    'driver' => env('BILLING_DRIVER', 'none'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Provider
     |--------------------------------------------------------------------------
     |
@@ -15,6 +30,25 @@ return [
     */
 
     'provider' => env('BILLING_PROVIDER', 'midtrans'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Midtrans Credentials
+    |--------------------------------------------------------------------------
+    |
+    | Sandbox is the default; `is_production` must be set explicitly, so a
+    | copied `.env` cannot silently charge real customers in a test run. The
+    | server key authenticates every request (HTTP Basic, empty password) and
+    | must never be logged.
+    |
+    */
+
+    'midtrans' => [
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+        'is_production' => (bool) env('MIDTRANS_IS_PRODUCTION', false),
+        'timeout' => (int) env('MIDTRANS_TIMEOUT', 15),
+    ],
 
     /*
     |--------------------------------------------------------------------------
