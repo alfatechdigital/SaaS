@@ -138,7 +138,7 @@ Harga dan metadata billing **sengaja tidak** dimasukkan: itu milik workstream bi
 | Berkas                                   | Isi                                                                                                                                                                                                                                 |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `App\Contracts\TeamEntitlementSource`    | **Baru.** `planCodeFor(Team): ?string` + `addonFeaturesFor(Team): array<Feature>`. Inilah tempat `subscriptions`/`tenant_addons` dibaca nanti.                                                                                       |
-| `App\Support\NoSubscriptionSource`       | **Baru.** Bindings hari ini: tidak ada langganan & tidak ada add-on → `null` + `[]`, sehingga semua tenant memakai `default_plan`.                                                                                                   |
+| `App\Support\NoSubscriptionSource`       | **Baru.** ~~Bindings hari ini: tidak ada langganan & tidak ada add-on → `null` + `[]`~~ — 🗑️ diganti `App\Support\Billing\SubscriptionEntitlementSource` pada 2026-11-26 (B-2.2). |
 | `App\Support\Entitlements`               | **Baru.** `planCode()`, `plan()`, `features()`, `can()`, `limit()`. Fitur efektif = fitur plan ∪ add-on aktif, dideduplikasi. Plan tak dikenal → `App\Exceptions\UnknownPlan` (gagal keras, bukan diam-diam jatuh ke default).          |
 | `App\Models\Team`                        | `can(Feature): bool` (tugas 4.3.2) dan `features(): array<int, string>` (tugas 4.3.3) — keduanya mendelegasikan ke `Entitlements`.                                                                                                 |
 | `App\Concerns\AuthorizesTeamModule`      | Method baru `authorizeFeature(Team, Feature)` → `abort_unless($team->can($feature), 403)` (tugas 4.3.4).                                                                                                                            |
@@ -238,7 +238,7 @@ Add-on (tugas 4.5.6):
 - `tenant_addons` **tidak** mengubah `subscriptions.plan_code` — label paket tenant tetap Basic/Plus/Pro (§B.4.2).
 - Entitlement membaca add-on lewat `TeamEntitlementSource::addonFeaturesFor()` yang sudah ada; implementasi billing cukup mengembalikan fitur dengan `status = active` dan `ends_at` null/`> now()`.
 
-> **Tidak ada migrasi di fase ini** (tugas 4.5.7). Empat tabel di atas baru dibuat bersama B-2 (SaaS billing, mulai 17 Nov). ✅ 2026-11-26: `plans` + `subscriptions` sudah dibuat beserta mesin statusnya — lihat [phase-05 B-2.1](phase-05-fitur-masa-depan.md#b21-tabel-langganan--mesin-status--selesai-2026-11-26-tugas-17-nov).
+> **Tidak ada migrasi di fase ini** (tugas 4.5.7). Empat tabel di atas baru dibuat bersama B-2 (SaaS billing, mulai 17 Nov). ✅ 2026-11-26: `plans` + `subscriptions` sudah dibuat beserta mesin statusnya — lihat [phase-05 B-2.1](phase-05-fitur-masa-depan.md#b21-tabel-langganan--mesin-status--selesai-2026-11-26-tugas-17-nov), dan service + sumber entitlement billing sudah aktif — lihat [phase-05 B-2.2](phase-05-fitur-masa-depan.md#b22-subscription-service--integrasi-entitlement--selesai-2026-11-26-tugas-18-nov).
 
 ### 4.6 Aturan Akses pada Fitur yang Sudah Ada
 
@@ -277,7 +277,7 @@ Add-on (tugas 4.5.6):
 | `config/plans.php`                                            | ✅ **Baru 2026-11-10**                                                                  |
 | `App\Support\Entitlements`                                   | ✅ **Baru 2026-11-10** — resolusi fitur efektif (plan ∪ add-on), `can()`, `limit()`     |
 | `App\Contracts\TeamEntitlementSource`                        | ✅ **Baru 2026-11-10** — seam sumber langganan; billing mengganti bindingnya             |
-| `App\Support\NoSubscriptionSource`                           | ✅ **Baru 2026-11-10** — binding hari ini: tanpa langganan, tanpa add-on                 |
+| `App\Support\NoSubscriptionSource`                           | ✅ **Baru 2026-11-10**; 🗑️ **diganti 2026-11-26** oleh `App\Support\Billing\SubscriptionEntitlementSource` (B-2.2) |
 | `App\Models\Team`                                            | ✅ Tambah `can()`, `features()`                                                         |
 | `App\Http\Middleware\HandleInertiaRequests`                   | ⏳ **Pindah ke 26 Nov** (bersama UI billing) — bagikan `features`                       |
 | Helper otorisasi                                              | ✅ `AuthorizesTeamModule::authorizeFeature()` 2026-11-10                                |
@@ -449,8 +449,8 @@ Perintah: `composer test` dan `npm run types:check`.
 | ID    | Utang                                                          | Alasan diterima                   | Kapan ditinjau                        |
 | ----- | -------------------------------------------------------------- | --------------------------------- | ------------------------------------- |
 | TD4-1 | Plan masih di config, belum dapat diubah runtime               | D-06 memilih config               | Saat panel platform dibutuhkan        |
-| TD4-2 | Belum ada representasi langganan di database                   | Menunggu billing                  | Fase 5                                |
-| TD4-3 | Entitlement belum dipakai untuk membatasi apa pun              | Tidak ada fitur berbayar          | Saat fitur berbayar pertama disetujui |
+| TD4-2 | ~~Belum ada representasi langganan di database~~                | ✅ **Ditutup 2026-11-26** — `subscriptions` + service (B-2.1/B-2.2) | —                             |
+| TD4-3 | Entitlement belum dipakai untuk membatasi apa pun              | Gating backend dijadwalkan 25 Nov | Tugas 25 Nov                          |
 | TD4-4 | Belum ada mekanisme downgrade (validasi data saat paket turun) | Belum relevan                     | Fase 5                                |
 | TD4-5 | Belum ada telemetri pemakaian fitur                            | Butuh storage & keputusan privasi | Fase 5                                |
 

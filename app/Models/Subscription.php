@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Concerns\BelongsToTeam;
+use App\Enums\BillingInterval;
 use App\Enums\SubscriptionStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\SubscriptionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -11,7 +13,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * One tenant's subscription — the source of truth for what the tenant has bought.
@@ -30,21 +31,23 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $team_id
  * @property string $plan_code
+ * @property BillingInterval|null $billing_interval
  * @property SubscriptionStatus $status
- * @property Carbon|null $trial_ends_at
- * @property Carbon $current_period_start
- * @property Carbon $current_period_end
- * @property Carbon|null $canceled_at
+ * @property CarbonImmutable|null $trial_ends_at
+ * @property CarbonImmutable $current_period_start
+ * @property CarbonImmutable $current_period_end
+ * @property CarbonImmutable|null $canceled_at
  * @property string $provider
  * @property string|null $provider_reference
- * @property Carbon|null $ended_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable|null $ended_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property-read Team $team
  * @property-read Plan|null $plan
  */
 #[Fillable([
     'plan_code',
+    'billing_interval',
     'status',
     'trial_ends_at',
     'current_period_start',
@@ -77,6 +80,7 @@ class Subscription extends Model
     {
         return [
             'status' => SubscriptionStatus::class,
+            'billing_interval' => BillingInterval::class,
             'trial_ends_at' => 'datetime',
             'current_period_start' => 'datetime',
             'current_period_end' => 'datetime',

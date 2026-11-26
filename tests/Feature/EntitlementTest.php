@@ -15,9 +15,9 @@ use Tests\TestCase;
 /**
  * Entitlement resolution (Fase 4, tugas 4.3.6 dan 4.3.7).
  *
- * No database on purpose: entitlement is a pure read of config plus whatever the
- * entitlement source reports, so these tests stay fast and independent of the
- * billing tables that do not exist yet.
+ * No database on purpose: these cases exercise the rules — plan contents, add-on
+ * union, unknown plan — against a fake source, so they stay fast. The real source
+ * (a running subscription) is covered by `SubscriptionEntitlementTest`.
  */
 class EntitlementTest extends TestCase
 {

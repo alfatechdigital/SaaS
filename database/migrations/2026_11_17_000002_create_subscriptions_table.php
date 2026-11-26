@@ -24,6 +24,9 @@ return new class extends Migration
             // foreign key: entitlement lives in config, and the plans table is a
             // projection that a fresh deployment has not necessarily seeded yet.
             $table->string('plan_code', 32);
+            // Null while the tenant is only trialing: there is no paid interval to
+            // bill yet. The first payment records whether it buys a month or a year.
+            $table->string('billing_interval', 16)->nullable();
             $table->string('status', 32);
             $table->timestamp('trial_ends_at')->nullable();
             $table->timestamp('current_period_start');

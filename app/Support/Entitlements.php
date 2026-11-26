@@ -33,7 +33,7 @@ final class Entitlements
      * The plan code in force for the tenant.
      *
      * Falls back to `config('plans.default_plan')` when the tenant has no
-     * subscription, which is every tenant until billing lands (tugas 4.3.7).
+     * subscription in a status that grants access (tugas 4.3.7).
      *
      * @throws UnknownPlan when the resolved plan is missing from config
      */

@@ -14,8 +14,8 @@ use App\Models\Team;
 use App\Models\Transaction;
 use App\Observers\ActivityObserver;
 use App\Observers\PublicSeoObserver;
+use App\Support\Billing\SubscriptionEntitlementSource;
 use App\Support\Entitlements;
-use App\Support\NoSubscriptionSource;
 use App\Support\TenantContext;
 use App\Support\WhatsApp\LogDriver;
 use App\Support\WhatsApp\MetaCloudDriver;
@@ -39,10 +39,10 @@ class AppServiceProvider extends ServiceProvider
         // One active tenant per request/job, shared by every collaborator.
         $this->app->singleton(TenantContext::class);
 
-        // Entitlements read purchased plans/add-ons through a source. Nobody
-        // subscribes yet, so nothing is purchased and every tenant runs on the
-        // default plan; the billing workstream swaps this binding.
-        $this->app->singleton(TeamEntitlementSource::class, NoSubscriptionSource::class);
+        // Entitlements read purchased plans/add-ons through a source. Billing is
+        // live: the tenant's running subscription decides the plan, and a tenant
+        // without one runs on `config('plans.default_plan')`.
+        $this->app->singleton(TeamEntitlementSource::class, SubscriptionEntitlementSource::class);
         $this->app->singleton(Entitlements::class);
 
         // One WhatsApp transport per deployment. `log` by default, so nothing can

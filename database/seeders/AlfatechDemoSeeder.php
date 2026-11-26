@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\ActivityEntityType;
+use App\Enums\BillingInterval;
 use App\Enums\ContentPlatform;
 use App\Enums\ContentStatus;
 use App\Enums\LeadStatus;
@@ -611,6 +612,7 @@ class AlfatechDemoSeeder extends Seeder
 
         $this->team->subscriptions()->create([
             'plan_code' => 'pro',
+            'billing_interval' => BillingInterval::Monthly,
             'status' => SubscriptionStatus::Active,
             'trial_ends_at' => null,
             'current_period_start' => $start,

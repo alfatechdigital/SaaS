@@ -8,7 +8,7 @@ use App\Models\Team;
 
 /**
  * Stands in for the billing-driven source so entitlement rules can be exercised
- * before `subscriptions` and `tenant_addons` exist.
+ * without creating subscription rows.
  */
 final class FakeTeamEntitlementSource implements TeamEntitlementSource
 {

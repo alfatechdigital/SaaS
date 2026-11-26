@@ -4,18 +4,16 @@ namespace App\Contracts;
 
 use App\Enums\Feature;
 use App\Models\Team;
+use App\Support\Billing\SubscriptionEntitlementSource;
 use App\Support\Entitlements;
-use App\Support\NoSubscriptionSource;
 
 /**
  * Where a tenant's purchased entitlements come from.
  *
  * The application never reads a plan name from a column: it asks
- * {@see Entitlements}, which asks this source. Today the only
- * implementation is {@see NoSubscriptionSource} (nobody subscribes
- * yet), and the SaaS billing workstream (B-2) will supply one that reads
- * `subscriptions` and `tenant_addons` instead — without touching a single
- * caller.
+ * {@see Entitlements}, which asks this source. The production
+ * implementation is {@see SubscriptionEntitlementSource}
+ * (a tenant's running subscription); tests may bind their own.
  *
  * Entitlements are the union of both answers: plan features ∪ active add-ons
  * (§B.4.2, PDR-06). Keeping them in one interface is what stops a caller from

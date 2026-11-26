@@ -8,9 +8,9 @@ use RuntimeException;
 /**
  * Thrown when a tenant resolves to a plan that `config/plans.php` does not define.
  *
- * Failing loudly is deliberate. The plan name comes from configuration today and
- * from `subscriptions` once billing lands, so an unknown value means a typo in
- * config or a subscription pointing at a deleted plan. Falling back to the
+ * Failing loudly is deliberate. The plan name comes from a tenant's running
+ * subscription, so an unknown value means a subscription pointing at a plan that
+ * config no longer defines. Falling back to the
  * default plan would silently hand a paying tenant a different feature set — the
  * kind of bug that only surfaces as a support ticket.
  *

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\BillingInterval;
 use App\Enums\SubscriptionStatus;
 use App\Models\Subscription;
 use App\Models\Team;
@@ -27,6 +28,7 @@ class SubscriptionFactory extends Factory
         return [
             'team_id' => Team::factory(),
             'plan_code' => (string) config('plans.default_plan', 'basic'),
+            'billing_interval' => BillingInterval::Monthly,
             'status' => SubscriptionStatus::Active,
             'trial_ends_at' => null,
             'current_period_start' => $start,
@@ -45,6 +47,7 @@ class SubscriptionFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => SubscriptionStatus::Trialing,
+            'billing_interval' => null,
             'trial_ends_at' => now()->addDays((int) config('billing.trial_days', 30)),
         ]);
     }

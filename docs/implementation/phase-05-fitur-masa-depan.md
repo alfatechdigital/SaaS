@@ -78,7 +78,7 @@ Setelah Fase 1–4 (yang direncanakan):
 | Domain         | Resolusi tenant terabstraksi; tabel `domains` masih desain |
 | SEO            | Meta/OG/canonical/sitemap/robots per tenant                |
 | Entitlement    | `Feature` enum + plan di config + `Team::can()`            |
-| Billing        | Skema `plans`/`subscriptions` + mesin status (B-2.1); service & provider menyusul |
+| Billing        | Skema + service langganan; entitlement membaca langganan (B-2.1/B-2.2); invoice, provider & gating menyusul |
 | Audit platform | Tersedia                                                   |
 
 Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, WhatsApp, AI, analitik, kuota.
@@ -107,8 +107,8 @@ Idiom fitur yang belum ada: katalog/produk, pesanan, keranjang, pembayaran, What
 | Aspek                   | Keterangan                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**              | ✅ **Disetujui 2026-09-30** — gelombang 1, **hanya sisi langganan SaaS** (tenant → platform). UI upgrade/downgrade tetap gelombang 2. |
-| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel `plans`/`subscriptions` + mesin status (B-2.1)                                                       |
-| **Sisa pekerjaan**      | Subscription service; integrasi provider; webhook; status siklus langganan; trial; invoice; dunning; UI upgrade/downgrade              |
+| **Fondasi siap**        | ✅ Entitlement (Fase 4); ✅ tabel `plans`/`subscriptions` + mesin status (B-2.1); ✅ service + sumber entitlement billing (B-2.2)       |
+| **Sisa pekerjaan**      | Invoice + dunning; integrasi provider; webhook; rekonsiliasi/kuota; UI upgrade/downgrade                                              |
 | **Catatan Indonesia**   | Midtrans/Xendit **bukan** subscription billing penuh — status langganan kemungkinan harus dikelola sendiri (job pengecekan periode)   |
 | **Risiko utama**        | Uang nyata: kesalahan status = kerugian finansial; webhook tidak idempoten; penagihan ganda                                           |
 | **Prasyarat keputusan** | D-05, PDR-05                                                                                                                          |
@@ -133,6 +133,27 @@ Keputusan yang perlu diingat:
 - **Demo tenant memakai Pro.** `AlfatechDemoSeeder` membuat langganan Pro aktif untuk `alfatech` (§B.4.3), supaya begitu sumber entitlement billing dipasang (tugas 18 Nov) tenant demo sudah melihat seluruh fitur.
 
 Test: `SubscriptionStatusTest` (matriks transisi persis diagram §4.5.3, status final, akses saat grace, semua status terjangkau dari trial, label unik), `BillingConfigTest` (harga = §B.4.3, tahunan = 10× bulanan, durasi siklus), `PlanSeederTest` (salinan config, idempoten, `active()`), `SubscriptionTableTest` (satu langganan berjalan per tenant, baris berakhir tidak memblokir pengganti, cast enum, isolasi tenant).
+
+#### B-2.2 Subscription service + integrasi entitlement — ✅ Selesai 2026-11-26 (tugas 18 Nov)
+
+| Bagian | Yang dibangun |
+| --- | --- |
+| **Service** | `App\Support\Billing\SubscriptionService`: `startTrial()`, `activate()`, `markPastDue()`, `markExpired()`, `cancel()`, `markCanceled()` — satu-satunya penulis tabel `subscriptions` |
+| **Interval** | `App\Enums\BillingInterval` (`monthly`/`yearly`) + kolom `subscriptions.billing_interval` (null saat trial, diisi saat pembayaran pertama) + `advance()` yang anti-overflow (31 Jan → 28 Feb) |
+| **Entitlement** | `App\Support\Billing\SubscriptionEntitlementSource` dibinding menggantikan `NoSubscriptionSource` (dihapus): plan ditentukan langganan berjalan; tanpa langganan → `config('plans.default_plan')` |
+| **Exception** | `InvalidSubscriptionTransition` (transisi ditolak mesin status) dan `SubscriptionAlreadyRunning` (trial kedua saat masih ada langganan berjalan) |
+
+Keputusan yang perlu diingat:
+
+- **Semua transisi lewat service.** Controller/job/webhook tidak boleh menulis `status` langsung; service memeriksa `SubscriptionStatus::canTransitionTo()` lebih dulu. Kesalahan status = kesalahan tagihan, bukan kosmetik.
+- **Pembayaran tidak menghanguskan hari.** Periode berbayar baru mulai di akhir periode yang sudah dibayar (atau akhir trial); bila periode lama sudah lewat, periode baru mulai saat pembayaran. Tanpa prorata karena Midtrans tidak punya prorata (D-05).
+- **Batal berbeda untuk trial dan berbayar.** Trial berakhir seketika; langganan berbayar tetap `active` sampai `current_period_end` dan hanya berhenti diperpanjang — `canceled_at` mencatat kapan diminta, dan `markCanceled()` (dipanggil job periode, tugas 19 Nov) yang menutup statusnya.
+- **`past_due` tetap memberi akses.** Grace 7 hari (§B.4.3) berarti fitur belum dicabut pada kegagalan tagihan pertama; `markExpired()` yang mengakhiri.
+- **Entitlement membaca langganan berjalan yang masih memberi akses.** `expired`/`canceled`/tanpa langganan → plan default; mematikan tenant sepenuhnya tetap urusan `teams.suspended_at` + job retensi, bukan plan.
+- **`$team->can()` tetap aman di luar request.** Sumber entitlement membungkus query-nya dalam `TenantContext::runFor($team, …)`, karena `subscriptions` dijaga global scope dan pertanyaan entitlement juga muncul dari command dan test.
+- **Add-on belum ada.** `addonFeaturesFor()` mengembalikan `[]` sampai `tenant_addons` dibangun (tugas 25 Nov) — fitur yang tidak dibeli tidak boleh muncul.
+
+Test: `SubscriptionServiceTest` (trial, konversi trial→aktif dengan/tanpa sisa hari, tahunan, past_due → aktif/expired, batal trial vs berbayar, penutupan periode, transisi terlarang, trial kedua ditolak), `SubscriptionEntitlementTest` (tanpa langganan = default, aktif/trial/past_due menentukan plan, expired jatuh ke default, langganan berjalan menang atas yang sudah berakhir, binding asli terpasang), `BillingIntervalTest` (anti-overflow & label).
 
 ### Item B-3 — WhatsApp Integration ✅ **GELOMBANG 1**
 
